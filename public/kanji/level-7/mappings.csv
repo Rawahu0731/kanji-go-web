@@ -1,0 +1,601 @@
+﻿path,reading
+images/1_あやしい.png,あやしい
+images/2_われわれ.png,われわれ
+images/3_けむる、けぶる.png,けむる、けぶる
+images/4_よい.png,よい
+images/5_ひとつ.png,ひとつ
+images/6_おこす.png,おこす
+images/7_せいする.png,せいする
+images/8_せい.png,せい
+images/9_ただしい.png,ただしい
+images/10_とぼしい.png,とぼしい
+images/11_つぐ、_はぐ.png,つぐ、はぐ
+images/12_のっとる.png,のっとる
+images/13_あめ、あま.png,あめ、あま
+images/14_そなえる.png,そなえる
+images/15_しょうもん.png,しょうもん
+images/16_かんがえる.png,かんがえる
+images/17_むなしい.png,むなしい
+images/18_あやしい.png,あやしい
+images/19_かなび、かなび.png,かなび、かなび
+images/20_くくわけなく.png,くくわけなく
+images/21_てんさくばんざい、てんさつばんざい.png,てんさくばんざい、てんさつばんざい
+images/22_もうす.png,もうす
+images/23_うしのあつもの.png,うしのあつもの
+images/24_なつ.png,なつ
+images/25_まわる、めぐる.png,まわる、めぐる
+images/26_おしたつ.png,おしたつ
+images/27_ぶりざーど.png,ぶりざーど
+images/28_いわくら、いわぐら.png,いわくら、いわぐら
+images/29_ことごとしい.png,ことごとしい
+images/30_おもしろい.png,おもしろい
+images/31_はなす.png,はなす
+images/32_ふえ.png,ふえ
+images/33_しょうせい.png,しょうせい
+images/34_じょ.png,じょ
+images/35_てんち.png,てんち
+images/36_えんさい.png,えんさい
+images/37_そめる.png,そめる
+images/38_ぽろにうむ.png,ぽろにうむ
+images/39_まぼろし.png,まぼろし
+images/40_うかがいみる.png,うかがいみる
+images/41_ばける.png,ばける
+images/42_ゆるす.png,ゆるす
+images/43_たかい.png,たかい
+images/44_きす.png,きす
+images/45_はためく等.png,はためく
+images/46_ぐれーん、げれーん、げれいん.png,ぐれーん、げれーん、げれいん
+images/47_つぶさに.png,つぶさに
+images/48_ゆめゆめ.png,ゆめゆめ
+images/49_あやつる.png,あやつる
+images/50_こよみびらき　等.png,こよみびらき
+images/51_らじうむ.png,らじうむ
+images/52_うらん.png,うらん
+images/53_せりうむ.png,せりうむ
+images/54_からすみ.png,からすみ
+images/55_しゅうねく.png,しゅうねく
+images/56_おとうと.png,おとうと
+images/57_かったー.png,かったー
+images/58_おもう.png,おもう
+images/59_えだおろし.png,えだおろし
+images/60_にちる.png,にちる
+images/61_じょうごむし.png,じょうごむし
+images/62_そぞろく.png,そぞろく
+images/63_おぼつかない.png,おぼつかない
+images/64_いいかしぐ.png,いいかしぐ
+images/65_かなぐる等.png,かなぐる
+images/66_おおつたのは.png,おおつたのは
+images/67_このごろ.png,このごろ
+images/68_にちょうのゆみかつらぎかっせん.png,にちょうのゆみかつらぎかっせん
+images/69_なびく.png,なびく
+images/70_ころばす.png,ころばす
+images/71_ざんぶと、ざんぶり.png,ざんぶと、ざんぶり
+images/72_ききがき　等.png,ききがき
+images/73_うまのかみはさみ、うまのかみばさみ.png,うまのかみはさみ、うまのかみばさみ
+images/74_えんがく.png,えんがく
+images/75_おんす.png,おんす
+images/76_きんたる.png,きんたる
+images/77_とらっく.png,とらっく
+images/78_ぼんのう.png,ぼんのう
+images/79_たまご.png,たまご
+images/80_おそれ.png,おそれ
+images/81_ほれる.png,ほれる
+images/82_さまたげられる.png,さまたげられる
+images/83_いたみうれえる.png,いたみうれえる
+images/84_つきすすむ.png,つきすすむ
+images/85_かぬち.png,かぬち
+images/86_みめよい.png,みめよい
+images/87_おがむ.png,おがむ
+images/88_おおい.png,おおい
+images/89_おいる.png,おいる
+images/90_なし.png,なし
+images/91_ただよう.png,ただよう
+images/92_どいもい　等.png,どいもい
+images/93_あおざい、あおやい　等.png,あおざい、あおやい
+images/94_ぶんぼーふえ　等.png,ぶんぼーふえ
+images/95_のんらー　等.png,のんらー
+images/96_ふぉー　等.png,ふぉー
+images/97_ちょんかい　等.png,ちょんかい
+images/98_かおらう　等.png,かおらう
+images/99_ぬおっくちゃむ　等.png,ぬおっくちゃむ
+images/100_ばっちゃん　等.png,ばっちゃん
+images/101_ちゅはん　等.png,ちゅはん
+images/102_がんねん.png,がんねん
+images/103_さいしょ.png,さいしょ
+images/104_ただしい.png,ただしい
+images/105_ますのすけ.png,ますのすけ
+images/106_うるめいわし.png,うるめいわし
+images/107_たか、はやぶさ.png,たか、はやぶさ
+images/108_てらつつき、てらつき.png,てらつつき、てらつき
+images/109_さけのはえ、さかばえ.png,さけのはえ、さかばえ
+images/110_ひとのこ.png,ひとのこ
+images/111_さわら.png,さわら
+images/112_からす.png,からす
+images/113_まなずるかぞうそが、まなづるかぞうそが.png,まなずるかぞうそが、まなづるかぞうそが
+images/114_しーぼーぎうむ.png,しーぼーぎうむ
+images/115_ふれろびうむ.png,ふれろびうむ
+images/116_にほにうむ.png,にほにうむ
+images/117_てねしん.png,てねしん
+images/118_みりあめーとる、めりあめーとる.png,みりあめーとる、めりあめーとる
+images/119_せんちあーる.png,せんちあーる
+images/120_かしのき.png,かしのき
+images/121_すずみむしろ.png,すずみむしろ
+images/122_きょ.png,きょ
+images/123_れい、ぜろ.png,れい、ぜろ
+images/124_なくなく.png,なくなく
+images/125_ほだ、ほた.png,ほだ、ほた
+images/126_い.png,い
+images/127_てつ、てち、しょう.png,てつ、てち、しょう
+images/128_なーん.png,なーん
+images/129_あした.png,あした
+images/130_こまごと.png,こまごと
+images/131_あさぼらけ.png,あさぼらけ
+images/132_ものいみ.png,ものいみ
+images/133_せせらぎ、せせらき、せぜらき　等.png,せせらぎ、せせらき、せぜらき
+images/134_うまのりつづみ　等.png,うまのりつづみ
+images/135_おとり.png,おとり
+images/136_ことぶき.png,ことぶき
+images/137_くるわ.png,くるわ
+images/138_どんぶと.png,どんぶと
+images/139_おとがい.png,おとがい
+images/140_ぼさつ、ささぼさつ.png,ぼさつ、ささぼさつ
+images/141_てづくり　等.png,てづくり
+images/142_ひながた　等.png,ひながた
+images/143_とな.png,とな
+images/144_くつのきびす.png,くつのきびす
+images/145_おか.png,おか
+images/146_くぼて.png,くぼて
+images/147_あられ.png,あられ
+images/148_まちぎみ.png,まちぎみ
+images/149_あらがね　等.png,あらがね
+images/150_こいしい.png,こいしい
+images/151_いそぎ.png,いそぎ
+images/152_うまい.png,うまい
+images/153_かくれる.png,かくれる
+images/154_よろこぶ.png,よろこぶ
+images/155_もうかる.png,もうかる
+images/156_ふるえる.png,ふるえる
+images/157_ひとしい.png,ひとしい
+images/158_うらない.png,うらない
+images/159_したるし.png,したるし
+images/160_あらい.png,あらい
+images/161_たける.png,たける
+images/162_もとる.png,もとる
+images/163_つぐ.png,つぐ
+images/164_ぬれる.png,ぬれる
+images/165_さげる.png,さげる
+images/166_わかい.png,わかい
+images/167_かぐわしい.png,かぐわしい
+images/168_よじる.png,よじる
+images/169_ゆれる.png,ゆれる
+images/170_ひとしい.png,ひとしい
+images/171_わきまえる.png,わきまえる
+images/172_くつがえりふす等.png,くつがえりふす
+images/173_くじりえる.png,くじりえる
+images/174_さかんにもえる.png,さかんにもえる
+images/175_はらばう等.png,はらばう
+images/176_たばかる.png,たばかる
+images/177_くろい.png,くろい
+images/178_はなやか.png,はなやか
+images/179_かむる.png,かむる
+images/180_ひらく.png,ひらく
+images/181_かつ.png,かつ
+images/182_いながら.png,いながら
+images/183_かいそぐ.png,かいそぐ
+images/184_いれる.png,いれる
+images/185_かねる.png,かねる
+images/186_くろい.png,くろい
+images/187_もうす.png,もうす
+images/188_みちる.png,みちる
+images/189_なす、せす.png,なす、せす
+images/190_あさい.png,あさい
+images/191_かわく.png,かわく
+images/192_なぞらえる.png,なぞらえる
+images/193_どくづく.png,どくづく
+images/194_たのしい.png,たのしい
+images/195_のっとる.png,のっとる
+images/196_しす.png,しす
+images/197_そぐ.png,そぐ
+images/198_うずたかい.png,うずたかい
+images/199_がとん.png,がとん
+images/200_おもおも.png,おもおも
+images/201_ちょべんたいん　等.png,ちょべんたいん
+images/202_さくらそうついのかがもん.png,さくらそうついのかがもん
+images/203_むつましづきれんりのたまつばき　等.png,むつましづきれんりのたまつばき
+images/204_たしなみ.png,たしなみ
+images/205_ふさがる.png,ふさがる
+images/206_まめまめしい.png,まめまめしい
+images/207_ほこのさき、ほこさき.png,ほこのさき、ほこさき
+images/208_もじきり.png,もじきり
+images/209_なり、また.png,なり、また
+images/210_ぶんしょう.png,ぶんしょう
+images/211_かたくみ.png,かたくみ
+images/212_もちつつじ.png,もちつつじ
+images/213_くまはじかみ.png,くまはじかみ
+images/214_ねずこ.png,ねずこ
+images/215_さるかき.png,さるかき
+images/216_ばいんみー　等.png,ばいんみー
+images/217_ちゃおとむ　等.png,ちゃおとむ
+images/218_だんぐえっと　等.png,だんぐえっと
+images/219_さくなぎ、さくなき.png,さくなぎ、さくなき
+images/220_かまつか.png,かまつか
+images/221_いなだ.png,いなだ
+images/222_くろひょう.png,くろひょう
+images/223_とつさかのじょうつるのすごもり　等.png,とつさかのじょうつるのすごもり
+images/224_ことしほうねんなにわのにぎわい.png,ことしほうねんなにわのにぎわい
+images/225_しのかげさるもしちしゃく.png,しのかげさるもしちしゃく
+images/226_ぎゅるてん.png,ぎゅるてん
+images/227_くんしん.png,くんしん
+images/228_あさくる.png,あさくる
+images/229_あろん.png,あろん
+images/230_たけだけしい等.png,たけだけしい
+images/231_はれる.png,はれる
+images/232_えだなし、えだぬき、えぐなし.png,えだなし、えだぬき、えぐなし
+images/233_あくたはらう.png,あくたはらう
+images/234_おびきだす.png,おびきだす
+images/235_あむ.png,あむ
+images/236_たちさまよう、たちやすらう.png,たちさまよう、たちやすらう
+images/237_ともえ.png,ともえ
+images/238_ちからくらべ.png,ちからくらべ
+images/239_やまのふもと.png,やまのふもと
+images/240_おおいちざ、おういちざ.png,おおいちざ、おういちざ
+images/241_さすらえありく、さすらいあるく.png,さすらえありく、さすらいあるく
+images/242_みどりご　等.png,みどりご
+images/243_よこべ　等.png,よこべ
+images/244_かっぱ.png,かっぱ
+images/245_やぼてん.png,やぼてん
+images/246_のほぎり、のこぎり　等.png,のほぎり、のこぎり
+images/247_たちがみ、たてがみ　等.png,たちがみ、たてがみ
+images/248_すたちすちっく　等.png,すたちすちっく
+images/249_かくれる.png,かくれる
+images/250_さえずる等.png,さえずる
+images/251_ひかげばしら.png,ひかげばしら
+images/252_かさねぐつ.png,かさねぐつ
+images/253_もののけ.png,もののけ
+images/254_はなづな.png,はなづな
+images/255_ひらとばり.png,ひらとばり
+images/256_あつさあたり.png,あつさあたり
+images/257_ぼうふら.png,ぼうふら
+images/258_ほうおう.png,ほうおう
+images/259_さいづちまげ　等.png,さいづちまげ
+images/260_むぎわら.png,むぎわら
+images/261_くろひつじ.png,くろひつじ
+images/262_ぶたごや.png,ぶたごや
+images/263_あまりもの.png,あまりもの
+images/264_うそぶく.png,うそぶく
+images/265_のみほす.png,のみほす
+images/266_いそしむ.png,いそしむ
+images/267_へりうむ.png,へりうむ
+images/268_ねおん.png,ねおん
+images/269_ようそ.png,ようそ
+images/270_ほるみうむ.png,ほるみうむ
+images/271_すいぎん　等.png,すいぎん
+images/272_ねんげつ、としつき.png,ねんげつ、としつき
+images/273_つきひ、がっぴ、つくひ　等.png,つきひ、がっぴ、つくひ
+images/274_せんてぃえん　等.png,せんてぃえん
+images/275_けんばう　等.png,けんばう
+images/276_じだいせわすいこでん.png,じだいせわすいこでん
+images/277_かたみうちたりきのやきつぎ.png,かたみうちたりきのやきつぎ
+images/278_いちかど.png,いちかど
+images/279_しどろもどろ　等.png,しどろもどろ
+images/280_うくつく、うぐつく等.png,うくつく、うぐつく
+images/281_きてかえるにしきのわかやか.png,きてかえるにしきのわかやか
+images/282_かどいでよしなごりのみやげ.png,かどいでよしなごりのみやげ
+images/283_あまのはしだて、はしだて　等.png,あまのはしだて、はしだて
+images/284_あらきばり、あらきはり.png,あらきばり、あらきはり
+images/285_あつつかう、あとつごう.png,あつつかう、あとつごう
+images/286_たなびく等.png,たなびく
+images/287_ふるまう.png,ふるまう
+images/288_うちかえす.png,うちかえす
+images/289_はしたない、はしたなし.png,はしたない、はしたなし
+images/290_ながい.png,ながい
+images/291_つくりわらい.png,つくりわらい
+images/292_ふきながし.png,ふきながし
+images/293_じがばち.png,じがばち
+images/294_さけさかな.png,さけさかな
+images/295_かわらなでしこ.png,かわらなでしこ
+images/296_こくもつぐら.png,こくもつぐら
+images/297_はねおどる.png,はねおどる
+images/298_むらさきそう.png,むらさきそう
+images/299_おやばね.png,おやばね
+images/300_とびあがる.png,とびあがる
+images/301_しわがれごえ.png,しわがれごえ
+images/302_うっとりする.png,うっとりする
+images/303_きょうかたびら.png,きょうかたびら
+images/304_からしあえ.png,からしあえ
+images/305_みそかづき.png,みそかづき
+images/306_ものみべい.png,ものみべい
+images/307_あげぼり.png,あげぼり
+images/308_むしまんじゅう.png,むしまんじゅう
+images/309_けしきばむ.png,けしきばむ
+images/310_たちさる.png,たちさる
+images/311_いしもち.png,いしもち
+images/312_あしはらかに　等.png,あしはらかに
+images/313_あまびこ　等.png,あまびこ
+images/314_たばこ.png,たばこ
+images/315_こもくさ.png,こもくさ
+images/316_わらび.png,わらび
+images/317_ここにきわまるごじんのそなえ.png,ここにきわまるごじんのそなえ
+images/318_さまりうむ.png,さまりうむ
+images/319_だらくま.png,だらくま
+images/320_さかだち　等.png,さかだち
+images/321_うえる.png,うえる
+images/322_ふせる.png,ふせる
+images/323_ただす.png,ただす
+images/324_とおい.png,とおい
+images/325_ある.png,ある
+images/326_ところ.png,ところ
+images/327_よわい.png,よわい
+images/328_まごころ　等.png,まごころ
+images/329_いぬい.png,いぬい
+images/330_かみのすえ.png,かみのすえ
+images/331_つっかけ.png,つっかけ
+images/332_しつけうば.png,しつけうば
+images/333_くもざる.png,くもざる
+images/334_おにやらい.png,おにやらい
+images/335_きょうかたびら.png,きょうかたびら
+images/336_まつやに.png,まつやに
+images/337_まるきばし.png,まるきばし
+images/338_どばし.png,どばし
+images/339_こくたん.png,こくたん
+images/340_ころがりふす.png,ころがりふす
+images/341_あんちもん.png,あんちもん
+images/342_あまのはしだて、はしだて　等.png,あまのはしだて、はしだて
+images/343_その.png,その
+images/344_うかがう.png,うかがう
+images/345_なげく.png,なげく
+images/346_なげく.png,なげく
+images/347_ふく.png,ふく
+images/348_くにぐに　等.png,くにぐに
+images/349_くしゃみ.png,くしゃみ
+images/350_ためいき.png,ためいき
+images/351_ひざかけ.png,ひざかけ
+images/352_ふなしうずら.png,ふなしうずら
+images/353_ははっちょう.png,ははっちょう
+images/354_ひめじねずみ.png,ひめじねずみ
+images/355_ゆやなぎ.png,ゆやなぎ
+images/356_びあほい　等.png,びあほい
+images/357_じゃんく.png,じゃんく
+images/358_こしぼね.png,こしぼね
+images/359_わかい、いとけない.png,わかい、いとけない
+images/360_さかさまにたつ.png,さかさまにたつ
+images/361_おどろきみる.png,おどろきみる
+images/362_くどくどしい.png,くどくどしい
+images/363_ひきかける、ひっかける.png,ひきかける、ひっかける
+images/364_おりたたむ.png,おりたたむ
+images/365_ぬけげ.png,ぬけげ
+images/366_しじゅうから.png,しじゅうから
+images/367_ぎぎ.png,ぎぎ
+images/368_おうそう.png,おうそう
+images/369_からかこ.png,からかこ
+images/370_ひお.png,ひお
+images/371_たばこ.png,たばこ
+images/372_さきくさ.png,さきくさ
+images/373_はりぎり　等.png,はりぎり
+images/374_おおえびかずら.png,おおえびかずら
+images/375_こやおぎ　等.png,こやおぎ
+images/376_さむはらじんじゃ.png,さむはらじんじゃ
+images/377_よせてごぎょうてぶりのふつつか等.png,よせてごぎょうてぶりのふつつか
+images/378_やまとのくにめおとざか　等.png,やまとのくにめおとざか
+images/379_けいせいなずなのせっく.png,けいせいなずなのせっく
+images/380_いたずらがみいろのきくずき等.png,いたずらがみいろのきくずき
+images/381_あさまがだけいろのやまかぜ　等.png,あさまがだけいろのやまかぜ
+images/382_じすぷろしうむ.png,じすぷろしうむ
+images/383_るてにうむ.png,るてにうむ
+images/384_るびじうむ.png,るびじうむ
+images/385_るてちうむ.png,るてちうむ
+images/386_ちょろんちく等.png,ちょろんちく
+images/387_だっぬぅ　等.png,だっぬぅ
+images/388_ほっとくっとろん　等.png,ほっとくっとろん
+images/389_おって.png,おって
+images/390_ほまち.png,ほまち
+images/391_にこにこ.png,にこにこ
+images/392_げんき.png,げんき
+images/393_うわき.png,うわき
+images/394_なげだし.png,なげだし
+images/395_ちゅうにん.png,ちゅうにん
+images/396_しんぼう.png,しんぼう
+images/397_てきく.png,てきく
+images/398_よくばる等.png,よくばる
+images/399_つきあたる.png,つきあたる
+images/400_さんぼうこうじん　等.png,さんぼうこうじん
+images/401_ぜに.png,ぜに
+images/402_ふつつか.png,ふつつか
+images/403_みずぐるま　等.png,みずぐるま
+images/404_あらし.png,あらし
+images/405_くらぼね　等.png,くらぼね
+images/406_ひしお.png,ひしお
+images/407_おくば、おくは.png,おくば、おくは
+images/408_しらかす.png,しらかす
+images/409_むらさめ.png,むらさめ
+images/410_ひじかさあめ.png,ひじかさあめ
+images/411_あまつび　等.png,あまつび
+images/412_ふぶき.png,ふぶき
+images/413_かえりみ.png,かえりみ
+images/414_うつぼ　等.png,うつぼ
+images/415_すみざし　等.png,すみざし
+images/416_すみつぼ.png,すみつぼ
+images/417_あおだ、あんだ、はんだ.png,あおだ、あんだ、はんだ
+images/418_きせる.png,きせる
+images/419_せなかのほね.png,せなかのほね
+images/420_あしのごい.png,あしのごい
+images/421_ぬかば　等.png,ぬかば
+images/422_つばさ.png,つばさ
+images/423_やきば　等.png,やきば
+images/424_あからさま.png,あからさま
+images/425_うでまくり.png,うでまくり
+images/426_たまだすき.png,たまだすき
+images/427_さもあらばあれ.png,さもあらばあれ
+images/428_おもわく.png,おもわく
+images/429_さいつとし.png,さいつとし
+images/430_ふなやかた.png,ふなやかた
+images/431_さきおととし.png,さきおととし
+images/432_とぼそ　等.png,とぼそ
+images/433_かすがい.png,かすがい
+images/434_とじきみ　等.png,とじきみ
+images/435_たかばかり　等.png,たかばかり
+images/436_しゃぐま　等.png,しゃぐま
+images/437_もちづき　等.png,もちづき
+images/438_たぶさ.png,たぶさ
+images/439_はらから.png,はらから
+images/440_わげ.png,わげ
+images/441_ふゆげ　等.png,ふゆげ
+images/442_すりこ.png,すりこ
+images/443_やまい.png,やまい
+images/444_ほとけ.png,ほとけ
+images/445_なんじ.png,なんじ
+images/446_ひつぎ.png,ひつぎ
+images/447_ひじ、こう.png,ひじ、こう
+images/448_とらかす.png,とらかす
+images/449_たいらか.png,たいらか
+images/450_ことほぐ.png,ことほぐ
+images/451_かきみる.png,かきみる
+images/452_はなひる.png,はなひる
+images/453_もだえる.png,もだえる
+images/454_さがす.png,さがす
+images/455_なだらか.png,なだらか
+images/456_くつろぐ.png,くつろぐ
+images/457_やらう.png,やらう
+images/458_こぼす.png,こぼす
+images/459_おしまろばす.png,おしまろばす
+images/460_ころぶ.png,ころぶ
+images/461_こしからむ等.png,こしからむ
+images/462_のぞく.png,のぞく
+images/463_けだかい等.png,けだかい
+images/464_むさぼる.png,むさぼる
+images/465_うちわたす.png,うちわたす
+images/466_ふくつけし.png,ふくつけし
+images/467_ふくつけし.png,ふくつけし
+images/468_おしはさむ.png,おしはさむ
+images/469_いさぎよい.png,いさぎよい
+images/470_はりひらく.png,はりひらく
+images/471_つとめる.png,つとめる
+images/472_おぼつかなし.png,おぼつかなし
+images/473_つたきる.png,つたきる
+images/474_あざれたり.png,あざれたり
+images/475_こえる.png,こえる
+images/476_かみそる.png,かみそる
+images/477_たつ.png,たつ
+images/478_むさぼる.png,むさぼる
+images/479_ふける.png,ふける
+images/480_さらす.png,さらす
+images/481_よく.png,よく
+images/482_もうす.png,もうす
+images/483_とどこおる.png,とどこおる
+images/484_わざわい.png,わざわい
+images/485_はやい.png,はやい
+images/486_およぶ.png,およぶ
+images/487_おす.png,おす
+images/488_おく.png,おく
+images/489_うるわしい.png,うるわしい
+images/490_かつぐ.png,かつぐ
+images/491_うらむ.png,うらむ
+images/492_すわる.png,すわる
+images/493_あたえる.png,あたえる
+images/494_つかれる.png,つかれる
+images/495_ねむい.png,ねむい
+images/496_ひれふす.png,ひれふす
+images/497_ひそめき.png,ひそめき
+images/498_おもはかる.png,おもはかる
+images/499_さけのもと.png,さけのもと
+images/500_ぶりぶり.png,ぶりぶり
+images/501_りねぞるむ・おるきでえ.png,りねぞるむ・おるきでえ
+images/502_あだしごとはさておき　等.png,あだしごとはさておき
+images/503_わっせるしゅてるつぇ.png,わっせるしゅてるつぇ
+images/504_しゃろわーるい.png,しゃろわーるい
+images/505_あわてふためいて.png,あわてふためいて
+images/506_びしずんがる.png,びしずんがる
+images/507_うるとらめえる.png,うるとらめえる
+images/508_あいんふゅーるんぐ.png,あいんふゅーるんぐ
+images/509_なりんくまーる.png,なりんくまーる
+images/510_でぃ・えるみゅどぅんぐ.png,でぃ・えるみゅどぅんぐ
+images/511_ぎよちーぬ.png,ぎよちーぬ
+images/512_らぎゅいよちーん、らぎゅいよけーん.png,らぎゅいよちーん、らぎゅいよけーん
+images/513_こしのおほぼね.png,こしのおほぼね
+images/514_ぞるれん.png,ぞるれん
+images/515_ぴさーちぇりにっつぁ.png,ぴさーちぇりにっつぁ
+images/516_しゅぱぬんぐ.png,しゅぱぬんぐ
+images/517_とらもんたあね.png,とらもんたあね
+images/518_ろーずんぐ.png,ろーずんぐ
+images/519_でっさんぶる.png,でっさんぶる
+images/520_ぱんくちゅありちー.png,ぱんくちゅありちー
+images/521_ちたん.png,ちたん
+images/522_あるみにうむ.png,あるみにうむ
+images/523_まぐねしうむ.png,まぐねしうむ
+images/524_おすみうむ.png,おすみうむ
+images/525_いりじうむ.png,いりじうむ
+images/526_いっとりうむ.png,いっとりうむ
+images/527_べりりうむ.png,べりりうむ
+images/528_らざほーじうむ.png,らざほーじうむ
+images/529_ど.png,ど
+images/530_か、け、げ.png,か、け、げ
+images/531_だいれくたー.png,だいれくたー
+images/532_あぷらいとピアノ.png,あぷらいとピアノ
+images/533_さーじぇん.png,さーじぇん
+images/534_かたこんぶ.png,かたこんぶ
+images/535_あんじぇりゆす.png,あんじぇりゆす
+images/536_しょう.png,しょう
+images/537_じん、にん.png,じん、にん
+images/538_よう、ゆう.png,よう、ゆう
+images/539_てん.png,てん
+images/540_かん.png,かん
+images/541_たりうむ.png,たりうむ
+images/542_たりうむ.png,たりうむ
+images/543_たりうむ.png,たりうむ
+images/544_ぴんぽんがいこう等.png,ぴんぽんがいこう
+images/545_よろめく等.png,よろめく
+images/546_しゅう.png,しゅう
+images/547_たいへい.png,たいへい
+images/548_かつらつ、がろう.png,かつらつ、がろう
+images/549_けんげん　等.png,けんげん
+images/550_えへん.png,えへん
+images/551_りょうちょう.png,りょうちょう
+images/552_しゃてつ.png,しゃてつ
+images/553_おつきゃく.png,おつきゃく
+images/554_ほうかい.png,ほうかい
+images/555_だ、な.png,だ、な
+images/556_のう.png,のう
+images/557_ま.png,ま
+images/558_さい.png,さい
+images/559_かいかい.png,かいかい
+images/560_うまれる.png,うまれる
+images/561_ひょう.png,ひょう
+images/562_かくたん.png,かくたん
+images/563_はくえき.png,はくえき
+images/564_どうじん.png,どうじん
+images/565_へんせん.png,へんせん
+images/566_ていおう.png,ていおう
+images/567_ずいひん、すいひん.png,ずいひん、すいひん
+images/568_ようじょう.png,ようじょう
+images/569_とうそう.png,とうそう
+images/570_そうとう.png,そうとう
+images/571_あんこう.png,あんこう
+images/572_ものあらがい　等.png,ものあらがい
+images/573_まなづる　等.png,まなづる
+images/574_さんねんあぶ.png,さんねんあぶ
+images/575_にんどういばら.png,にんどういばら
+images/576_ひょうしぎ.png,ひょうしぎ
+images/577_かたぐるま.png,かたぐるま
+images/578_さんすくみ.png,さんすくみ
+images/579_ぎょう、ごう.png,ぎょう、ごう
+images/580_せい.png,せい
+images/581_つばす.jpg,つばす
+images/582_いしぶし、いしぶち　等.jpg,いしぶし、いしぶち
+images/583_なまず、なまづ.jpg,なまず、なまづ
+images/584_しろねずみ.jpg,しろねずみ
+images/585_はなのくもやよいのはなごろも.jpg,はなのくもやよいのはなごろも
+images/586_かたかしきのいい　等.jpg,かたかしきのいい
+images/587_すし.jpg,すし
+images/588_みぞれ.jpg,みぞれ
+images/589_ひるくちかい.jpg,ひるくちかい
+images/590_ぐりはま、ぐれはま.jpg,ぐりはま、ぐれはま
+images/591_つまからげはだしのふりそで.jpg,つまからげはだしのふりそで
+images/592_さんかつにせのつやむすび.jpg,さんかつにせのつやむすび
+images/593_くえてぃおう　等.jpg,くえてぃおう
+images/594_こむびんざん.jpg,こむびんざん
+images/595_ばいんざーろん、ばいんやーろん.jpg,ばいんざーろん、ばいんやーろん
+images/596_にらむ.jpg,にらむ
+images/597_あなうら.jpg,あなうら
+images/598_ばっかつ.jpg,ばっかつ
+images/599_せりふ.jpg,せりふ
+images/600_ほくべい.jpg,ほくべい
