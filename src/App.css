@@ -249,27 +249,29 @@ h1 {
 }
 
 .quiz-input {
-  width: 100%;
-  max-width: 450px;
-  padding: 16px;
-  font-size: 20px;
-  border: 3px solid #e0e0e0;
-  border-radius: 12px;
-  text-align: center;
-  transition: all 0.3s;
-  background: rgba(255, 255, 255, 0.9);
-  font-weight: 500;
+  color: #000;                /* 入力文字を黒に */
+  background-color: #fff;     /* 背景を白に */
+  caret-color: #d33;          /* カーソル色（任意） */
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  outline: none;
 }
 
 .quiz-input:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  border-color: #6ca0ff;
+  box-shadow: 0 0 0 3px rgba(108,160,255,0.15);
 }
 
-.quiz-input:disabled {
-  background: #f5f5f5;
-  opacity: 0.7;
+/* プレースホルダが見づらい場合の色 */
+.quiz-input::placeholder {
+  color: #999;
+}
+
+/* もし他のスタイルに上書きされる場合は強制する */
+.quiz-input.override-visible {
+  color: #000 !important;
+  background-color: #fff !important;
 }
 
 .quiz-buttons {
