@@ -85,21 +85,18 @@ h1 {
 .list-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 30px;
-  margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-  border-radius: 16px;
-  backdrop-filter: blur(10px);
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.9); /* 必要に応じて調整 */
+  border-radius: 6px;
 }
 
 .list-header p {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #667eea;
   margin: 0;
+  color: #111; /* 黒寄りの色でコントラスト確保 */
+  font-weight: 600;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
 }
 
 .start-quiz-button {
@@ -138,6 +135,8 @@ h1 {
   animation: fadeInUp 0.5s ease-out;
   animation-fill-mode: both;
   backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
 }
 
 .kanji-card:hover {
@@ -159,10 +158,15 @@ h1 {
 }
 
 .kanji-card .reading {
-  font-size: 16px;
-  font-weight: 600;
-  color: #667eea;
-  margin-top: 8px;
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  background: rgba(255,255,255,0.85); /* 半透明の背景で読みやすく */
+  color: #111;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  backdrop-filter: blur(2px);
 }
 
 /* 問題モード */
