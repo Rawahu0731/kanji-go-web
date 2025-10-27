@@ -26,6 +26,24 @@ function App() {
   const [isCorrect, setIsCorrect] = useState(false);
   const [score, setScore] = useState({ correct: 0, incorrect: 0 });
 
+  // --- サービスワーカー登録: 画像キャッシュ用 ---
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      // load イベント時に登録すると、公開ディレクトリの sw.js が確実に取得できる
+      const onLoad = () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((reg) => {
+            console.log('ServiceWorker registered:', reg);
+          })
+          .catch((err) => {
+            console.warn('ServiceWorker registration failed:', err);
+          });
+      };
+      window.addEventListener('load', onLoad);
+      return () => window.removeEventListener('load', onLoad);
+    }
+  }, []);
+
   useEffect(() => {
     async function load() {
       setLoading(true);
