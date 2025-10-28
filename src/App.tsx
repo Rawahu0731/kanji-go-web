@@ -284,6 +284,11 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* フッター: 免責事項へのリンク */}
+      <footer className="app-footer" style={{ marginTop: '2.5rem' }}>
+        <a href="/disclaimer.html" target="_blank" rel="noopener noreferrer">免責事項</a>
+      </footer>
     </>
   )
 }

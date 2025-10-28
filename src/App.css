@@ -1,30 +1,24 @@
 #root {
-  max-width: 1400px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2.25rem;
   text-align: center;
 }
 
-/* ヘッダースタイル */
+/* ヘッダースタイル（白背景に合うグラデーション文字） */
 h1 {
-  font-size: 3rem;
-  font-weight: 800;
-  color: white;
-  margin-bottom: 2rem;
-  text-shadow: 
-    0 2px 10px rgba(0, 0, 0, 0.3),
-    0 4px 20px rgba(102, 126, 234, 0.5),
-    0 0 40px rgba(118, 75, 162, 0.4);
+  font-size: 2.6rem;
+  font-weight: 900;
+  margin-bottom: 1.6rem;
   animation: fadeInDown 0.8s ease-out;
-  background: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(10px);
-  padding: 1.5rem 3rem;
-  border-radius: 20px;
+  /* グラデーションの文字色 */
+  background: linear-gradient(90deg, #4756e6 0%, #764ba2 60%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   display: inline-block;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 0.5rem;
+  letter-spacing: -0.02em;
 }
 
 /* レベル選択ボタン */
@@ -77,8 +71,9 @@ h1 {
 }
 
 .level-button:not(.active) {
-  background: rgba(255, 255, 255, 0.9);
+  background: #fff;
   color: #333;
+  border: 1px solid rgba(20,20,40,0.04);
 }
 
 /* 一覧モード */
@@ -126,15 +121,14 @@ h1 {
 }
 
 .kanji-card {
-  background: rgba(255, 255, 255, 0.95);
-  border: none;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #fff;
+  border: 1px solid rgba(20,20,40,0.04);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   animation: fadeInUp 0.5s ease-out;
   animation-fill-mode: both;
-  backdrop-filter: blur(10px);
   position: relative;
   overflow: hidden;
 }
@@ -161,12 +155,12 @@ h1 {
   position: absolute;
   left: 8px;
   bottom: 8px;
-  background: rgba(255,255,255,0.85); /* 半透明の背景で読みやすく */
+  background: rgba(255,255,255,0.95); /* 白背景でも読みやすく */
   color: #111;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 9px;
+  border-radius: 6px;
   font-size: 0.95rem;
-  backdrop-filter: blur(2px);
+  border: 1px solid rgba(20,20,40,0.04);
 }
 
 /* 問題モード */
@@ -217,13 +211,12 @@ h1 {
 }
 
 .quiz-card {
-  background: rgba(255, 255, 255, 0.98);
-  border: none;
-  border-radius: 24px;
-  padding: 40px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(20px);
-  animation: scaleIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #fff;
+  border: 1px solid rgba(20,20,40,0.04);
+  border-radius: 20px;
+  padding: 36px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.06);
+  animation: scaleIn 0.36s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .quiz-image {
@@ -498,4 +491,21 @@ h1 {
     flex-direction: column;
     gap: 15px;
   }
+}
+
+/* フッター小物 */
+.app-footer {
+  text-align: center;
+  font-size: 0.95rem;
+  color: #5b5f73;
+}
+.app-footer a {
+  color: #4756e6;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background 0.18s;
+}
+.app-footer a:hover {
+  background: rgba(71,86,230,0.06);
 }
