@@ -25,6 +25,10 @@ function App() {
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [score, setScore] = useState({ correct: 0, incorrect: 0 });
+  // 単語帳モード: 一覧で読みを隠すかどうか
+  const [studyMode, setStudyMode] = useState(false);
+  // reveal 状態をファイル名（または imageUrl）をキーに管理
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
 
   // --- サービスワーカー登録: 画像キャッシュ用 ---
   useEffect(() => {
@@ -115,6 +119,18 @@ function App() {
     setMode('quiz');
   };
 
+  // カードがクリックされたとき（単語帳モード時は読みを表示/非表示）
+  const handleCardClick = (it: Item) => {
+    if (!studyMode) return;
+    const key = it.filename || it.imageUrl;
+    setRevealed(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   // 一覧モードに戻る
   const backToList = () => {
     setMode('list');
@@ -192,17 +208,46 @@ function App() {
         <div>
           <div className="list-header">
             <p>レベル{selectedLevel}: {items.length}問</p>
-            <button onClick={startQuiz} className="start-quiz-button">
-              問題モード開始
-            </button>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <button
+                onClick={() => {
+                  setStudyMode(prev => !prev);
+                  setRevealed(new Set());
+                }}
+                className={`study-toggle ${studyMode ? 'active' : ''}`}
+                aria-pressed={studyMode}
+              >
+                単語帳モード: {studyMode ? 'ON' : 'OFF'}
+              </button>
+
+              <button onClick={startQuiz} className="start-quiz-button">
+                問題モード開始
+              </button>
+            </div>
           </div>
           <div className="card-grid">
-            {items.map((it, i) => (
-              <div key={i} className="kanji-card">
-                <img src={it.imageUrl} alt={it.filename} />
-                <div className="reading">読み: {it.reading}</div>
-              </div>
-            ))}
+            {items.map((it, i) => {
+              const key = it.filename || it.imageUrl;
+              const isRevealed = revealed.has(key);
+              return (
+                <div
+                  key={i}
+                  className={`kanji-card ${studyMode ? 'clickable' : ''}`}
+                  onClick={() => handleCardClick(it)}
+                >
+                  <img src={it.imageUrl} alt={it.filename} />
+                  {studyMode ? (
+                    isRevealed ? (
+                      <div className="reading">読み: {it.reading}</div>
+                    ) : (
+                      <div className="hidden-reading">クリックで表示</div>
+                    )
+                  ) : (
+                    <div className="reading">読み: {it.reading}</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -285,9 +330,11 @@ function App() {
         </div>
       )}
 
-      {/* フッター: 免責事項へのリンク */}
+      {/* フッター: 免責事項・パッチノートへのリンク */}
       <footer className="app-footer" style={{ marginTop: '2.5rem' }}>
         <a href="/disclaimer.html" target="_blank" rel="noopener noreferrer">免責事項</a>
+        <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
+        <a href="/patch-notes.html" target="_blank" rel="noopener noreferrer">パッチノート</a>
       </footer>
     </>
   )

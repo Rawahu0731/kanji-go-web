@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>アップデート履歴 - 漢字勉強サイト</title>
+    <style>
+      body { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial; background: #fff; color:#222; margin:0; padding:2rem; }
+      .container { max-width:900px; margin:0 auto; }
+      h1 { font-size:1.8rem; margin-bottom:1rem; color:#4756e6; }
+      time { color:#6b6f85; font-size:0.95rem; }
+      h2 { font-size:1.15rem; margin-top:1.2rem; color:#222; }
+      ul { margin:0.6rem 0 1.2rem 1.2rem; color:#333; }
+      li { margin-bottom:0.5rem; }
+      .back { display:inline-block; margin-top:1.6rem; padding:0.6rem 1rem; background:#fff; border:1px solid #eef0f6; border-radius:8px; box-shadow:0 6px 16px rgba(30,30,60,0.04); text-decoration:none; color:#222; }
+      .meta { margin-bottom:1rem; color:#666; }
+      .section { margin-bottom:1rem; padding-bottom:0.6rem; border-bottom:1px solid #f0f0f4; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>アップデート履歴（パッチノート）</h1>
+      <p class="meta">このページではサイトの主要な更新内容を時系列で記録しています。</p>
+
+      <section class="section">
+        <h2>2025-10-29 — v0.2.0</h2>
+        <time>公開日: 2025-10-29</time>
+        <ul>
+          <li>単語帳モードを追加：一覧で読みを隠してカードをクリックすると読みが表示されます（ON/OFF トグルあり）。</li>
+          <li>白背景デザインを適用：全体を白背景に調整しつつ、カードに微妙なシャドウとグラデーションを付与しました。</li>
+          <li>サービスワーカーを導入：画像のキャッシュを行い、再読み込み時の負荷を軽減します（Cache-first 戦略）。</li>
+          <li>免責事項ページを追加（<a href="/disclaimer.html">免責事項</a>）。</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>2025-10-27 — v0.1.0</h2>
+        <time>公開日: 2025-10-27</time>
+        <ul>
+          <li>初期リリース: レベル7の漢字一覧表示と問題モード（シャッフル出題）を実装。</li>
+          <li>CSV からのデータ読み込みと画像表示に対応。</li>
+        </ul>
+      </section>
+
+      <a class="back" href="/">← サイトに戻る</a>
+    </div>
+  </body>
+</html>

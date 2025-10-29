@@ -163,6 +163,36 @@ h1 {
   border: 1px solid rgba(20,20,40,0.04);
 }
 
+/* 単語帳モード用 */
+.kanji-card.clickable { cursor: pointer; }
+.hidden-reading {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  background: linear-gradient(180deg, #fbfdff, #f7f8fc);
+  color: #6b6f85;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  border: 1px dashed rgba(80,80,120,0.06);
+  box-shadow: 0 6px 18px rgba(20,20,40,0.03);
+}
+
+.study-toggle {
+  padding: 10px 14px;
+  font-weight: 700;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #eef0f6;
+  color: #333;
+  box-shadow: 0 6px 16px rgba(30,30,60,0.04);
+}
+.study-toggle.active {
+  background: linear-gradient(90deg, #4756e6 0%, #764ba2 60%);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(71,86,230,0.15);
+}
+
 /* 問題モード */
 .quiz-container {
   max-width: 700px;
