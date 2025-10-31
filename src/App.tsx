@@ -10,6 +10,7 @@ type Item = {
 
 type Level = 4 | 5 | 6 | 7 | 8;
 type Mode = 'list' | 'quiz';
+type QuizFormat = 'input' | 'choice'; // 入力 or 四択
 
 function App() {
   const [selectedLevel, setSelectedLevel] = useState<Level>(7);
@@ -19,12 +20,14 @@ function App() {
   
   // 問題モード用のステート
   const [mode, setMode] = useState<Mode>('list');
+  const [quizFormat, setQuizFormat] = useState<QuizFormat>('input'); // 問題形式
   const [quizItems, setQuizItems] = useState<Item[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [score, setScore] = useState({ correct: 0, incorrect: 0 });
+  const [choices, setChoices] = useState<string[]>([]); // 四択の選択肢
   // 単語帳モード: 一覧で読みを隠すかどうか
   const [studyMode, setStudyMode] = useState(false);
   // reveal 状態をファイル名（または imageUrl）をキーに管理
@@ -118,6 +121,24 @@ function App() {
     setScore({ correct: 0, incorrect: 0 });
     setMode('quiz');
   };
+
+  // 四択の選択肢を生成
+  const generateChoices = (correctItem: Item, allItems: Item[]): string[] => {
+    const correct = correctItem.reading;
+    const others = allItems.filter(it => it.reading !== correct);
+    const shuffledOthers = [...others].sort(() => Math.random() - 0.5);
+    const wrongChoices = shuffledOthers.slice(0, 3).map(it => it.reading);
+    const all = [correct, ...wrongChoices];
+    return all.sort(() => Math.random() - 0.5);
+  };
+
+  // 問題が変わったとき、四択の選択肢を更新
+  useEffect(() => {
+    if (mode === 'quiz' && quizFormat === 'choice' && quizItems.length > 0 && quizItems[currentIndex]) {
+      const opts = generateChoices(quizItems[currentIndex], quizItems);
+      setChoices(opts);
+    }
+  }, [mode, quizFormat, quizItems, currentIndex]);
 
   // カードがクリックされたとき（単語帳モード時は読みを表示/非表示）
   const handleCardClick = (it: Item) => {
@@ -267,6 +288,30 @@ function App() {
             </div>
           </div>
 
+          {/* 問題形式の選択 */}
+          <div className="quiz-format-selector">
+            <button
+              onClick={() => {
+                setQuizFormat('input');
+                setUserAnswer('');
+                setShowResult(false);
+              }}
+              className={`format-button ${quizFormat === 'input' ? 'active' : ''}`}
+            >
+              入力形式
+            </button>
+            <button
+              onClick={() => {
+                setQuizFormat('choice');
+                setUserAnswer('');
+                setShowResult(false);
+              }}
+              className={`format-button ${quizFormat === 'choice' ? 'active' : ''}`}
+            >
+              四択形式
+            </button>
+          </div>
+
           <div className="quiz-card">
             <img 
               src={quizItems[currentIndex].imageUrl} 
@@ -274,29 +319,70 @@ function App() {
               className="quiz-image"
             />
             
-            <div className="quiz-input-container">
-              <label className="quiz-label">
-                この漢字の読みは？<br />（送り仮名も含めてすべて入力してください）
-              </label>
-              <input
-                type="text"
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !showResult) {
-                    checkAnswer();
-                  } else if (e.key === 'Enter' && showResult) {
-                    nextQuestion();
-                  }
-                }}
-                disabled={showResult}
-                className="quiz-input"
-                placeholder="ひらがなで入力"
-                autoFocus
-              />
-            </div>
+            {quizFormat === 'input' ? (
+              // 入力形式
+              <div className="quiz-input-container">
+                <label className="quiz-label">
+                  この漢字の読みは？<br />（送り仮名も含めてすべて入力してください）
+                </label>
+                <input
+                  type="text"
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !showResult) {
+                      checkAnswer();
+                    } else if (e.key === 'Enter' && showResult) {
+                      nextQuestion();
+                    }
+                  }}
+                  disabled={showResult}
+                  className="quiz-input"
+                  placeholder="ひらがなで入力"
+                  autoFocus
+                />
+              </div>
+            ) : (
+              // 四択形式
+              <div className="quiz-choices-container">
+                <label className="quiz-label">
+                  この漢字の読みは？（選択肢から選んでください）
+                </label>
+                <div className="quiz-choices">
+                  {choices.map((choice, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        if (!showResult) {
+                          setUserAnswer(choice);
+                          // 自動で解答チェック
+                          const correctReading = quizItems[currentIndex].reading;
+                          const correctOptions = correctReading.split('、').map(r => r.trim());
+                          const correct = correctOptions.includes(choice.trim());
+                          setIsCorrect(correct);
+                          setShowResult(true);
+                          if (correct) {
+                            setScore(prev => ({ ...prev, correct: prev.correct + 1 }));
+                          } else {
+                            setScore(prev => ({ ...prev, incorrect: prev.incorrect + 1 }));
+                          }
+                        }
+                      }}
+                      disabled={showResult}
+                      className={`choice-button ${
+                        showResult && choice === quizItems[currentIndex].reading ? 'correct-choice' : ''
+                      } ${
+                        showResult && choice === userAnswer && !isCorrect ? 'wrong-choice' : ''
+                      }`}
+                    >
+                      {choice}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-            {!showResult ? (
+            {!showResult && quizFormat === 'input' && (
               <div className="quiz-buttons">
                 <button
                   onClick={checkAnswer}
@@ -309,7 +395,9 @@ function App() {
                   あきらめる
                 </button>
               </div>
-            ) : (
+            )}
+            
+            {showResult && (
               <div className="result-container">
                 <div className={`result-message ${isCorrect ? 'correct' : 'incorrect'}`}>
                   {isCorrect ? '✓ 正解！' : '✗ 不正解'}
