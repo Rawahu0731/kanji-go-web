@@ -622,3 +622,71 @@ h1 {
 .app-footer a:hover {
   background: rgba(71,86,230,0.06);
 }
+
+/* 不具合情報バナー */
+.issue-banner {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: linear-gradient(135deg, #fff3cd 0%, #ffe8a1 100%);
+  border-bottom: 2px solid #ffc107;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.15);
+  animation: slideDown 0.3s ease-out;
+}
+
+.issue-banner-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.issue-icon {
+  font-size: 1.2rem;
+}
+
+.issue-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #856404;
+}
+
+.issue-text a {
+  color: #d9534f;
+  text-decoration: underline;
+  margin: 0 4px;
+}
+
+.issue-text a:hover {
+  color: #c9302c;
+}
+
+.issue-close {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  color: #856404;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.issue-close:hover {
+  background: rgba(0,0,0,0.1);
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

@@ -32,6 +32,10 @@ function App() {
   const [studyMode, setStudyMode] = useState(false);
   // reveal 状態をファイル名（または imageUrl）をキーに管理
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  
+  // 不具合情報の表示フラグ（true の場合、ページ上部にバナーを表示）
+  const [hasKnownIssues, setHasKnownIssues] = useState(true); // 不具合発生中のため true
+  const [showIssueBanner, setShowIssueBanner] = useState(true); // バナーを閉じられるように
 
   // --- サービスワーカー登録: 画像キャッシュ用 ---
   useEffect(() => {
@@ -205,6 +209,26 @@ function App() {
 
   return (
     <>
+      {/* 不具合情報バナー */}
+      {hasKnownIssues && showIssueBanner && (
+        <div className="issue-banner">
+          <div className="issue-banner-content">
+            <span className="issue-icon">⚠️</span>
+            <span className="issue-text">
+              不具合が発生しています。詳細は
+              <a href="/known-issues.html" target="_blank" rel="noopener noreferrer">こちら</a>
+            </span>
+            <button
+              className="issue-close"
+              onClick={() => setShowIssueBanner(false)}
+              aria-label="閉じる"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       <h1>漢字勉強サイト</h1>
       
       {/* レベル選択ボタン */}
@@ -423,6 +447,8 @@ function App() {
         <a href="/disclaimer.html" target="_blank" rel="noopener noreferrer">免責事項</a>
         <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
         <a href="/patch-notes.html" target="_blank" rel="noopener noreferrer">パッチノート</a>
+        <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
+        <a href="/known-issues.html" target="_blank" rel="noopener noreferrer">既知の不具合</a>
       </footer>
     </>
   )
