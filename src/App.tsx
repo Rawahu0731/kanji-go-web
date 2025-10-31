@@ -464,7 +464,7 @@ function App() {
         <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
         <a href="/patch-notes.html" target="_blank" rel="noopener noreferrer">パッチノート</a>
         <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
-        <a href="/known-issues.html" target="_blank" rel="noopener noreferrer">既知の不具合</a>
+        <a href="/known-issues.html" target="_blank" rel="noopener noreferrer">不具合情報</a>
       </footer>
     </>
   )
