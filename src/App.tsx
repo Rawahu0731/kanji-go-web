@@ -34,8 +34,11 @@ function App() {
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   
   // 不具合情報の表示フラグ（true の場合、ページ上部にバナーを表示）
-  const [hasKnownIssues, setHasKnownIssues] = useState(true); // 不具合発生中のため true
+  const hasKnownIssues = false; // 修正完了のため false（必要に応じて true に変更）
   const [showIssueBanner, setShowIssueBanner] = useState(true); // バナーを閉じられるように
+  
+  // 四択: 正解のインデックスを保持（0-3）
+  const [correctChoiceIndex, setCorrectChoiceIndex] = useState<number>(-1);
 
   // --- サービスワーカー登録: 画像キャッシュ用 ---
   useEffect(() => {
@@ -126,21 +129,36 @@ function App() {
     setMode('quiz');
   };
 
-  // 四択の選択肢を生成
-  const generateChoices = (correctItem: Item, allItems: Item[]): string[] => {
+  // 四択の選択肢を生成（正解のインデックスも返す）
+  const generateChoices = (correctItem: Item, allItems: Item[]): { choices: string[], correctIndex: number } => {
     const correct = correctItem.reading;
     const others = allItems.filter(it => it.reading !== correct);
     const shuffledOthers = [...others].sort(() => Math.random() - 0.5);
     const wrongChoices = shuffledOthers.slice(0, 3).map(it => it.reading);
-    const all = [correct, ...wrongChoices];
-    return all.sort(() => Math.random() - 0.5);
+    
+    // 正解を含む4つの選択肢を作成
+    const correctIndex = Math.floor(Math.random() * 4); // 0-3 のランダムな位置
+    const choicesArray: string[] = [];
+    let wrongIndex = 0;
+    
+    for (let i = 0; i < 4; i++) {
+      if (i === correctIndex) {
+        choicesArray.push(correct);
+      } else {
+        choicesArray.push(wrongChoices[wrongIndex] || '');
+        wrongIndex++;
+      }
+    }
+    
+    return { choices: choicesArray, correctIndex };
   };
 
   // 問題が変わったとき、四択の選択肢を更新
   useEffect(() => {
     if (mode === 'quiz' && quizFormat === 'choice' && quizItems.length > 0 && quizItems[currentIndex]) {
-      const opts = generateChoices(quizItems[currentIndex], quizItems);
-      setChoices(opts);
+      const result = generateChoices(quizItems[currentIndex], quizItems);
+      setChoices(result.choices);
+      setCorrectChoiceIndex(result.correctIndex);
     }
   }, [mode, quizFormat, quizItems, currentIndex]);
 
@@ -379,10 +397,8 @@ function App() {
                       onClick={() => {
                         if (!showResult) {
                           setUserAnswer(choice);
-                          // 自動で解答チェック
-                          const correctReading = quizItems[currentIndex].reading;
-                          const correctOptions = correctReading.split('、').map(r => r.trim());
-                          const correct = correctOptions.includes(choice.trim());
+                          // インデックスで正解判定（文字列比較を使わない）
+                          const correct = idx === correctChoiceIndex;
                           setIsCorrect(correct);
                           setShowResult(true);
                           if (correct) {
@@ -394,7 +410,7 @@ function App() {
                       }}
                       disabled={showResult}
                       className={`choice-button ${
-                        showResult && choice === quizItems[currentIndex].reading ? 'correct-choice' : ''
+                        showResult && idx === correctChoiceIndex ? 'correct-choice' : ''
                       } ${
                         showResult && choice === userAnswer && !isCorrect ? 'wrong-choice' : ''
                       }`}

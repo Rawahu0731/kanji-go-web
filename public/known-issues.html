@@ -28,46 +28,24 @@
 
       <section class="section">
         <h2>現在報告されている不具合</h2>
-        <ul>
-          <li>
-            <strong>四択クイズで正解の選択肢を選んでも不正解と判定される</strong>
-            <span class="status investigating">調査中</span>
-            <p style="margin:0.3rem 0 0 0; color:#666; font-size:0.95rem;">
-              <strong>報告日:</strong> 2025-10-31<br />
-              <strong>状況:</strong> 四択形式の問題で正しい選択肢を選択しても、不正解として扱われることがあります。<br />
-              <strong>対応状況:</strong> 現在、文字列比較ロジックの見直しと修正を進めています。
-            </p>
-          </li>
-        </ul>
-        
-        <!-- 不具合がある場合は以下のようなフォーマットで追加してください
-        <ul>
-          <li>
-            <strong>四択形式で同じ選択肢が複数表示される</strong>
-            <span class="status investigating">調査中</span>
-            <p style="margin:0.3rem 0 0 0; color:#666; font-size:0.95rem;">
-              漢字データが少ない場合に発生することがあります。修正を検討中です。
-            </p>
-          </li>
-        </ul>
-        -->
+        <p style="color:#666;">現在、重大な不具合は報告されていません。</p>
       </section>
 
       <section class="section">
         <h2>修正済みの不具合</h2>
-        <p style="color:#666;">現在、修正済みの不具合はありません。</p>
-        
-        <!-- 修正済みの場合は以下のようなフォーマットで追加
         <ul>
           <li>
-            <strong>サービスワーカーが正しく登録されない</strong>
-            <span class="status fixed">修正済み (v0.2.1)</span>
+            <strong>四択クイズで正解の選択肢を選んでも不正解と判定される</strong>
+            <span class="status fixed">修正済み (v0.3.1)</span>
             <p style="margin:0.3rem 0 0 0; color:#666; font-size:0.95rem;">
-              2025-10-30 に修正されました。キャッシュが正常に動作するようになりました。
+              <strong>報告日:</strong> 2025-10-31<br />
+              <strong>修正日:</strong> 2025-10-31<br />
+              <strong>状況:</strong> 四択形式の問題で正しい選択肢を選択しても、不正解として扱われることがありました。<br />
+              <strong>原因:</strong> 正解の読みに「、」が含まれている場合、文字列比較で一致しないことがありました。<br />
+              <strong>修正内容:</strong> 選択肢のインデックス（位置）で正解判定するように変更しました。正解ボタンをクリックすれば必ず正解になります。
             </p>
           </li>
         </ul>
-        -->
       </section>
 
       <section class="section">
