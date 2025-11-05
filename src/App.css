@@ -79,19 +79,48 @@ h1 {
 /* 一覧モード */
 .list-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 16px;
   padding: 8px 12px;
-  background: rgba(255,255,255,0.9); /* 必要に応じて調整 */
+  background: rgba(255,255,255,0.9);
   border-radius: 6px;
 }
 
 .list-header p {
   margin: 0;
-  color: #111; /* 黒寄りの色でコントラスト確保 */
+  color: #111;
   font-weight: 600;
   text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+  text-align: center;
+}
+
+/* ジャンル選択ドロップダウン */
+.genre-select {
+  padding: 10px 40px 10px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+  background: white;
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  min-width: 200px;
+}
+
+.genre-select:hover {
+  border-color: rgba(102, 126, 234, 0.6);
+  background-color: rgba(102, 126, 234, 0.05);
+}
+
+.genre-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .start-quiz-button {
@@ -125,12 +154,15 @@ h1 {
   border: 1px solid rgba(20,20,40,0.04);
   border-radius: 14px;
   padding: 18px;
+  padding-bottom: 12px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
   transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   animation: fadeInUp 0.5s ease-out;
   animation-fill-mode: both;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .kanji-card:hover {
@@ -142,9 +174,10 @@ h1 {
   width: 100%;
   height: auto;
   border-radius: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s;
+  flex-shrink: 0;
 }
 
 .kanji-card:hover img {
@@ -152,15 +185,29 @@ h1 {
 }
 
 .kanji-card .reading {
-  position: absolute;
-  left: 8px;
-  bottom: 8px;
-  background: rgba(255,255,255,0.95); /* 白背景でも読みやすく */
+  margin-top: auto;
+  background: rgba(255,255,255,0.95);
   color: #111;
   padding: 6px 9px;
   border-radius: 6px;
   font-size: 0.95rem;
   border: 1px solid rgba(20,20,40,0.04);
+  text-align: center;
+}
+
+.kanji-card .additional-info {
+  background: rgba(135, 206, 250, 0.95);
+  color: #111;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  border: 1px solid rgba(20,20,40,0.06);
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  line-height: 1.4;
+  margin-top: 6px;
+  word-wrap: break-word;
 }
 
 /* 単語帳モード用 */

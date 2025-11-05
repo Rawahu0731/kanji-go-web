@@ -6,17 +6,101 @@ type Item = {
   reading: string;
   meaning?: string;
   imageUrl: string;
+  additionalInfo?: string;
 };
 
 type Level = 4 | 5 | 6 | 7 | 8;
 type Mode = 'list' | 'quiz';
 type QuizFormat = 'input' | 'choice'; // 入力 or 四択
 
+// CSV行をパースする関数（ダブルクォートで囲まれたカンマに対応）
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  
+  result.push(current);
+  return result;
+}
+
+// 読み方から送り仮名を抽出し、表示用にフォーマット
+function formatReadingWithOkurigana(reading: string) {
+  // 'で囲まれた部分を赤色にする
+  const parts = [];
+  let lastIndex = 0;
+  const regex = /'([^']+)'/g;
+  let match;
+  let key = 0;
+  
+  while ((match = regex.exec(reading)) !== null) {
+    // マッチ前の部分
+    if (match.index > lastIndex) {
+      parts.push(
+        <span key={key++}>{reading.substring(lastIndex, match.index)}</span>
+      );
+    }
+    // 送り仮名部分（赤色）
+    parts.push(
+      <span key={key++} style={{ color: '#ff6b6b' }}>{match[1]}</span>
+    );
+    lastIndex = regex.lastIndex;
+  }
+  
+  // 残りの部分
+  if (lastIndex < reading.length) {
+    parts.push(
+      <span key={key++}>{reading.substring(lastIndex)}</span>
+    );
+  }
+  
+  return <>{parts}</>;
+}
+
+// 読み方から送り仮名を除外した本体部分を取得
+function extractReadingCore(reading: string): string {
+  return reading.replace(/'[^']*'/g, '');
+}
+
 function App() {
   const [selectedLevel, setSelectedLevel] = useState<Level>(7);
   const [items, setItems] = useState<Item[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // ジャンル絞り込み用のステート
+  const [selectedGenre, setSelectedGenre] = useState<string>('all');
+  const genres = [
+    'all',
+    '動物',
+    '植物・藻類',
+    '地名・建造物',
+    '人名',
+    'スラング',
+    '飲食',
+    '単位',
+    '演目・外題',
+    '則天文字',
+    'チュノム',
+    '元素',
+    '嘘字',
+    '簡体字',
+    '文学の漢字',
+    '字義未詳',
+    '西夏文字'
+  ];
   
   // 問題モード用のステート
   const [mode, setMode] = useState<Mode>('list');
@@ -80,9 +164,13 @@ function App() {
         }
         const text = await res.text();
         const lines = text.split(/\r?\n/).filter(Boolean);
-        const header = lines.shift()?.split(',').map(h => h.trim().toLowerCase()) || [];
+        
+        // ヘッダー行を解析
+        const headerLine = lines.shift() || '';
+        const header = parseCSVLine(headerLine).map(h => h.trim().toLowerCase());
+        
         const data = lines.map(line => {
-          const cols = line.split(',');
+          const cols = parseCSVLine(line);
           const obj: any = {};
           for (let i = 0; i < cols.length; i++) {
             obj[header[i] || `col${i}`] = cols[i].trim();
@@ -102,6 +190,7 @@ function App() {
             reading: d.reading || d['reading'] || '',
             meaning: d.meaning,
             imageUrl,
+            additionalInfo: d.additional_info || d['additional_info'] || '',
           } as Item;
         });
         setItems(mapped);
@@ -143,9 +232,11 @@ function App() {
     
     for (let i = 0; i < 4; i++) {
       if (i === correctIndex) {
-        choicesArray.push(correct);
+        // 正解の選択肢から送り仮名を除外
+        choicesArray.push(extractReadingCore(correct));
       } else {
-        choicesArray.push(wrongChoices[wrongIndex] || '');
+        // 不正解の選択肢からも送り仮名を除外
+        choicesArray.push(extractReadingCore(wrongChoices[wrongIndex] || ''));
         wrongIndex++;
       }
     }
@@ -189,7 +280,12 @@ function App() {
     // 正解が「、」で区切られている場合、いずれかに一致すればOK
     const correctOptions = correctReading.split('、').map(r => r.trim());
     const userInput = userAnswer.trim();
-    const correct = correctOptions.includes(userInput);
+    
+    // 各正解オプションについて、送り仮名を除いた部分で照合
+    const correct = correctOptions.some(option => {
+      const coreReading = extractReadingCore(option);
+      return userInput === coreReading;
+    });
     
     setIsCorrect(correct);
     setShowResult(true);
@@ -267,11 +363,41 @@ function App() {
       {error && <div className="error">{error}</div>}
       
       {/* 一覧モード */}
-      {items && mode === 'list' && (
+      {items && mode === 'list' && (() => {
+        // ジャンルでフィルタリング
+        const filteredItems = selectedGenre === 'all' 
+          ? items 
+          : items.filter(item => {
+              const info = item.additionalInfo || '';
+              // ジャンル名が含まれているかチェック
+              return info.includes(selectedGenre);
+            });
+        
+        return (
         <div>
           <div className="list-header">
-            <p>レベル{selectedLevel}: {items.length}問</p>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <p>レベル{selectedLevel}: {filteredItems.length}問 {selectedGenre !== 'all' && `(${selectedGenre})`}</p>
+            
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {/* ジャンル選択ドロップダウン */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <label htmlFor="genre-select" style={{ fontWeight: 600, color: '#333' }}>
+                  ジャンル:
+                </label>
+                <select
+                  id="genre-select"
+                  value={selectedGenre}
+                  onChange={(e) => setSelectedGenre(e.target.value)}
+                  className="genre-select"
+                >
+                  {genres.map(genre => (
+                    <option key={genre} value={genre}>
+                      {genre === 'all' ? 'すべて' : genre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
               <button
                 onClick={() => {
                   setStudyMode(prev => !prev);
@@ -289,7 +415,7 @@ function App() {
             </div>
           </div>
           <div className="card-grid">
-            {items.map((it, i) => {
+            {filteredItems.map((it, i) => {
               const key = it.filename || it.imageUrl;
               const isRevealed = revealed.has(key);
               return (
@@ -301,19 +427,30 @@ function App() {
                   <img src={it.imageUrl} alt={it.filename} />
                   {studyMode ? (
                     isRevealed ? (
-                      <div className="reading">読み: {it.reading}</div>
+                      <>
+                        {it.additionalInfo && (
+                          <div className="additional-info">{it.additionalInfo}</div>
+                        )}
+                        <div className="reading">読み: {formatReadingWithOkurigana(it.reading)}</div>
+                      </>
                     ) : (
                       <div className="hidden-reading">クリックで表示</div>
                     )
                   ) : (
-                    <div className="reading">読み: {it.reading}</div>
+                    <>
+                      {it.additionalInfo && (
+                        <div className="additional-info">{it.additionalInfo}</div>
+                      )}
+                      <div className="reading">読み: {formatReadingWithOkurigana(it.reading)}</div>
+                    </>
                   )}
                 </div>
               );
             })}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* 問題モード */}
       {mode === 'quiz' && quizItems.length > 0 && (
@@ -365,7 +502,7 @@ function App() {
               // 入力形式
               <div className="quiz-input-container">
                 <label className="quiz-label">
-                  この漢字の読みは？<br />（送り仮名も含めてすべて入力してください）
+                  この漢字の読みは？<br />（送り仮名（''で囲まれた部分）は入力しなくてもOK）
                 </label>
                 <input
                   type="text"
@@ -442,13 +579,12 @@ function App() {
                 <div className={`result-message ${isCorrect ? 'correct' : 'incorrect'}`}>
                   {isCorrect ? '✓ 正解！' : '✗ 不正解'}
                 </div>
-                {!isCorrect && (
-                  <div className="correct-answer">
-                    正解: <span className="correct-answer-text">
-                      {quizItems[currentIndex].reading}
-                    </span>
-                  </div>
-                )}
+                <div className="correct-answer">
+                  {isCorrect ? '読み方: ' : '正解: '}
+                  <span className="correct-answer-text">
+                    {formatReadingWithOkurigana(quizItems[currentIndex].reading)}
+                  </span>
+                </div>
                 <button onClick={nextQuestion} className="next-button">
                   {currentIndex < quizItems.length - 1 ? '次の問題へ' : '終了'}
                 </button>
