@@ -28,7 +28,20 @@
 
       <section class="section">
         <h2>現在報告されている不具合</h2>
-        <p style="color:#666;">現在、重大な不具合は報告されていません。</p>
+        <ul>
+          <li>
+            <strong>デプロイ後に送り仮名や追加情報が表示されない</strong>
+            <span class="status fixed">修正済み (v0.3.2)</span>
+            <p style="margin:0.3rem 0 0 0; color:#666; font-size:0.95rem;">
+              <strong>報告日:</strong> 2025-11-05<br />
+              <strong>修正日:</strong> 2025-11-05<br />
+              <strong>症状:</strong> データを更新してデプロイしても、送り仮名や追加情報などの最新データが反映されず、古いデータが表示される。<br />
+              <strong>原因:</strong> Service Worker（キャッシュ機能）がCSVファイルもキャッシュ対象にしていたため、更新されたCSVファイルが読み込まれていませんでした。<br />
+              <strong>修正内容:</strong> CSVファイルをキャッシュ対象から除外し、常にネットワークから最新版を取得するように変更しました。画像のみをキャッシュすることで、高速化を維持しつつデータの最新性を確保します。<br />
+              <strong>対処方法:</strong> ブラウザで強制リロード（Ctrl + Shift + R / Cmd + Shift + R）を実行してください。または、開発者ツールからキャッシュをクリアしてください。
+            </p>
+          </li>
+        </ul>
       </section>
 
       <section class="section">

@@ -1,7 +1,7 @@
 // Service Worker: 画像をキャッシュして次回以降の読み込みを高速化します。
-// 単純な cache-first 戦略を実装しています。
+// CSVファイルは常にネットワークから最新版を取得し、画像のみキャッシュします。
 
-const CACHE_NAME = 'kanji-images-v1';
+const CACHE_NAME = 'kanji-images-v2'; // バージョン更新: 古いキャッシュをクリア
 const IMAGE_PATH_PREFIX = '/kanji/';
 
 self.addEventListener('install', (event) => {
@@ -25,17 +25,23 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// cache-first: まずキャッシュを返し、なければネットワークから取得してキャッシュする
+// cache-first: 画像のみキャッシュ。CSVファイルは常に最新を取得
 self.addEventListener('fetch', (event) => {
   try {
     const req = event.request;
     const url = new URL(req.url);
 
-    // 画像または /kanji/ 配下のリクエストに対してキャッシュを使用
+    // CSVファイルは常にネットワークから取得（キャッシュしない）
+    const isCsv = url.pathname.endsWith('.csv');
+    if (isCsv) {
+      return; // キャッシュ処理をスキップし、通常のfetchに任せる
+    }
+
+    // 画像ファイルのみキャッシュ対象
     const isImage = /\.(png|jpg|jpeg|gif|svg|webp|avif)$/i.test(url.pathname);
     const isKanjiPath = url.pathname.startsWith(IMAGE_PATH_PREFIX);
 
-    if (req.method === 'GET' && (isImage || isKanjiPath)) {
+    if (req.method === 'GET' && isImage && isKanjiPath) {
       event.respondWith(
         caches.open(CACHE_NAME).then((cache) =>
           cache.match(req).then((cached) => {
