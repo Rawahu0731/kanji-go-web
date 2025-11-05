@@ -1,3 +1,7 @@
-requests==2.31.0
-beautifulsoup4==4.12.3
-lxml==5.1.0
+# Python dependencies for development only (scraping)
+# These are not needed for deployment
+# To install locally: pip install -r requirements.txt
+
+# requests==2.31.0
+# beautifulsoup4==4.12.3
+# lxml==5.1.0
