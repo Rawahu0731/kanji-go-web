@@ -365,13 +365,34 @@ function App() {
       
       {/* 一覧モード */}
       {items && mode === 'list' && (() => {
+        // 定義済みジャンルのリスト（'all'と'ジャンルなし'を除く）
+        const definedGenres = [
+          '動物',
+          '植物・藻類',
+          '地名・建造物',
+          '人名',
+          'スラング',
+          '飲食',
+          '単位',
+          '演目・外題',
+          '則天文字',
+          'チュノム',
+          '元素',
+          '嘘字',
+          '簡体字',
+          '文学の漢字',
+          '字義未詳',
+          '西夏文字'
+        ];
+        
         // ジャンルでフィルタリング
         const filteredItems = selectedGenre === 'all' 
           ? items 
           : selectedGenre === 'ジャンルなし'
           ? items.filter(item => {
               const info = item.additionalInfo || '';
-              return info.trim() === '';
+              // 定義済みジャンルのいずれも含まれていないものを抽出
+              return !definedGenres.some(genre => info.includes(genre));
             })
           : items.filter(item => {
               const info = item.additionalInfo || '';
