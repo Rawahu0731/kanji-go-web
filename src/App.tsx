@@ -84,6 +84,7 @@ function App() {
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const genres = [
     'all',
+    'ジャンルなし',
     '動物',
     '植物・藻類',
     '地名・建造物',
@@ -367,6 +368,11 @@ function App() {
         // ジャンルでフィルタリング
         const filteredItems = selectedGenre === 'all' 
           ? items 
+          : selectedGenre === 'ジャンルなし'
+          ? items.filter(item => {
+              const info = item.additionalInfo || '';
+              return info.trim() === '';
+            })
           : items.filter(item => {
               const info = item.additionalInfo || '';
               // ジャンル名が含まれているかチェック
