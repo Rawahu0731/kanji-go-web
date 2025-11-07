@@ -7,6 +7,7 @@ type Item = {
   meaning?: string;
   imageUrl: string;
   additionalInfo?: string;
+  components?: string; // 漢字の構成要素（例: "火,火" for 炎）
 };
 
 type Level = 4 | 5 | 6 | 7 | 8;
@@ -103,6 +104,10 @@ function App() {
     '西夏文字'
   ];
   
+  // 検索機能のステート
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchMode, setSearchMode] = useState<'reading' | 'component'>('reading');
+  
   // 問題モード用のステート
   const [mode, setMode] = useState<Mode>('list');
   const [quizFormat, setQuizFormat] = useState<QuizFormat>('input'); // 問題形式
@@ -182,7 +187,7 @@ function App() {
         // ヘッダ名は 'path' または 'filename' のどちらかが来る想定
         const filenameField = header.includes('path') ? 'path' : (header.includes('filename') ? 'filename' : header[0]);
 
-        const mapped: Item[] = data.map(d => {
+          const mapped: Item[] = data.map(d => {
           const fname = d[filenameField];
           // CSV に画像パスが 'images/...' のように書かれているので、そのまま結合
           const imageUrl = fname?.startsWith('/') ? fname : `/kanji/level-${selectedLevel}/${fname}`;
@@ -192,6 +197,7 @@ function App() {
             meaning: d.meaning,
             imageUrl,
             additionalInfo: d.additional_info || d['additional_info'] || '',
+            components: d.components || d['components'] || '', // 構成要素を追加
           } as Item;
         });
         setItems(mapped);
@@ -386,7 +392,7 @@ function App() {
         ];
         
         // ジャンルでフィルタリング
-        const filteredItems = selectedGenre === 'all' 
+        let filteredItems = selectedGenre === 'all' 
           ? items 
           : selectedGenre === 'ジャンルなし'
           ? items.filter(item => {
@@ -400,10 +406,81 @@ function App() {
               return info.includes(selectedGenre);
             });
         
+        // 検索機能: 検索クエリでさらにフィルタリング
+        if (searchQuery.trim()) {
+          const query = searchQuery.trim().toLowerCase();
+          filteredItems = filteredItems.filter(item => {
+            if (searchMode === 'reading') {
+              // 送り仮名検索: 'で囲まれた部分（赤い部分）のみを抽出して検索
+              const okuriganaMatches = item.reading.match(/'([^']+)'/g);
+              if (!okuriganaMatches) return false;
+              const okuriganaText = okuriganaMatches.map(m => m.replace(/'/g, '')).join('');
+              return okuriganaText.toLowerCase().includes(query);
+            } else {
+              // 構成要素検索: componentsフィールドをスペースで分割して各要素で検索
+              const components = item.components || '';
+              const componentList = components.split(/\s+/).filter(c => c).map(c => c.trim().toLowerCase());
+              return componentList.some(component => component.includes(query));
+            }
+          });
+        }
+        
         return (
         <div>
           <div className="list-header">
             <p>レベル{selectedLevel}: {filteredItems.length}問 {selectedGenre !== 'all' && `(${selectedGenre})`}</p>
+            
+            {/* 検索ボックス */}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <label htmlFor="search-mode-select" style={{ fontWeight: 600, color: '#333' }}>
+                  検索モード:
+                </label>
+                <select
+                  id="search-mode-select"
+                  value={searchMode}
+                  onChange={(e) => {
+                    setSearchMode(e.target.value as 'reading' | 'component');
+                    setSearchQuery(''); // モード切替時に検索クエリをクリア
+                  }}
+                  className="genre-select"
+                >
+                  <option value="reading">送り仮名検索</option>
+                  <option value="component">構成要素検索</option>
+                </select>
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={searchMode === 'reading' ? '送り仮名で検索（例: しい）' : '構成要素で検索（例: 火）'}
+                className="search-input"
+                style={{
+                  padding: '8px 12px',
+                  fontSize: '14px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  minWidth: '250px'
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="clear-search-button"
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: '14px',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  検索クリア
+                </button>
+              )}
+            </div>
             
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
               {/* ジャンル選択ドロップダウン */}
