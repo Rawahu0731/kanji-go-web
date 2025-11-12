@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { getKnownIssues } from './lib/microcms'
+import type { Article } from './lib/microcms'
 import './App.css'
 
 type Item = {
@@ -123,12 +126,31 @@ function App() {
   // reveal 状態をファイル名（または imageUrl）をキーに管理
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   
-  // 不具合情報の表示フラグ（true の場合、ページ上部にバナーを表示）
-  const hasKnownIssues = false; // 修正完了のため false（必要に応じて true に変更）
-  const [showIssueBanner, setShowIssueBanner] = useState(true); // バナーを閉じられるように
+  // 不具合情報バナー用のステート
+  const [investigatingIssues, setInvestigatingIssues] = useState<Article[]>([]);
+  const [showIssueBanner, setShowIssueBanner] = useState(true);
   
   // 四択: 正解のインデックスを保持（0-3）
   const [correctChoiceIndex, setCorrectChoiceIndex] = useState<number>(-1);
+
+  // 調査中の不具合を取得
+  useEffect(() => {
+    async function fetchInvestigatingIssues() {
+      try {
+        const issues = await getKnownIssues();
+        // status が investigating のものだけフィルタ
+        const investigating = issues.filter(issue => {
+          const status = Array.isArray(issue.status) ? issue.status[0] : issue.status;
+          return status === 'investigating';
+        });
+        setInvestigatingIssues(investigating);
+      } catch (error) {
+        console.error('不具合情報の取得に失敗:', error);
+      }
+    }
+    
+    fetchInvestigatingIssues();
+  }, []);
 
   // --- サービスワーカー登録: 画像キャッシュ用 ---
   useEffect(() => {
@@ -331,13 +353,13 @@ function App() {
   return (
     <>
       {/* 不具合情報バナー */}
-      {hasKnownIssues && showIssueBanner && (
+      {investigatingIssues.length > 0 && showIssueBanner && (
         <div className="issue-banner">
           <div className="issue-banner-content">
             <span className="issue-icon">⚠️</span>
             <span className="issue-text">
-              不具合が発生しています。詳細は
-              <a href="/known-issues.html" target="_blank" rel="noopener noreferrer">こちら</a>
+              現在不具合が発生しています。詳細は
+              <Link to="/known-issues" style={{ color: '#fff', textDecoration: 'underline', marginLeft: '0.3rem' }}>こちら</Link>
             </span>
             <button
               className="issue-close"
@@ -704,7 +726,7 @@ function App() {
         <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
         <a href="/patch-notes.html" target="_blank" rel="noopener noreferrer">パッチノート</a>
         <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
-        <a href="/known-issues.html" target="_blank" rel="noopener noreferrer">不具合情報</a>
+        <Link to="/known-issues">不具合情報</Link>
       </footer>
     </>
   )
