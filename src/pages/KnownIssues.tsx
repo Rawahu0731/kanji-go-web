@@ -25,6 +25,19 @@ export default function KnownIssues() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (id: string) => {
+    setExpandedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -134,6 +147,7 @@ export default function KnownIssues() {
         ) : (
           articles.map((article) => {
             const statusInfo = getStatusLabel(article.status);
+            const isExpanded = expandedIds.has(article.id);
             
             return (
               <section 
@@ -144,49 +158,85 @@ export default function KnownIssues() {
                   borderBottom: '1px solid #f0f0f4'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginTop: '1.2rem' }}>
-                  <h2 style={{ fontSize: '1.15rem', margin: 0, color: '#dc3545' }}>
-                    🐛 {article.title}
-                  </h2>
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '0.3rem 0.8rem',
-                    background: statusInfo.bgColor,
-                    color: statusInfo.color,
-                    borderRadius: '12px',
-                    fontSize: '0.85rem',
-                    fontWeight: 'bold',
-                    border: `1px solid ${statusInfo.color}33`
-                  }}>
-                    {statusInfo.text}
-                  </span>
-                </div>
-                <time style={{ color: '#6b6f85', fontSize: '0.95rem' }}>
-                  報告日: {new Date(article.date).toLocaleDateString('ja-JP')}
-                </time>
                 <div 
-                  style={{ marginTop: '0.8rem', color: '#333' }}
-                  dangerouslySetInnerHTML={{ __html: article.body }}
-                />
-                {article.tags && article.tags.length > 0 && (
-                  <div style={{ marginTop: '0.6rem' }}>
-                    {article.tags.map((tag, idx) => (
-                      <span 
-                        key={idx}
-                        style={{
-                          display: 'inline-block',
-                          padding: '0.2rem 0.6rem',
-                          marginRight: '0.4rem',
-                          background: '#fee',
-                          borderRadius: '4px',
-                          fontSize: '0.85rem',
-                          color: '#c00'
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                  onClick={() => toggleExpanded(article.id)}
+                  style={{ 
+                    cursor: 'pointer',
+                    userSelect: 'none'
+                  }}
+                >
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.8rem', 
+                    marginTop: '1.2rem'
+                  }}>
+                    <span style={{ fontSize: '1.2rem', transition: 'transform 0.2s', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+                      ▶
+                    </span>
+                    <h2 style={{ fontSize: '1.15rem', margin: 0, color: '#dc3545' }}>
+                      🐛 {article.title}
+                    </h2>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '0.3rem 0.8rem',
+                      background: statusInfo.bgColor,
+                      color: statusInfo.color,
+                      borderRadius: '12px',
+                      fontSize: '0.85rem',
+                      fontWeight: 'bold',
+                      border: `1px solid ${statusInfo.color}33`,
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {statusInfo.text}
+                    </span>
                   </div>
+                  <time 
+                    style={{ 
+                      color: '#6b6f85', 
+                      fontSize: '0.95rem',
+                      display: 'block',
+                      marginTop: '0.3rem',
+                      marginLeft: '2rem',
+                      textAlign: 'left'
+                    }}
+                  >
+                    報告日: {new Date(article.date).toLocaleDateString('ja-JP')}
+                  </time>
+                </div>
+                {isExpanded && (
+                  <>
+                    <div 
+                      className="known-issues-content"
+                      style={{ 
+                        marginTop: '0.8rem', 
+                        marginLeft: '2rem',
+                        color: '#333',
+                        textAlign: 'left'
+                      }}
+                      dangerouslySetInnerHTML={{ __html: article.body }}
+                    />
+                    {article.tags && article.tags.length > 0 && (
+                      <div style={{ marginTop: '0.6rem', marginLeft: '2rem' }}>
+                        {article.tags.map((tag, idx) => (
+                          <span 
+                            key={idx}
+                            style={{
+                              display: 'inline-block',
+                              padding: '0.2rem 0.6rem',
+                              marginRight: '0.4rem',
+                              background: '#fee',
+                              borderRadius: '4px',
+                              fontSize: '0.85rem',
+                              color: '#c00'
+                            }}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </section>
             );

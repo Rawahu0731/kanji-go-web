@@ -737,3 +737,31 @@ h1 {
     opacity: 1;
   }
 }
+
+/* KnownIssuesページのHTMLコンテンツ内のスタイル */
+.known-issues-content {
+  text-align: left !important;
+}
+
+.known-issues-content p,
+.known-issues-content ul,
+.known-issues-content ol,
+.known-issues-content li,
+.known-issues-content h1,
+.known-issues-content h2,
+.known-issues-content h3,
+.known-issues-content h4,
+.known-issues-content div {
+  text-align: left !important;
+}
+
+.known-issues-content ul,
+.known-issues-content ol {
+  margin-left: 1.5rem;
+  padding-left: 0.5rem;
+}
+
+.known-issues-content li {
+  margin-bottom: 0.5rem;
+}
+
