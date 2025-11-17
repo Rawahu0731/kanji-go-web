@@ -1,0 +1,215 @@
+.shop-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+  color: #e0e0e0;
+  padding-bottom: 2rem;
+}
+
+.shop-header {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.shop-header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.coins-display {
+  background: linear-gradient(135deg, #f5af19 0%, #f12711 100%);
+  padding: 0.5rem 1.2rem;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 15px rgba(245, 175, 25, 0.3);
+}
+
+.shop-content {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 2rem;
+}
+
+.category-filter {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.category-filter button {
+  padding: 0.7rem 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #a0a0c0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.category-filter button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.category-filter button.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.purchase-message {
+  background: rgba(102, 234, 126, 0.2);
+  border: 1px solid rgba(102, 234, 126, 0.4);
+  color: #66ea7e;
+  padding: 1rem;
+  border-radius: 10px;
+  text-align: center;
+  margin-bottom: 2rem;
+  font-weight: 600;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.shop-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.shop-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.shop-item.purchased {
+  border-color: rgba(102, 234, 126, 0.4);
+  background: rgba(102, 234, 126, 0.05);
+}
+
+.shop-item.active {
+  border-color: rgba(102, 126, 234, 0.6);
+  background: rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+}
+
+.item-icon {
+  font-size: 3rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.item-name {
+  font-size: 1.2rem;
+  margin: 0 0 0.5rem 0;
+  color: #fff;
+  text-align: center;
+}
+
+.item-description {
+  font-size: 0.9rem;
+  color: #a0a0c0;
+  text-align: center;
+  margin: 0 0 1.5rem 0;
+  flex-grow: 1;
+}
+
+.item-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.item-price {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f5af19;
+}
+
+.purchase-button {
+  padding: 0.7rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.purchase-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.purchase-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.purchase-button.purchased-btn {
+  background: rgba(102, 234, 126, 0.3);
+  color: #66ea7e;
+  box-shadow: none;
+}
+
+.empty-message {
+  text-align: center;
+  color: #a0a0c0;
+  font-size: 1.1rem;
+  padding: 3rem;
+}
+
+@media (max-width: 768px) {
+  .shop-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .items-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .category-filter {
+    flex-direction: column;
+  }
+
+  .category-filter button {
+    width: 100%;
+  }
+}

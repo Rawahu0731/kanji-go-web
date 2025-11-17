@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getKnownIssues } from './lib/microcms'
 import type { Article } from './lib/microcms'
+import { useGamification } from './contexts/GamificationContext'
 import './App.css'
 
 type Item = {
@@ -78,6 +79,50 @@ function extractReadingCore(reading: string): string {
   return reading.replace(/'[^']*'/g, '');
 }
 
+// XP/コイン獲得時のポップアップ表示
+function showRewardPopup(xp: number, coins: number) {
+  const popup = document.createElement('div');
+  popup.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(102, 126, 234, 0.95);
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    font-weight: 600;
+    z-index: 9999;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    animation: rewardPop 0.6s ease-out;
+    pointer-events: none;
+  `;
+  popup.innerHTML = `+${xp} XP &nbsp;&nbsp; +${coins} コイン`;
+  document.body.appendChild(popup);
+  
+  setTimeout(() => {
+    popup.style.animation = 'rewardFade 0.3s ease-out forwards';
+    setTimeout(() => popup.remove(), 300);
+  }, 1000);
+}
+
+// アニメーション定義
+if (typeof document !== 'undefined' && !document.getElementById('reward-animations')) {
+  const style = document.createElement('style');
+  style.id = 'reward-animations';
+  style.textContent = `
+    @keyframes rewardPop {
+      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+      50% { transform: translate(-50%, -50%) scale(1.1); }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+    @keyframes rewardFade {
+      to { opacity: 0; transform: translate(-50%, -60%) scale(0.8); }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 function App() {
   const [selectedLevel, setSelectedLevel] = useState<Level>(7);
   const [items, setItems] = useState<Item[] | null>(null);
@@ -120,6 +165,10 @@ function App() {
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [score, setScore] = useState({ correct: 0, incorrect: 0 });
+  const [currentStreak, setCurrentStreak] = useState(0);
+  
+  // ゲーミフィケーションシステム
+  const { addXp, addCoins, updateStats, state: gamificationState } = useGamification();
   const [choices, setChoices] = useState<string[]>([]); // 四択の選択肢
   // 単語帳モード: 一覧で読みを隠すかどうか
   const [studyMode, setStudyMode] = useState(false);
@@ -244,6 +293,7 @@ function App() {
     setUserAnswer('');
     setShowResult(false);
     setScore({ correct: 0, incorrect: 0 });
+    setCurrentStreak(0);
     setMode('quiz');
   };
 
@@ -321,8 +371,39 @@ function App() {
     
     if (correct) {
       setScore(prev => ({ ...prev, correct: prev.correct + 1 }));
+      
+      // XPとコインを付与
+      const xpGain = 10;
+      const coinGain = 5;
+      addXp(xpGain);
+      addCoins(coinGain);
+      
+      // ストリーク更新
+      const newStreak = currentStreak + 1;
+      setCurrentStreak(newStreak);
+      
+      // 統計更新
+      updateStats({
+        totalQuizzes: gamificationState.stats.totalQuizzes + 1,
+        correctAnswers: gamificationState.stats.correctAnswers + 1,
+        currentStreak: newStreak,
+        bestStreak: Math.max(gamificationState.stats.bestStreak, newStreak)
+      });
+      
+      // XP/コイン獲得の視覺的フィードバック
+      showRewardPopup(xpGain, coinGain);
     } else {
       setScore(prev => ({ ...prev, incorrect: prev.incorrect + 1 }));
+      
+      // ストリークリセット
+      setCurrentStreak(0);
+      
+      // 統計更新
+      updateStats({
+        totalQuizzes: gamificationState.stats.totalQuizzes + 1,
+        incorrectAnswers: gamificationState.stats.incorrectAnswers + 1,
+        currentStreak: 0
+      });
     }
   };
 
@@ -332,6 +413,16 @@ function App() {
     setIsCorrect(false);
     setShowResult(true);
     setScore(prev => ({ ...prev, incorrect: prev.incorrect + 1 }));
+    
+    // ストリークリセット
+    setCurrentStreak(0);
+    
+    // 統計更新
+    updateStats({
+      totalQuizzes: gamificationState.stats.totalQuizzes + 1,
+      incorrectAnswers: gamificationState.stats.incorrectAnswers + 1,
+      currentStreak: 0
+    });
   };
 
   // 次の問題へ
@@ -352,6 +443,36 @@ function App() {
 
   return (
     <>
+      {/* ゲーミフィケーションヘッダー */}
+      <div className="gamification-header">
+        <div className="player-stats-bar">
+          <div className="stat-item">
+            <span className="stat-label">レベル</span>
+            <span className="stat-value">{gamificationState.level}</span>
+          </div>
+          <div className="xp-progress">
+            <div className="xp-bar-bg">
+              <div 
+                className="xp-bar-fill" 
+                style={{ width: `${(gamificationState.xp / (100 * Math.pow(1.5, gamificationState.level - 1))) * 100}%` }}
+              ></div>
+            </div>
+            <span className="xp-text">
+              {gamificationState.xp} / {Math.floor(100 * Math.pow(1.5, gamificationState.level - 1))} XP
+            </span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">💰</span>
+            <span className="stat-value">{gamificationState.coins}</span>
+          </div>
+        </div>
+        <div className="nav-links">
+          <Link to="/profile" className="nav-link">プロフィール</Link>
+          <Link to="/shop" className="nav-link">ショップ</Link>
+          <Link to="/story" className="nav-link">ストーリー</Link>
+        </div>
+      </div>
+
       {/* 不具合情報バナー */}
       {investigatingIssues.length > 0 && showIssueBanner && (
         <div className="issue-banner">
@@ -664,10 +785,41 @@ function App() {
                           const correct = idx === correctChoiceIndex;
                           setIsCorrect(correct);
                           setShowResult(true);
+                          
                           if (correct) {
                             setScore(prev => ({ ...prev, correct: prev.correct + 1 }));
+                            
+                            // XPとコインを付与
+                            const xpGain = 10;
+                            const coinGain = 5;
+                            addXp(xpGain);
+                            addCoins(coinGain);
+                            
+                            // ストリーク更新
+                            const newStreak = currentStreak + 1;
+                            setCurrentStreak(newStreak);
+                            
+                            // 統計更新
+                            updateStats({
+                              totalQuizzes: gamificationState.stats.totalQuizzes + 1,
+                              correctAnswers: gamificationState.stats.correctAnswers + 1,
+                              currentStreak: newStreak,
+                              bestStreak: Math.max(gamificationState.stats.bestStreak, newStreak)
+                            });
+                            
+                            showRewardPopup(xpGain, coinGain);
                           } else {
                             setScore(prev => ({ ...prev, incorrect: prev.incorrect + 1 }));
+                            
+                            // ストリークリセット
+                            setCurrentStreak(0);
+                            
+                            // 統計更新
+                            updateStats({
+                              totalQuizzes: gamificationState.stats.totalQuizzes + 1,
+                              incorrectAnswers: gamificationState.stats.incorrectAnswers + 1,
+                              currentStreak: 0
+                            });
                           }
                         }
                       }}
