@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { getKnownIssues } from './lib/microcms'
 import type { Article } from './lib/microcms'
 import { useGamification } from './contexts/GamificationContext'
+import { DebugPanel } from './components/DebugPanel'
+import ActiveBoosts from './components/ActiveBoosts'
 import './App.css'
 
 type Item = {
@@ -128,6 +130,10 @@ function App() {
   const [items, setItems] = useState<Item[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // デバッグモード裏コマンド用
+  const [debugTapCount, setDebugTapCount] = useState(0);
+  const [debugTapTimer, setDebugTapTimer] = useState<NodeJS.Timeout | null>(null);
   
   // ジャンル絞り込み用のステート
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
@@ -344,6 +350,31 @@ function App() {
     });
   };
 
+  // デバッグモード起動用の裏コマンド: タイトルを10回タップ
+  const handleTitleTap = () => {
+    // 既存のタイマーをクリア
+    if (debugTapTimer) {
+      clearTimeout(debugTapTimer);
+    }
+
+    const newCount = debugTapCount + 1;
+    setDebugTapCount(newCount);
+
+    if (newCount >= 10) {
+      // 10回タップでデバッグモードを起動
+      window.dispatchEvent(new Event('activateDebugMode'));
+      setDebugTapCount(0);
+      setDebugTapTimer(null);
+    } else {
+      // 2秒以内に次のタップがなければカウントをリセット
+      const timer = setTimeout(() => {
+        setDebugTapCount(0);
+        setDebugTapTimer(null);
+      }, 2000);
+      setDebugTapTimer(timer);
+    }
+  };
+
   // 一覧モードに戻る
   const backToList = () => {
     setMode('list');
@@ -443,9 +474,44 @@ function App() {
 
   return (
     <>
+      {/* アクティブなブーストの表示 */}
+      <ActiveBoosts />
+      
       {/* ゲーミフィケーションヘッダー */}
       <div className="gamification-header">
         <div className="player-stats-bar">
+          <Link to="/profile" className="header-profile-icon" title={gamificationState.username}>
+            {gamificationState.activeIcon === 'custom' && gamificationState.customIconUrl ? (
+              <img 
+                src={gamificationState.customIconUrl} 
+                alt="アイコン"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  objectFit: 'cover'
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement!.textContent = '👤';
+                }}
+              />
+            ) : (
+              <>
+                {gamificationState.activeIcon === 'default' ? '👤' : 
+                 gamificationState.activeIcon === 'icon_fire' ? '🔥' :
+                 gamificationState.activeIcon === 'icon_star' ? '⭐' :
+                 gamificationState.activeIcon === 'icon_dragon' ? '🐉' :
+                 gamificationState.activeIcon === 'icon_crown' ? '👑' :
+                 gamificationState.activeIcon === 'icon_ninja' ? '🥷' :
+                 gamificationState.activeIcon === 'icon_wizard' ? '🧙' :
+                 gamificationState.activeIcon === 'icon_samurai' ? '⚔️' :
+                 gamificationState.activeIcon === 'icon_robot' ? '🤖' :
+                 gamificationState.activeIcon === 'icon_cherry_blossom' ? '🌸' : '👤'}
+              </>
+            )}
+          </Link>
+          <div className="header-username">{gamificationState.username}</div>
           <div className="stat-item">
             <span className="stat-label">レベル</span>
             <span className="stat-value">{gamificationState.level}</span>
@@ -469,6 +535,7 @@ function App() {
         <div className="nav-links">
           <Link to="/profile" className="nav-link">プロフィール</Link>
           <Link to="/shop" className="nav-link">ショップ</Link>
+          <Link to="/collection" className="nav-link">📚 コレクション</Link>
           <Link to="/story" className="nav-link">ストーリー</Link>
         </div>
       </div>
@@ -493,7 +560,13 @@ function App() {
         </div>
       )}
 
-      <h1>漢字勉強サイト</h1>
+      <h1 
+        onClick={handleTitleTap}
+        style={{ cursor: 'default', userSelect: 'none' }}
+        title=""
+      >
+        漢字勉強サイト
+      </h1>
       
       {/* レベル選択ボタン */}
       <div className="level-buttons">
@@ -880,6 +953,9 @@ function App() {
         <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
         <Link to="/known-issues">不具合情報</Link>
       </footer>
+
+      {/* デバッグパネル */}
+      <DebugPanel />
     </>
   )
 }

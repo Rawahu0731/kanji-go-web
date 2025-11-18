@@ -2,15 +2,29 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { BADGES } from '../data/badges';
 import type { Badge } from '../data/badges';
+import type { KanjiCard, CardRarity } from '../data/cardCollection';
+import { CARD_PACK_CONFIG } from '../data/cardCollection';
+import { getRandomKanji } from '../data/allKanji';
 
 const STORAGE_KEY = 'kanji_gamification';
+
+export type ActiveBoost = {
+  id: string;
+  name: string;
+  effect: string;
+  icon: string;
+  expiresAt: number; // タイムスタンプ
+};
 
 export type GamificationState = {
   xp: number;
   level: number;
   coins: number;
+  totalXp: number; // 累計XP（ストーリー解放などの判定に使用）
   unlockedBadges: string[];
   purchasedItems: string[];
+  activeBoosts: ActiveBoost[]; // アクティブなブースト
+  cardCollection: KanjiCard[]; // カードコレクション
   stats: {
     totalQuizzes: number;
     correctAnswers: number;
@@ -20,19 +34,29 @@ export type GamificationState = {
   };
   activeTheme: string;
   activeIcon: string;
+  customIconUrl: string; // カスタムアイコンのURL
+  username: string; // ユーザーネーム
 };
 
 type GamificationContextType = {
   state: GamificationState;
   addXp: (amount: number) => void;
   addCoins: (amount: number) => void;
+  setXp: (amount: number) => void;
+  setCoins: (amount: number) => void;
   unlockBadge: (badgeId: string) => void;
-  purchaseItem: (itemId: string, price: number) => boolean;
+  purchaseItem: (itemId: string, price: number, addToPurchased?: boolean) => boolean;
+  activateBoost: (boostId: string, name: string, effect: string, icon: string, durationMinutes: number) => void;
   updateStats: (updates: Partial<GamificationState['stats']>) => void;
   setTheme: (themeId: string) => void;
   setIcon: (iconId: string) => void;
+  setCustomIconUrl: (url: string) => void;
+  setUsername: (username: string) => void;
   getXpForNextLevel: () => number;
   getLevelProgress: () => number;
+  getActiveBoostMultiplier: (type: 'xp' | 'coin') => number;
+  addCardToCollection: (card: KanjiCard) => void;
+  openCardPack: (packType: string) => KanjiCard[];
 };
 
 const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
@@ -40,9 +64,12 @@ const GamificationContext = createContext<GamificationContextType | undefined>(u
 const INITIAL_STATE: GamificationState = {
   xp: 0,
   level: 1,
-  coins: 0,
+  coins: 99999999,
+  totalXp: 0,
   unlockedBadges: [],
   purchasedItems: [],
+  activeBoosts: [],
+  cardCollection: [],
   stats: {
     totalQuizzes: 0,
     correctAnswers: 0,
@@ -51,7 +78,9 @@ const INITIAL_STATE: GamificationState = {
     bestStreak: 0
   },
   activeTheme: 'default',
-  activeIcon: 'default'
+  activeIcon: 'default',
+  customIconUrl: '',
+  username: 'プレイヤー'
 };
 
 // レベルアップに必要なXPを計算（指数関数的に増加）
@@ -80,14 +109,81 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
+  // 期限切れのブーストを定期的に削除
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setState(prev => {
+        const now = Date.now();
+        const validBoosts = prev.activeBoosts.filter(boost => boost.expiresAt > now);
+        
+        if (validBoosts.length !== prev.activeBoosts.length) {
+          return { ...prev, activeBoosts: validBoosts };
+        }
+        return prev;
+      });
+    }, 1000); // 1秒ごとにチェック
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // アクティブなブーストの倍率を計算
+  const getActiveBoostMultiplier = (type: 'xp' | 'coin'): number => {
+    const now = Date.now();
+    let multiplier = 1;
+
+    // 永続アップグレードの効果
+    if (state.purchasedItems.includes('permanent_xp_boost') && type === 'xp') {
+      multiplier *= 1.1;
+    }
+    if (state.purchasedItems.includes('permanent_coin_boost') && type === 'coin') {
+      multiplier *= 1.1;
+    }
+    if (state.purchasedItems.includes('master_learner')) {
+      multiplier *= 1.2;
+    }
+    if (state.purchasedItems.includes('ultimate_power')) {
+      multiplier *= 1.5;
+    }
+
+    // 時限ブーストの効果
+    state.activeBoosts.forEach(boost => {
+      if (boost.expiresAt > now) {
+        // XPブースト
+        if (type === 'xp') {
+          if (boost.effect === 'xp_boost_2x_1h') multiplier *= 2;
+          else if (boost.effect === 'xp_boost_3x_30m') multiplier *= 3;
+          else if (boost.effect === 'xp_boost_5x_15m') multiplier *= 5;
+          else if (boost.effect === 'xp_boost_10x_5m') multiplier *= 10;
+          else if (boost.effect === 'all_boost_15m') multiplier *= 1.5;
+          else if (boost.effect === 'mega_boost_1h') multiplier *= 3;
+          else if (boost.effect === 'double_reward_24h') multiplier *= 2;
+          else if (boost.effect === 'legendary_boost_30m') multiplier *= 5;
+        }
+        // コインブースト
+        if (type === 'coin') {
+          if (boost.effect === 'coin_boost_2x_1h') multiplier *= 2;
+          else if (boost.effect === 'all_boost_15m') multiplier *= 1.5;
+          else if (boost.effect === 'mega_boost_1h') multiplier *= 3;
+          else if (boost.effect === 'double_reward_24h') multiplier *= 2;
+          else if (boost.effect === 'legendary_boost_30m') multiplier *= 5;
+        }
+      }
+    });
+
+    return multiplier;
+  };
+
   const addXp = (amount: number) => {
+    const multiplier = getActiveBoostMultiplier('xp');
+    const boostedAmount = Math.floor(amount * multiplier);
+    
     setState(prev => {
-      let newXp = prev.xp + amount;
+      const newXp = prev.xp + boostedAmount;
+      const newTotalXp = prev.totalXp + boostedAmount;
       let newLevel = prev.level;
       
-      // レベルアップ判定
+      // レベルアップ判定（XPは消費しない）
       while (newXp >= getXpForLevel(newLevel)) {
-        newXp -= getXpForLevel(newLevel);
         newLevel++;
       }
 
@@ -110,12 +206,33 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         showLevelUpNotification(newLevel);
       }
 
-      return { ...prev, xp: newXp, level: newLevel, unlockedBadges: newBadges };
+      return { ...prev, xp: newXp, level: newLevel, totalXp: newTotalXp, unlockedBadges: newBadges };
     });
   };
 
   const addCoins = (amount: number) => {
-    setState(prev => ({ ...prev, coins: prev.coins + amount }));
+    const multiplier = getActiveBoostMultiplier('coin');
+    const boostedAmount = Math.floor(amount * multiplier);
+    setState(prev => ({ ...prev, coins: prev.coins + boostedAmount }));
+  };
+
+  const setXp = (amount: number) => {
+    setState(prev => {
+      const newXp = amount;
+      const newTotalXp = amount;
+      let newLevel = 1;
+      
+      // XPからレベルを再計算（XPは消費されないので、累計XPと同じ）
+      while (newXp >= getXpForLevel(newLevel)) {
+        newLevel++;
+      }
+
+      return { ...prev, xp: newXp, level: newLevel, totalXp: newTotalXp };
+    });
+  };
+
+  const setCoins = (amount: number) => {
+    setState(prev => ({ ...prev, coins: amount }));
   };
 
   const unlockBadge = (badgeId: string) => {
@@ -141,7 +258,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const purchaseItem = (itemId: string, price: number): boolean => {
+  const purchaseItem = (itemId: string, price: number, addToPurchased: boolean = true): boolean => {
     if (state.coins < price) {
       return false;
     }
@@ -149,10 +266,37 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     setState(prev => ({
       ...prev,
       coins: prev.coins - price,
-      purchasedItems: [...prev.purchasedItems, itemId]
+      purchasedItems: addToPurchased ? [...prev.purchasedItems, itemId] : prev.purchasedItems
     }));
     
     return true;
+  };
+
+  const activateBoost = (boostId: string, name: string, effect: string, icon: string, durationMinutes: number) => {
+    const expiresAt = Date.now() + durationMinutes * 60 * 1000;
+    
+    setState(prev => {
+      // 同じ効果のブーストが既にアクティブな場合は時間を延長
+      const existingBoostIndex = prev.activeBoosts.findIndex(b => b.effect === effect);
+      
+      if (existingBoostIndex !== -1) {
+        const updatedBoosts = [...prev.activeBoosts];
+        updatedBoosts[existingBoostIndex].expiresAt = Math.max(
+          updatedBoosts[existingBoostIndex].expiresAt,
+          expiresAt
+        );
+        return { ...prev, activeBoosts: updatedBoosts };
+      }
+      
+      // 新しいブーストを追加
+      return {
+        ...prev,
+        activeBoosts: [...prev.activeBoosts, { id: boostId, name, effect, icon, expiresAt }]
+      };
+    });
+    
+    // ブースト有効化の通知
+    showBoostNotification(name, icon, durationMinutes);
   };
 
   const updateStats = (updates: Partial<GamificationState['stats']>) => {
@@ -198,6 +342,14 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, activeIcon: iconId }));
   };
 
+  const setCustomIconUrl = (url: string) => {
+    setState(prev => ({ ...prev, customIconUrl: url, activeIcon: 'custom' }));
+  };
+
+  const setUsername = (username: string) => {
+    setState(prev => ({ ...prev, username: username.trim() || 'プレイヤー' }));
+  };
+
   const getXpForNextLevel = () => {
     return getXpForLevel(state.level);
   };
@@ -207,18 +359,96 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     return (state.xp / xpNeeded) * 100;
   };
 
+  const addCardToCollection = (card: KanjiCard) => {
+    setState(prev => ({
+      ...prev,
+      cardCollection: [...prev.cardCollection, { ...card, obtainedAt: Date.now() }]
+    }));
+  };
+
+  const openCardPack = (packType: string): KanjiCard[] => {
+    const config = CARD_PACK_CONFIG[packType];
+    if (!config) return [];
+
+    const cards: KanjiCard[] = [];
+
+    // レアリティの重み付き抽選
+    const selectRarity = (): CardRarity => {
+      const totalWeight = Object.values(config.rarityWeights).reduce((a, b) => a + b, 0);
+      let random = Math.random() * totalWeight;
+      
+      for (const [rarity, weight] of Object.entries(config.rarityWeights)) {
+        random -= weight;
+        if (random <= 0) {
+          return rarity as CardRarity;
+        }
+      }
+      return 'common';
+    };
+
+    // 保証枠を先に生成
+    if (config.guaranteed) {
+      for (const [rarity, count] of Object.entries(config.guaranteed)) {
+        for (let i = 0; i < count; i++) {
+          const kanjiList = getRandomKanji(1, config.levelRange);
+          if (kanjiList.length > 0) {
+            const kanjiData = kanjiList[0];
+            cards.push({
+              id: `${Date.now()}-${Math.random()}`,
+              kanji: kanjiData.kanji,
+              reading: kanjiData.reading,
+              meaning: kanjiData.meaning,
+              level: kanjiData.level,
+              rarity: rarity as CardRarity,
+              imageUrl: `/kanji/level-${kanjiData.level}/images/${kanjiData.kanji}.png`
+            });
+          }
+        }
+      }
+    }
+
+    // 残りのカードを生成
+    const remainingCount = config.cardCount - cards.length;
+    const randomKanjis = getRandomKanji(remainingCount, config.levelRange);
+    
+    for (let i = 0; i < randomKanjis.length; i++) {
+      const rarity = selectRarity();
+      const kanjiData = randomKanjis[i];
+      
+      cards.push({
+        id: `${Date.now()}-${Math.random()}-${i}`,
+        kanji: kanjiData.kanji,
+        reading: kanjiData.reading,
+        meaning: kanjiData.meaning,
+        level: kanjiData.level,
+        rarity,
+        imageUrl: `/kanji/level-${kanjiData.level}/images/${kanjiData.kanji}.png`
+      });
+    }
+
+    return cards;
+  };
+
   return (
     <GamificationContext.Provider value={{
       state,
       addXp,
       addCoins,
+      setXp,
+      setCoins,
       unlockBadge,
       purchaseItem,
+      activateBoost,
       updateStats,
       setTheme,
       setIcon,
+      setCustomIconUrl,
+      setUsername,
       getXpForNextLevel,
-      getLevelProgress
+      getLevelProgress,
+      getActiveBoostMultiplier,
+      addCardToCollection,
+      openCardPack
     }}>
       {children}
     </GamificationContext.Provider>
@@ -291,6 +521,43 @@ function showBadgeNotification(badge: Badge) {
         <div>
           <div style="font-weight: 700; margin-bottom: 0.25rem;">🏆 バッジ獲得！</div>
           <div style="font-size: 0.9rem; color: #a0a0c0;">${badge.name}</div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.animation = 'slideOutRight 0.5s ease-out';
+    setTimeout(() => notification.remove(), 500);
+  }, 3000);
+}
+
+function showBoostNotification(name: string, icon: string, durationMinutes: number) {
+  const notification = document.createElement('div');
+  notification.className = 'boost-notification';
+  notification.innerHTML = `
+    <div style="
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      font-size: 1rem;
+      z-index: 10000;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      animation: slideInRight 0.5s ease-out;
+      min-width: 250px;
+    ">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <span style="font-size: 2rem;">${icon}</span>
+        <div>
+          <div style="font-weight: 700; margin-bottom: 0.25rem;">ブースト有効化！</div>
+          <div style="font-size: 0.9rem;">${name}</div>
+          <div style="font-size: 0.8rem; opacity: 0.9; margin-top: 0.25rem;">残り ${durationMinutes}分</div>
         </div>
       </div>
     </div>

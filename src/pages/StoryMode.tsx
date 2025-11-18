@@ -19,7 +19,7 @@ function StoryMode() {
   const [progress, setProgress] = useState<StoryProgress>({
     completedChapters: [],
     currentChapter: 1,
-    totalXp: gamificationState.xp // ゲーミフィケーションシステムからXPを取得
+    totalXp: gamificationState.totalXp // ゲーミフィケーションシステムから累計XPを取得
   });
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [showReward, setShowReward] = useState(false);
@@ -38,7 +38,7 @@ function StoryMode() {
   };
 
   const isChapterUnlocked = (chapter: Chapter): boolean => {
-    return progress.totalXp >= chapter.requiredXp;
+    return gamificationState.totalXp >= chapter.requiredXp;
   };
 
   const isChapterCompleted = (chapterId: number): boolean => {
@@ -71,13 +71,12 @@ function StoryMode() {
         ...progress,
         completedChapters: [...progress.completedChapters, selectedChapter.id],
         currentChapter: Math.max(progress.currentChapter, selectedChapter.id + 1),
-        totalXp: gamificationState.xp // 最新のXPを反映
+        totalXp: gamificationState.totalXp // 最新の累計XPを反映
       };
       saveProgress(newProgress);
       setShowReward(true);
-    } else {
-      setShowReward(true);
     }
+    // 既に完了済みの場合は何もしない（報酬画面を表示しない）
   };
 
   const closeChapter = () => {
@@ -90,7 +89,7 @@ function StoryMode() {
       <header className="story-header">
         <Link to="/" className="back-button">← ホームへ戻る</Link>
         <h1>ストーリーモード</h1>
-        <div className="xp-display">総XP: {gamificationState.xp}</div>
+        <div className="xp-display">累計XP: {gamificationState.totalXp}</div>
       </header>
 
       <div className="story-content">
@@ -144,25 +143,27 @@ function StoryMode() {
               <button className="close-button" onClick={closeChapter}>×</button>
             </div>
             
-            <div className="modal-content">
-              {!showReward ? (
-                <>
-                  {selectedChapter.illustration && (
-                    <div className="modal-illustration">
-                      {selectedChapter.illustration}
-                    </div>
-                  )}
-                  <div className="story-text">
-                    {selectedChapter.story}
+            {!showReward ? (
+              <div className="modal-content">
+                {selectedChapter.illustration && (
+                  <div className="modal-illustration">
+                    {selectedChapter.illustration}
                   </div>
+                )}
+                <div className="story-text">
+                  {selectedChapter.story}
+                </div>
+                {!isChapterCompleted(selectedChapter.id) && (
                   <button 
                     className="complete-button"
                     onClick={completeChapter}
                   >
-                    {isChapterCompleted(selectedChapter.id) ? '報酬を確認' : '章を完了する'}
+                    章を完了する
                   </button>
-                </>
-              ) : (
+                )}
+              </div>
+            ) : (
+              <div className="modal-content">
                 <div className="reward-display">
                   <div className="reward-animation">✨</div>
                   <h3>🎉 報酬を獲得しました！</h3>
@@ -181,8 +182,8 @@ function StoryMode() {
                     続ける
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}

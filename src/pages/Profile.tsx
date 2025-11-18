@@ -1,13 +1,26 @@
 import { Link } from 'react-router-dom';
 import { useGamification } from '../contexts/GamificationContext';
 import { BADGES } from '../data/badges';
+import { useState } from 'react';
 import '../styles/Profile.css';
 
 function Profile() {
-  const { state, getXpForNextLevel, getLevelProgress } = useGamification();
+  const { state, getXpForNextLevel, getLevelProgress, setUsername } = useGamification();
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(state.username);
 
   const unlockedBadgesList = state.unlockedBadges.map(id => BADGES[id]).filter(Boolean);
   const totalBadges = Object.keys(BADGES).length;
+
+  const handleNameSave = () => {
+    setUsername(nameInput);
+    setIsEditingName(false);
+  };
+
+  const handleNameCancel = () => {
+    setNameInput(state.username);
+    setIsEditingName(false);
+  };
 
   return (
     <div className="profile-container">
@@ -20,13 +33,77 @@ function Profile() {
         {/* プレイヤー情報 */}
         <div className="player-info-card">
           <div className="player-icon">
-            {state.activeIcon === 'default' ? '👤' : 
-             state.activeIcon === 'icon_fire' ? '🔥' :
-             state.activeIcon === 'icon_star' ? '⭐' :
-             state.activeIcon === 'icon_dragon' ? '🐉' : '👤'}
+            {state.activeIcon === 'custom' && state.customIconUrl ? (
+              <img 
+                src={state.customIconUrl} 
+                alt="カスタムアイコン"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  objectFit: 'cover'
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement!.textContent = '👤';
+                }}
+              />
+            ) : (
+              <>
+                {state.activeIcon === 'default' ? '👤' : 
+                 state.activeIcon === 'icon_fire' ? '🔥' :
+                 state.activeIcon === 'icon_star' ? '⭐' :
+                 state.activeIcon === 'icon_dragon' ? '🐉' :
+                 state.activeIcon === 'icon_crown' ? '👑' :
+                 state.activeIcon === 'icon_ninja' ? '🥷' :
+                 state.activeIcon === 'icon_wizard' ? '🧙' :
+                 state.activeIcon === 'icon_samurai' ? '⚔️' :
+                 state.activeIcon === 'icon_robot' ? '🤖' :
+                 state.activeIcon === 'icon_cherry_blossom' ? '🌸' : '👤'}
+              </>
+            )}
           </div>
           <div className="player-stats">
-            <h2>レベル {state.level}</h2>
+            <div className="username-container">
+              {isEditingName ? (
+                <div className="username-edit">
+                  <input
+                    type="text"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    maxLength={20}
+                    className="username-input"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleNameSave();
+                      if (e.key === 'Escape') handleNameCancel();
+                    }}
+                  />
+                  <div className="username-buttons">
+                    <button onClick={handleNameSave} className="username-save-btn">
+                      ✓
+                    </button>
+                    <button onClick={handleNameCancel} className="username-cancel-btn">
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="username-display">
+                  <h2>{state.username}</h2>
+                  <button 
+                    onClick={() => setIsEditingName(true)} 
+                    className="username-edit-btn"
+                    title="ユーザーネームを編集"
+                  >
+                    ✏️
+                  </button>
+                </div>
+              )}
+            </div>
+            <h3 style={{ margin: '0.5rem 0', color: '#a0a0c0', fontSize: '1.2rem' }}>
+              レベル {state.level}
+            </h3>
             <div className="xp-bar-container">
               <div className="xp-bar" style={{ width: `${getLevelProgress()}%` }}></div>
             </div>

@@ -1,0 +1,473 @@
+.card-collection-container {
+  min-height: 100vh;
+  padding: 2rem;
+  background: #f8f9fa;
+}
+
+.collection-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.back-button {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0.75rem 1.5rem;
+  background: white;
+  color: #1a1a1a;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border: 1px solid #e0e0e0;
+}
+
+.back-button:hover {
+  background: #f8f9fa;
+  border-color: #1a1a1a;
+  transform: translateX(-2px);
+}
+
+.collection-header h1 {
+  color: #1a1a1a;
+  font-size: 2.5rem;
+  margin: 1rem 0;
+  font-weight: 700;
+}
+
+.collection-stats {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.stat-badge {
+  background: white;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e0e0e0;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1a1a1a;
+}
+
+.stat-percentage {
+  font-size: 1rem;
+  color: #999;
+  margin-top: 0.25rem;
+}
+
+/* モード切り替え */
+.mode-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.mode-toggle button {
+  padding: 0.75rem 2rem;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  color: #1a1a1a;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-toggle button:hover {
+  background: #f8f9fa;
+  border-color: #1a1a1a;
+}
+
+.mode-toggle button.active {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+  color: white;
+}
+
+.collection-content {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* レアリティ統計 */
+.rarity-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.rarity-stat-item {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 1.5rem;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.rarity-stat-item:hover {
+  transform: translateY(-5px);
+}
+
+.rarity-stat-item.rarity-common {
+  border-left: 5px solid #9ca3af;
+}
+
+.rarity-stat-item.rarity-rare {
+  border-left: 5px solid #3b82f6;
+}
+
+.rarity-stat-item.rarity-epic {
+  border-left: 5px solid #a855f7;
+}
+
+.rarity-stat-item.rarity-legendary {
+  border-left: 5px solid #f97316;
+}
+
+.rarity-icon {
+  font-size: 2rem;
+}
+
+.rarity-name {
+  flex: 1;
+  font-weight: 600;
+  color: #333;
+}
+
+.rarity-count {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #667eea;
+}
+
+/* フィルター・ソート */
+.collection-controls {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.filter-section,
+.sort-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: white;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e0e0e0;
+}
+
+.filter-section label,
+.sort-section label {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.filter-select,
+.sort-select {
+  padding: 0.5rem 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 1rem;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #1a1a1a;
+}
+
+.filter-select:hover,
+.sort-select:hover {
+  border-color: #1a1a1a;
+}
+
+.filter-select:focus,
+.sort-select:focus {
+  outline: none;
+  border-color: #1a1a1a;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
+/* カードグリッド */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 2rem;
+  padding: 1rem;
+}
+
+.collection-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.collection-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.collection-card.rarity-common {
+  border: 2px solid #9ca3af;
+}
+
+.collection-card.rarity-rare {
+  border: 2px solid #3b82f6;
+}
+
+.collection-card.rarity-epic {
+  border: 2px solid #a855f7;
+}
+
+.collection-card.rarity-legendary {
+  border: 2px solid #f97316;
+}
+
+.collection-card.not-owned {
+  border: 2px solid #e0e0e0;
+  background: #f8f9fa;
+  opacity: 0.6;
+}
+
+.collection-card.not-owned:hover {
+  opacity: 0.8;
+}
+
+.card-image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.card-image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-silhouette {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #333 0%, #555 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.silhouette-icon {
+  font-size: 6rem;
+  color: #666;
+  font-weight: bold;
+}
+
+.card-count-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(255, 215, 0, 0.95);
+  color: #333;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.card-rarity-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+}
+
+.card-rarity-overlay.rarity-common {
+  background: rgba(156, 163, 175, 0.9);
+  color: white;
+}
+
+.card-rarity-overlay.rarity-rare {
+  background: rgba(59, 130, 246, 0.9);
+  color: white;
+}
+
+.card-rarity-overlay.rarity-epic {
+  background: rgba(168, 85, 247, 0.9);
+  color: white;
+}
+
+.card-rarity-overlay.rarity-legendary {
+  background: rgba(249, 115, 22, 0.9);
+  color: white;
+}
+
+.card-details {
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.card-kanji-large {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+}
+
+.card-obtained-date {
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 0.5rem;
+}
+
+.card-kanji-large.locked {
+  color: #999;
+}
+
+.card-locked-text {
+  font-size: 0.9rem;
+  color: #999;
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+/* シルエット表示 */
+.card-silhouette {
+  width: 100%;
+  height: 100%;
+  background: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.silhouette-icon {
+  font-size: 5rem;
+  color: #999;
+  font-weight: bold;
+}
+
+/* 被り数バッジ */
+.card-count-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #1a1a1a;
+  color: white;
+  font-weight: bold;
+  font-size: 0.9rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  z-index: 10;
+}
+
+/* 空のコレクション */
+.empty-collection {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e0e0e0;
+}
+
+.empty-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+}
+
+.empty-collection h3 {
+  color: #1a1a1a;
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+}
+
+.empty-collection p {
+  color: #666;
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+
+.shop-link-button {
+  display: inline-block;
+  padding: 1rem 2rem;
+  background: #1a1a1a;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  transition: all 0.2s ease;
+}
+
+.shop-link-button:hover {
+  background: #333;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .card-collection-container {
+    padding: 1rem;
+  }
+
+  .collection-header h1 {
+    font-size: 2rem;
+  }
+
+  .cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .collection-controls {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .rarity-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .back-button {
+    position: static;
+    display: inline-block;
+    margin-bottom: 1rem;
+  }
+}

@@ -78,3 +78,131 @@ button:focus-visible {
 input {
   font-family: inherit;
 }
+
+/* テーマスタイル */
+/* デフォルトテーマ */
+body.theme-default {
+  background: #ffffff;
+  color: #222;
+  background-image: radial-gradient(1000px 400px at 10% 10%, rgba(102,126,234,0.04), transparent),
+                    radial-gradient(800px 300px at 90% 90%, rgba(118,75,162,0.04), transparent);
+}
+
+/* ダークブルーテーマ */
+body.theme-theme_dark_blue {
+  background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+  color: #e0f7ff;
+  background-attachment: fixed;
+}
+
+body.theme-theme_dark_blue a {
+  color: #5dade2;
+}
+
+body.theme-theme_dark_blue button {
+  background-color: rgba(93, 173, 226, 0.2);
+  color: #e0f7ff;
+  border-color: rgba(93, 173, 226, 0.3);
+}
+
+/* パープルテーマ */
+body.theme-theme_purple {
+  background: linear-gradient(135deg, #1a0b2e 0%, #3d1f5c 50%, #5f3a87 100%);
+  color: #e8d5ff;
+  background-attachment: fixed;
+}
+
+body.theme-theme_purple a {
+  color: #b794f6;
+}
+
+body.theme-theme_purple button {
+  background-color: rgba(183, 148, 246, 0.2);
+  color: #e8d5ff;
+  border-color: rgba(183, 148, 246, 0.3);
+}
+
+/* グリーンテーマ */
+body.theme-theme_green {
+  background: linear-gradient(135deg, #0d3b2e 0%, #1b5e3f 50%, #2d8659 100%);
+  color: #d4ffea;
+  background-attachment: fixed;
+}
+
+body.theme-theme_green a {
+  color: #6ee7b7;
+}
+
+body.theme-theme_green button {
+  background-color: rgba(110, 231, 183, 0.2);
+  color: #d4ffea;
+  border-color: rgba(110, 231, 183, 0.3);
+}
+
+/* サンセットテーマ */
+body.theme-theme_sunset {
+  background: linear-gradient(135deg, #2d1b3d 0%, #6b3654 50%, #b8526b 100%);
+  color: #ffe8e8;
+  background-attachment: fixed;
+}
+
+body.theme-theme_sunset a {
+  color: #ffa07a;
+}
+
+body.theme-theme_sunset button {
+  background-color: rgba(255, 160, 122, 0.2);
+  color: #ffe8e8;
+  border-color: rgba(255, 160, 122, 0.3);
+}
+
+/* 桜テーマ */
+body.theme-theme_cherry {
+  background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 50%, #f48fb1 100%);
+  color: #4a0e2e;
+  background-attachment: fixed;
+}
+
+body.theme-theme_cherry a {
+  color: #c2185b;
+}
+
+body.theme-theme_cherry button {
+  background-color: rgba(244, 143, 177, 0.3);
+  color: #4a0e2e;
+  border-color: rgba(244, 143, 177, 0.4);
+}
+
+/* ミッドナイトテーマ */
+body.theme-theme_midnight {
+  background: linear-gradient(135deg, #0a1128 0%, #1c2541 50%, #2d3561 100%);
+  color: #d4e4ff;
+  background-attachment: fixed;
+}
+
+body.theme-theme_midnight a {
+  color: #7c9aff;
+}
+
+body.theme-theme_midnight button {
+  background-color: rgba(124, 154, 255, 0.2);
+  color: #d4e4ff;
+  border-color: rgba(124, 154, 255, 0.3);
+}
+
+/* 紅葉テーマ */
+body.theme-theme_autumn {
+  background: linear-gradient(135deg, #3e2723 0%, #6d4c41 50%, #8d6e63 100%);
+  color: #fff3e0;
+  background-attachment: fixed;
+}
+
+body.theme-theme_autumn a {
+  color: #ffab91;
+}
+
+body.theme-theme_autumn button {
+  background-color: rgba(255, 171, 145, 0.2);
+  color: #fff3e0;
+  border-color: rgba(255, 171, 145, 0.3);
+}

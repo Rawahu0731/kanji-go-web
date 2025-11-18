@@ -1,10 +1,10 @@
 /* ゲーミフィケーションヘッダー */
 .gamification-header {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
+  background: white;
   padding: 1rem 2rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid #e0e0e0;
   margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .player-stats-bar {
@@ -15,23 +15,55 @@
   flex-wrap: wrap;
 }
 
+.header-profile-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  background: #f8f9fa;
+  border: 2px solid #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  overflow: hidden;
+}
+
+.header-profile-icon:hover {
+  transform: scale(1.05);
+  border-color: #1a1a1a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header-username {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  padding: 0.5rem 1rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
 .stat-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: #f8f9fa;
   padding: 0.5rem 1rem;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
 }
 
 .stat-label {
-  color: #a0a0c0;
+  color: #666;
   font-size: 0.9rem;
 }
 
 .stat-value {
-  color: #fff;
+  color: #1a1a1a;
   font-weight: 700;
   font-size: 1.1rem;
 }
@@ -42,23 +74,22 @@
 }
 
 .xp-bar-bg {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  background: #e0e0e0;
+  border-radius: 6px;
   height: 12px;
   overflow: hidden;
   margin-bottom: 0.25rem;
 }
 
 .xp-bar-fill {
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  background: #1a1a1a;
   height: 100%;
   transition: width 0.5s ease;
-  box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
 }
 
 .xp-text {
   font-size: 0.85rem;
-  color: #a0a0c0;
+  color: #666;
 }
 
 .nav-links {
@@ -70,18 +101,18 @@
 
 .nav-link {
   padding: 0.6rem 1.2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #1a1a1a;
   color: white;
   text-decoration: none;
-  border-radius: 10px;
+  border-radius: 6px;
   font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
 }
 
 .nav-link:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  background: #333;
+  transform: translateY(-1px);
 }
 
 #root {
@@ -91,17 +122,13 @@
   text-align: center;
 }
 
-/* ヘッダースタイル（白背景に合うグラデーション文字） */
+/* ヘッダースタイル */
 h1 {
   font-size: 2.6rem;
   font-weight: 900;
   margin-bottom: 1.6rem;
   animation: fadeInDown 0.8s ease-out;
-  /* グラデーションの文字色 */
-  background: linear-gradient(90deg, #4756e6 0%, #764ba2 60%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: #1a1a1a;
   display: inline-block;
   padding: 0.25rem 0.5rem;
   letter-spacing: -0.02em;
@@ -121,45 +148,30 @@ h1 {
   font-size: 16px;
   font-weight: 600;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
-}
-
-.level-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.level-button:hover::before {
-  opacity: 1;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .level-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .level-button.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #1a1a1a;
   color: white;
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
 }
 
 .level-button:not(.active) {
-  background: #fff;
-  color: #333;
-  border: 1px solid rgba(20,20,40,0.04);
+  background: white;
+  color: #1a1a1a;
+  border: 1px solid #e0e0e0;
+}
+
+.level-button:not(.active):hover {
+  border-color: #1a1a1a;
 }
 
 /* 一覧モード */
@@ -182,31 +194,48 @@ h1 {
 
 /* ジャンル選択ドロップダウン */
 .genre-select {
-  padding: 10px 40px 10px 16px;
-  font-size: 15px;
-  font-weight: 500;
-  color: #333;
+  padding: 12px 36px 12px 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
   background: white;
-  border: 2px solid rgba(102, 126, 234, 0.3);
+  border: 2px solid #e0e0e0;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231a1a1a' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   min-width: 200px;
 }
 
 .genre-select:hover {
-  border-color: rgba(102, 126, 234, 0.6);
-  background-color: rgba(102, 126, 234, 0.05);
+  border-color: #1a1a1a;
 }
 
 .genre-select:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #1a1a1a;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
+.start-quiz-button {
+  padding: 14px 36px;
+  font-size: 18px;
+  font-weight: 700;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.start-quiz-button:hover {
+  background: #333;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .start-quiz-button {
@@ -236,13 +265,13 @@ h1 {
 }
 
 .kanji-card {
-  background: #fff;
-  border: 1px solid rgba(20,20,40,0.04);
-  border-radius: 14px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
   padding: 18px;
   padding-bottom: 12px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
   animation: fadeInUp 0.5s ease-out;
   animation-fill-mode: both;
   position: relative;
@@ -252,48 +281,45 @@ h1 {
 }
 
 .kanji-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 16px 40px rgba(102, 126, 234, 0.2);
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border-color: #1a1a1a;
 }
 
 .kanji-card img {
   width: 100%;
   height: auto;
-  border-radius: 12px;
+  border-radius: 6px;
   margin-bottom: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s;
+  transition: transform 0.2s;
   flex-shrink: 0;
 }
 
 .kanji-card:hover img {
-  transform: scale(1.05);
+  transform: scale(1.03);
 }
 
 .kanji-card .reading {
   margin-top: auto;
-  background: rgba(255,255,255,0.95);
-  color: #111;
+  background: #f8f9fa;
+  color: #1a1a1a;
   padding: 6px 9px;
   border-radius: 6px;
   font-size: 0.95rem;
-  border: 1px solid rgba(20,20,40,0.04);
+  border: 1px solid #e0e0e0;
   text-align: center;
+  font-weight: 600;
 }
 
 .kanji-card .additional-info {
-  background: rgba(135, 206, 250, 0.95);
-  color: #111;
+  background: #f8f9fa;
+  color: #1a1a1a;
   padding: 5px 8px;
   border-radius: 6px;
-  font-size: 0.75rem;
-  border: 1px solid rgba(20,20,40,0.06);
-  font-weight: 500;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  font-size: 0.85rem;
+  border: 1px solid #e0e0e0;
   text-align: center;
-  line-height: 1.4;
   margin-top: 6px;
-  word-wrap: break-word;
 }
 
 /* 単語帳モード用 */
@@ -314,16 +340,16 @@ h1 {
 .study-toggle {
   padding: 10px 14px;
   font-weight: 700;
-  border-radius: 10px;
-  background: #fff;
-  border: 1px solid #eef0f6;
-  color: #333;
-  box-shadow: 0 6px 16px rgba(30,30,60,0.04);
+  border-radius: 6px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  color: #1a1a1a;
+  transition: all 0.2s ease;
 }
 .study-toggle.active {
-  background: linear-gradient(90deg, #4756e6 0%, #764ba2 60%);
-  color: #fff;
-  box-shadow: 0 10px 30px rgba(71,86,230,0.15);
+  background: #1a1a1a;
+  color: white;
+  border-color: #1a1a1a;
 }
 
 /* 問題モード */
@@ -346,31 +372,33 @@ h1 {
   padding: 10px 20px;
   font-size: 14px;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.9);
+  background: white;
   border: 2px solid #e0e0e0;
-  border-radius: 10px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s ease;
+  color: #1a1a1a;
 }
 
 .back-button:hover {
-  background: #f5f5f5;
-  border-color: #667eea;
-  transform: translateX(-3px);
+  background: #f8f9fa;
+  border-color: #1a1a1a;
+  transform: translateX(-2px);
 }
 
 .quiz-progress {
   font-size: 20px;
   font-weight: 700;
-  color: #667eea;
+  color: #1a1a1a;
 }
 
 .quiz-score {
   font-size: 16px;
   font-weight: 600;
   padding: 8px 16px;
-  background: rgba(102, 126, 234, 0.1);
-  border-radius: 10px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
 }
 
 /* 問題形式選択 */
@@ -385,33 +413,31 @@ h1 {
   padding: 10px 20px;
   font-size: 15px;
   font-weight: 600;
-  border-radius: 10px;
-  background: #fff;
-  border: 1px solid #eef0f6;
-  color: #333;
+  border-radius: 6px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  color: #1a1a1a;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(30,30,60,0.04);
 }
 
 .format-button:hover {
-  transform: translateY(-2px);
-  border-color: #d0d5ff;
+  transform: translateY(-1px);
+  border-color: #1a1a1a;
 }
 
 .format-button.active {
-  background: linear-gradient(90deg, #4756e6 0%, #764ba2 60%);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 8px 24px rgba(71,86,230,0.2);
+  background: #1a1a1a;
+  color: white;
+  border-color: #1a1a1a;
 }
 
 .quiz-card {
-  background: #fff;
-  border: 1px solid rgba(20,20,40,0.04);
-  border-radius: 20px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
   padding: 36px;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   animation: scaleIn 0.36s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

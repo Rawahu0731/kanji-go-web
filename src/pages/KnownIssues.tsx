@@ -137,7 +137,7 @@ export default function KnownIssues() {
           既知の不具合
         </h1>
         <p style={{ marginBottom: '1rem', color: '#666' }}>
-          現在確認されている不具合の一覧です。修正され次第、パッチノートでお知らせします。
+          現在確認されている不具合の一覧です。情報は随時更新されます。
         </p>
 
         {articles.length === 0 ? (
