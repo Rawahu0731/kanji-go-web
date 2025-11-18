@@ -404,8 +404,8 @@ function App() {
       setScore(prev => ({ ...prev, correct: prev.correct + 1 }));
       
       // XPとコインを付与
-      const xpGain = 10;
-      const coinGain = 5;
+      const xpGain = 100;
+      const coinGain = 50;
       addXp(xpGain);
       addCoins(coinGain);
       
@@ -863,8 +863,8 @@ function App() {
                             setScore(prev => ({ ...prev, correct: prev.correct + 1 }));
                             
                             // XPとコインを付与
-                            const xpGain = 10;
-                            const coinGain = 5;
+                            const xpGain = 50;
+                            const coinGain = 100;
                             addXp(xpGain);
                             addCoins(coinGain);
                             
