@@ -16,7 +16,8 @@ export type ActiveBoost = {
   expiresAt: number; // タイムスタンプ
 };
 
-export type GamificationState = {
+export interface GamificationState {
+  version?: number; // データバージョン
   xp: number;
   level: number;
   coins: number;
@@ -36,7 +37,7 @@ export type GamificationState = {
   activeIcon: string;
   customIconUrl: string; // カスタムアイコンのURL
   username: string; // ユーザーネーム
-};
+}
 
 type GamificationContextType = {
   state: GamificationState;
@@ -61,7 +62,10 @@ type GamificationContextType = {
 
 const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
 
+const CURRENT_VERSION = 1; // データバージョン
+
 const INITIAL_STATE: GamificationState = {
+  version: CURRENT_VERSION,
   xp: 0,
   level: 1,
   coins: 0,
@@ -83,6 +87,26 @@ const INITIAL_STATE: GamificationState = {
   username: 'プレイヤー'
 };
 
+// データマイグレーション関数
+function migrateData(data: any): GamificationState {
+  const version = data.version || 0;
+  
+  // バージョン0から1へのマイグレーション
+  if (version < 1) {
+    // コイン数が異常に多い場合（99999999など）は0にリセット
+    if (data.coins && data.coins > 10000) {
+      console.log('異常なコイン数を検出しました。リセットします:', data.coins);
+      data.coins = 0;
+    }
+    data.version = 1;
+  }
+  
+  // バージョン番号を最新に更新
+  data.version = CURRENT_VERSION;
+  
+  return data;
+}
+
 // レベルアップに必要なXPを計算（指数関数的に増加）
 function getXpForLevel(level: number): number {
   return Math.floor(100 * Math.pow(1.5, level - 1));
@@ -97,7 +121,10 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setState(parsed);
+        const migrated = migrateData(parsed);
+        setState(migrated);
+        // マイグレーション後のデータを保存
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
       } catch (e) {
         console.error('Failed to parse gamification state:', e);
       }
