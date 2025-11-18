@@ -64,7 +64,7 @@ const GamificationContext = createContext<GamificationContextType | undefined>(u
 const INITIAL_STATE: GamificationState = {
   xp: 0,
   level: 1,
-  coins: 99999999,
+  coins: 0,
   totalXp: 0,
   unlockedBadges: [],
   purchasedItems: [],
