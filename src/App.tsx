@@ -133,7 +133,7 @@ function App() {
   
   // デバッグモード裏コマンド用
   const [debugTapCount, setDebugTapCount] = useState(0);
-  const [debugTapTimer, setDebugTapTimer] = useState<NodeJS.Timeout | null>(null);
+  const [debugTapTimer, setDebugTapTimer] = useState<number | null>(null);
   
   // ジャンル絞り込み用のステート
   const [selectedGenre, setSelectedGenre] = useState<string>('all');

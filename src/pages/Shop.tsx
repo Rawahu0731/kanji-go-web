@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import { useGamification } from '../contexts/GamificationContext';
 import { SHOP_ITEMS } from '../data/shopItems';
 import type { ShopItem } from '../data/shopItems';
-import { CARD_PACK_CONFIG } from '../data/cardCollection';
-import type { KanjiCard, CardRarity } from '../data/cardCollection';
+import type { KanjiCard } from '../data/cardCollection';
 import '../styles/Shop.css';
 
 function Shop() {
