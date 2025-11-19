@@ -4,7 +4,7 @@ export type ShopItem = {
   name: string;
   description: string;
   price: number;
-  category: 'theme' | 'icon' | 'boost' | 'collection';
+  category: 'theme' | 'icon' | 'collection' | 'gacha';
   icon: string;
   effect?: string;
   rarity?: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
@@ -184,185 +184,11 @@ export const SHOP_ITEMS: ShopItem[] = [
     icon: '🎨',
     effect: 'custom'
   },
-  // ブーストアイテム
-  {
-    id: 'xp_boost_2x_1h',
-    name: 'XP2倍ブースト（1時間）',
-    description: '1時間XPが2倍になる。短時間の集中学習に最適！',
-    price: 1000,
-    category: 'boost',
-    icon: '⚡',
-    effect: 'xp_boost_2x_1h'
-  },
-  {
-    id: 'xp_boost_3x_30m',
-    name: 'XP3倍ブースト（30分）',
-    description: '30分間XPが3倍になる。超集中モードで一気に稼ぐ！',
-    price: 1500,
-    category: 'boost',
-    icon: '⚡⚡',
-    effect: 'xp_boost_3x_30m'
-  },
-  {
-    id: 'xp_boost_5x_15m',
-    name: 'XP5倍ブースト（15分）',
-    description: '15分間XPが5倍になる。最強の瞬発力でレベルアップ！',
-    price: 2000,
-    category: 'boost',
-    icon: '⚡⚡⚡',
-    effect: 'xp_boost_5x_15m'
-  },
-  {
-    id: 'coin_boost_2x_1h',
-    name: 'コイン2倍ブースト（1時間）',
-    description: '1時間獲得コインが2倍になる。お金を稼ぎたい時に！',
-    price: 800,
-    category: 'boost',
-    icon: '💰',
-    effect: 'coin_boost_2x_1h'
-  },
-  {
-    id: 'combo_boost_1h',
-    name: 'コンボ維持ブースト（1時間）',
-    description: '1時間コンボが途切れにくくなる。連続正解でハイスコア！',
-    price: 1200,
-    category: 'boost',
-    icon: '🔗',
-    effect: 'combo_boost_1h'
-  },
-  {
-    id: 'lucky_boost_30m',
-    name: 'ラッキーブースト（30分）',
-    description: '30分間レアアイテムドロップ率が上昇。運試しに！',
-    price: 1500,
-    category: 'boost',
-    icon: '🍀',
-    effect: 'lucky_boost_30m'
-  },
-  {
-    id: 'all_boost_15m',
-    name: '全能力ブースト（15分）',
-    description: '15分間XP・コイン・コンボすべてが1.5倍。究極のパワーアップ！',
-    price: 2500,
-    category: 'boost',
-    icon: '🌟',
-    effect: 'all_boost_15m'
-  },
-  {
-    id: 'streak_shield',
-    name: '連続記録シールド',
-    description: '1回分の学習を逃してもストリークが途切れない保護アイテム。',
-    price: 3000,
-    category: 'boost',
-    icon: '🛡️',
-    effect: 'streak_shield'
-  },
-  {
-    id: 'auto_hint_1h',
-    name: 'オートヒント（1時間）',
-    description: '1時間難しい問題で自動的にヒントが表示される。学習サポート！',
-    price: 500,
-    category: 'boost',
-    icon: '💡',
-    effect: 'auto_hint_1h'
-  },
-  {
-    id: 'perfect_bonus_1h',
-    name: 'パーフェクトボーナス（1時間）',
-    description: '1時間全問正解時のボーナスが2倍になる。完璧を目指そう！',
-    price: 1800,
-    category: 'boost',
-    icon: '✨',
-    effect: 'perfect_bonus_1h'
-  },
-  // プレミアムブースト（やり込み要素）
-  {
-    id: 'xp_boost_10x_5m',
-    name: 'XP10倍ブースト（5分）',
-    description: '5分間XPが10倍！超短時間で爆発的成長。使いこなせるか？',
-    price: 5000,
-    category: 'boost',
-    icon: '⚡⚡⚡⚡',
-    effect: 'xp_boost_10x_5m'
-  },
-  {
-    id: 'mega_boost_1h',
-    name: 'メガブースト（1時間）',
-    description: '1時間XP・コイン・コンボすべてが3倍！圧倒的なパワー！',
-    price: 8000,
-    category: 'boost',
-    icon: '💥',
-    effect: 'mega_boost_1h'
-  },
-  {
-    id: 'double_reward_24h',
-    name: '24時間ダブル報酬',
-    description: '丸一日すべての報酬が2倍。本気の学習マラソンに！',
-    price: 12000,
-    category: 'boost',
-    icon: '🎁',
-    effect: 'double_reward_24h'
-  },
-  {
-    id: 'legendary_boost_30m',
-    name: 'レジェンダリーブースト（30分）',
-    description: '30分間XP×5、コイン×5、完璧ボーナス×3！伝説級の力！',
-    price: 15000,
-    category: 'boost',
-    icon: '👑⚡',
-    effect: 'legendary_boost_30m'
-  },
-  // 永続アップグレード（やり込み要素）
-  {
-    id: 'permanent_xp_boost',
-    name: '永続XPブースト+10%',
-    description: '永久にXP獲得量が10%増加！一度購入すれば効果は永続！',
-    price: 25000,
-    category: 'boost',
-    icon: '🔰',
-    effect: 'permanent_xp_boost'
-  },
-  {
-    id: 'permanent_coin_boost',
-    name: '永続コインブースト+10%',
-    description: '永久にコイン獲得量が10%増加！富への第一歩！',
-    price: 25000,
-    category: 'boost',
-    icon: '💰🔰',
-    effect: 'permanent_coin_boost'
-  },
-  {
-    id: 'auto_save_streak',
-    name: '自動ストリーク保護',
-    description: 'ストリークが途切れそうな時、自動的に保護（月3回まで）。安心の保険！',
-    price: 30000,
-    category: 'boost',
-    icon: '🛡️✨',
-    effect: 'auto_save_streak'
-  },
-  {
-    id: 'master_learner',
-    name: 'マスター学習者の証',
-    description: 'すべての基本能力が永続的に20%向上。真の達人の証明！',
-    price: 50000,
-    category: 'boost',
-    icon: '🎓👑',
-    effect: 'master_learner'
-  },
-  {
-    id: 'ultimate_power',
-    name: '究極の力',
-    description: '全能力が永続的に50%向上。このゲームの最終到達点。手に入れられるか？',
-    price: 100000,
-    category: 'boost',
-    icon: '💫🌟',
-    effect: 'ultimate_power'
-  },
   // カードパック（ガチャ要素）
   {
     id: 'card_pack_basic',
     name: 'ベーシックパック',
-    description: 'ランダムで3枚の漢字カードを獲得。レベル4-5の漢字が出る！',
+    description: 'ランダムで3枚の漢字カードを獲得。',
     price: 1000,
     category: 'collection',
     icon: '📦',
@@ -372,7 +198,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'card_pack_bronze',
     name: 'ブロンズパック',
-    description: 'ランダムで5枚の漢字カードを獲得。レベル4-6の漢字が出やすい！',
+    description: 'ランダムで5枚の漢字カードを獲得。',
     price: 3000,
     category: 'collection',
     icon: '🃏',
@@ -382,7 +208,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'card_pack_silver',
     name: 'シルバーパック',
-    description: 'ランダムで5枚の漢字カードを獲得。レベル5-7の漢字が出る。レアカードの可能性も！',
+    description: 'ランダムで5枚の漢字カードを獲得。レアカードの可能性も！',
     price: 8000,
     category: 'collection',
     icon: '🎴',
@@ -392,7 +218,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'card_pack_gold',
     name: 'ゴールドパック',
-    description: 'ランダムで7枚の漢字カードを獲得。レベル6-8の漢字が中心。レアカード1枚確定！',
+    description: 'ランダムで7枚の漢字カードを獲得。レアカード1枚確定！',
     price: 15000,
     category: 'collection',
     icon: '🎰',
@@ -408,5 +234,35 @@ export const SHOP_ITEMS: ShopItem[] = [
     icon: '💎',
     effect: 'card_pack_platinum',
     rarity: 'legendary'
+  },
+  // キャラクターガチャ
+  {
+    id: 'character_gacha_single',
+    name: '単発ガチャ',
+    description: 'ランダムで1体のキャラクターを獲得。XP・コインブースト効果を持つ！',
+    price: 500,
+    category: 'gacha',
+    icon: '🎲',
+    effect: 'character_gacha_1'
+  },
+  {
+    id: 'character_gacha_5',
+    name: '5連ガチャ',
+    description: 'ランダムで5体のキャラクターを獲得。レア以上1体確定！',
+    price: 2000,
+    category: 'gacha',
+    icon: '🎲🎲',
+    effect: 'character_gacha_5',
+    rarity: 'rare'
+  },
+  {
+    id: 'character_gacha_10',
+    name: '10連ガチャ',
+    description: 'ランダムで10体のキャラクターを獲得。エピック以上1体確定！',
+    price: 3500,
+    category: 'gacha',
+    icon: '🎲🎲🎲',
+    effect: 'character_gacha_10',
+    rarity: 'epic'
   }
 ];

@@ -73,6 +73,17 @@ function CardCollection() {
     }
   });
 
+  // コンプリート報酬を計算
+  const getCompleteBonus = (uniqueCount: number): number => {
+    if (uniqueCount >= 2136) return 0.25; // 常用漢字全種コンプリート！
+    if (uniqueCount >= 1500) return 0.15;
+    if (uniqueCount >= 1000) return 0.1;
+    if (uniqueCount >= 500) return 0.06;
+    if (uniqueCount >= 250) return 0.04;
+    if (uniqueCount >= 100) return 0.02;
+    return 0;
+  };
+
   // レアリティの日本語名
   const getRarityName = (rarity: string): string => {
     switch (rarity) {
@@ -96,6 +107,10 @@ function CardCollection() {
     epic: state.cardCollection.filter(c => c.rarity === 'epic').length,
     legendary: state.cardCollection.filter(c => c.rarity === 'legendary').length,
   };
+
+  // コレクションボーナスを計算
+  const collectionBonus = useGamification().getCollectionBoost();
+  const bonusPercentage = Math.round(collectionBonus * 100);
 
   return (
     <div className="card-collection-container">
@@ -145,11 +160,32 @@ function CardCollection() {
             <span className="rarity-count">{stats.epic}</span>
           </div>
           <div className="rarity-stat-item rarity-legendary">
-            <span className="rarity-icon">🟠</span>
+            <span className="rarity-icon">🌟</span>
             <span className="rarity-name">レジェンダリー</span>
             <span className="rarity-count">{stats.legendary}</span>
           </div>
         </div>
+
+        {/* コレクションボーナス表示 */}
+        {collectionBonus > 0 && (
+          <div className="collection-bonus-info">
+            <div className="bonus-header">
+              <span className="bonus-icon">✨</span>
+              <span className="bonus-title">コレクションボーナス</span>
+            </div>
+            <div className="bonus-value">+{bonusPercentage}% XP/コイン</div>
+            <div className="bonus-details">
+              <div className="bonus-detail-item">
+                <span>被りボーナス:</span>
+                <span>{Math.round((collectionBonus - getCompleteBonus(uniqueOwned)) * 100)}%</span>
+              </div>
+              <div className="bonus-detail-item">
+                <span>コンプリート報酬:</span>
+                <span>{Math.round(getCompleteBonus(uniqueOwned) * 100)}%</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* フィルター・ソート */}
         <div className="collection-controls">

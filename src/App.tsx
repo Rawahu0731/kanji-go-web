@@ -4,7 +4,6 @@ import { getKnownIssues } from './lib/microcms'
 import type { Article } from './lib/microcms'
 import { useGamification } from './contexts/GamificationContext'
 import { DebugPanel } from './components/DebugPanel'
-import ActiveBoosts from './components/ActiveBoosts'
 import './App.css'
 
 type Item = {
@@ -174,7 +173,7 @@ function App() {
   const [currentStreak, setCurrentStreak] = useState(0);
   
   // ゲーミフィケーションシステム
-  const { addXp, addCoins, updateStats, state: gamificationState } = useGamification();
+  const { addXp, addCoins, updateStats, addCharacterXp, state: gamificationState } = useGamification();
   const [choices, setChoices] = useState<string[]>([]); // 四択の選択肢
   // 単語帳モード: 一覧で読みを隠すかどうか
   const [studyMode, setStudyMode] = useState(false);
@@ -403,11 +402,14 @@ function App() {
     if (correct) {
       setScore(prev => ({ ...prev, correct: prev.correct + 1 }));
       
-      // XPとコインを付与
-      const xpGain = 100;
-      const coinGain = 50;
+      // XPとコインを付与（入力形式は難しいので報酬が多い）
+      const xpGain = 150;
+      const coinGain = 100;
       addXp(xpGain);
       addCoins(coinGain);
+      
+      // キャラクターに経験値を付与（入力形式: 20XP）
+      addCharacterXp(20);
       
       // ストリーク更新
       const newStreak = currentStreak + 1;
@@ -474,9 +476,6 @@ function App() {
 
   return (
     <>
-      {/* アクティブなブーストの表示 */}
-      <ActiveBoosts />
-      
       {/* ゲーミフィケーションヘッダー */}
       <div className="gamification-header">
         <div className="player-stats-bar">
@@ -534,6 +533,7 @@ function App() {
         </div>
         <div className="nav-links">
           <Link to="/profile" className="nav-link">プロフィール</Link>
+          <Link to="/characters" className="nav-link">⭐ キャラクター</Link>
           <Link to="/shop" className="nav-link">ショップ</Link>
           <Link to="/collection" className="nav-link">📚 コレクション</Link>
           <Link to="/story" className="nav-link">ストーリー</Link>
@@ -794,6 +794,7 @@ function App() {
                 setQuizFormat('input');
                 setUserAnswer('');
                 setShowResult(false);
+                nextQuestion(); // 新しい問題を取得
               }}
               className={`format-button ${quizFormat === 'input' ? 'active' : ''}`}
             >
@@ -804,6 +805,7 @@ function App() {
                 setQuizFormat('choice');
                 setUserAnswer('');
                 setShowResult(false);
+                nextQuestion(); // 新しい問題を取得
               }}
               className={`format-button ${quizFormat === 'choice' ? 'active' : ''}`}
             >
@@ -862,11 +864,17 @@ function App() {
                           if (correct) {
                             setScore(prev => ({ ...prev, correct: prev.correct + 1 }));
                             
-                            // XPとコインを付与
+                            // XPとコインを付与（四択形式は簡単なので報酬が少ない）
                             const xpGain = 50;
-                            const coinGain = 100;
+                            const coinGain = 30;
                             addXp(xpGain);
                             addCoins(coinGain);
+                            
+                            // キャラクターに経験値を付与（四択形式: 5XP）
+                            addCharacterXp(5);
+                            
+                            // ストリーク更新
+                            addCharacterXp(5);
                             
                             // ストリーク更新
                             const newStreak = currentStreak + 1;

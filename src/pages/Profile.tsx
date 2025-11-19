@@ -187,6 +187,40 @@ function Profile() {
             })}
           </div>
         </div>
+
+        {/* キャラクター管理へのリンク */}
+        <div className="stats-card">
+          <h2>キャラクター</h2>
+          <p style={{ textAlign: 'center', color: '#a0a0c0', padding: '1rem', marginBottom: '1rem' }}>
+            所持キャラクター: {state.characters.length}体
+          </p>
+          <Link 
+            to="/characters" 
+            style={{
+              display: 'block',
+              textAlign: 'center',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              padding: '1rem 2rem',
+              borderRadius: '12px',
+              textDecoration: 'none',
+              fontWeight: '600',
+              fontSize: '1.1rem',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)';
+            }}
+          >
+            キャラクター管理へ →
+          </Link>
+        </div>
       </div>
     </div>
   );

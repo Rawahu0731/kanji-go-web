@@ -44,6 +44,66 @@
   margin-top: 1rem;
 }
 
+.collection-bonus-info {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin: 1.5rem auto;
+  max-width: 500px;
+  box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+}
+
+.bonus-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.bonus-icon {
+  font-size: 1.5rem;
+}
+
+.bonus-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.bonus-value {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.bonus-details {
+  display: flex;
+  justify-content: space-around;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.bonus-detail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.bonus-detail-item span:first-child {
+  opacity: 0.9;
+}
+
+.bonus-detail-item span:last-child {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
 .stat-badge {
   background: white;
   padding: 1rem 2rem;

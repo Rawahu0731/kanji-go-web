@@ -319,3 +319,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* キャラクターカードのホバー効果 */
+.character-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
