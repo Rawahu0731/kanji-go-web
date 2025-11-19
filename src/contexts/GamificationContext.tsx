@@ -227,7 +227,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       // マージ戦略：
       // - totalXp は大きい方を採用
       // - xp はローカルの進行を優先
-      // - coins は最大値を採用（重複付与を避けるため）
+      // - coins はローカルの値を優先（消費を反映するため）
       // - 配列はユニオン
       // - stats の累積は合算、currentStreak/bestStreak は大きい方
       const merged: GamificationState = {
@@ -236,7 +236,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         totalXp: Math.max(state.totalXp || 0, migratedRemote.totalXp || 0),
         xp: state.xp,
         level: Math.max(state.level, migratedRemote.level),
-        coins: Math.max(state.coins || 0, migratedRemote.coins || 0),
+        coins: state.coins,
         unlockedBadges: Array.from(new Set([...(migratedRemote.unlockedBadges || []), ...(state.unlockedBadges || [])])),
         purchasedItems: Array.from(new Set([...(migratedRemote.purchasedItems || []), ...(state.purchasedItems || [])])),
         cardCollection: mergeCardCollections(migratedRemote.cardCollection || [], state.cardCollection || []),
