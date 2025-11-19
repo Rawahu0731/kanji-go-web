@@ -65,7 +65,7 @@ type GamificationContextType = {
 
 const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
 
-const CURRENT_VERSION = 3; // データバージョン（バージョン3：統計データリセット）
+const CURRENT_VERSION = 4; // データバージョン（バージョン4：XP計算式変更記念コイン配布）
 
 const INITIAL_STATE: GamificationState = {
   version: CURRENT_VERSION,
@@ -127,6 +127,14 @@ function migrateData(data: any): GamificationState {
     data.version = 3;
   }
   
+  // バージョン3から4へのマイグレーション
+  if (version < 4) {
+    // XP計算式変更記念：10500コイン配布
+    console.log('アップデート記念で10500コインを配布します！');
+    data.coins = (data.coins || 0) + 10500;
+    data.version = 4;
+  }
+  
   // キャラクター機能の追加（既存のデータにフィールドを追加）
   if (!data.characters) {
     data.characters = [];
@@ -185,9 +193,9 @@ function mergeCharacters(a: OwnedCharacter[], b: OwnedCharacter[]): OwnedCharact
   return Array.from(map.values());
 }
 
-// レベルアップに必要なXPを計算（指数関数的に増加）
+// レベルアップに必要なXPを計算(1.5次関数的に増加: level^1.5)
 function getXpForLevel(level: number): number {
-  return Math.floor(100 * Math.pow(1.5, level - 1));
+  return Math.floor(50 * level * Math.sqrt(level));
 }
 
 export function GamificationProvider({ children }: { children: ReactNode }) {

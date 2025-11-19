@@ -559,11 +559,11 @@ function App() {
             <div className="xp-bar-bg">
               <div 
                 className="xp-bar-fill" 
-                style={{ width: `${(gamificationState.xp / (100 * Math.pow(1.5, gamificationState.level - 1))) * 100}%` }}
+                style={{ width: `${(gamificationState.xp / (50 * gamificationState.level * Math.sqrt(gamificationState.level))) * 100}%` }}
               ></div>
             </div>
             <span className="xp-text">
-              {gamificationState.xp} / {Math.floor(100 * Math.pow(1.5, gamificationState.level - 1))} XP
+              {gamificationState.xp} / {Math.floor(50 * gamificationState.level * Math.sqrt(gamificationState.level))} XP
             </span>
           </div>
           <div className="stat-item">
