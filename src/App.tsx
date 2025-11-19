@@ -14,9 +14,14 @@ type Item = {
   imageUrl: string;
   additionalInfo?: string;
   components?: string; // 漢字の構成要素（例: "火,火" for 炎）
+  kanji?: string; // エクストラ用: 画像なしで漢字文字を表示
+  // エクストラ専用フィールド
+  sentence?: string; // 問題文
+  katakana?: string; // 漢字に変換するカタカナ部分
+  answer?: string; // 正解の漢字
 };
 
-type Level = 4 | 5 | 6 | 7 | 8;
+type Level = 4 | 5 | 6 | 7 | 8 | 'extra';
 type Mode = 'list' | 'quiz';
 type QuizFormat = 'input' | 'choice'; // 入力 or 四択
 
@@ -258,7 +263,7 @@ function App() {
       setError(null);
       setItems(null);
 
-      // レベル7以外は準備中
+      // レベル7, 8以外は準備中（extraも準備中）
       if (selectedLevel !== 7 && selectedLevel !== 8) {
         setLoading(false);
         setError('準備中です');
@@ -290,18 +295,22 @@ function App() {
 
         // ヘッダ名は 'path' または 'filename' のどちらかが来る想定
         const filenameField = header.includes('path') ? 'path' : (header.includes('filename') ? 'filename' : header[0]);
+        const kanjiField = header.includes('kanji') ? 'kanji' : null;
 
           const mapped: Item[] = data.map(d => {
+          // 通常のレベル（4-8）
           const fname = d[filenameField];
-          // CSV に画像パスが 'images/...' のように書かれているので、そのまま結合
+          const kanjiChar = kanjiField ? d[kanjiField] : null;
           const imageUrl = fname?.startsWith('/') ? fname : `/kanji/level-${selectedLevel}/${fname}`;
+          
           return {
-            filename: fname,
+            filename: fname || kanjiChar || '',
             reading: d.reading || d['reading'] || '',
             meaning: d.meaning,
             imageUrl,
+            kanji: kanjiChar || null,
             additionalInfo: d.additional_info || d['additional_info'] || '',
-            components: d.components || d['components'] || '', // 構成要素を追加
+            components: d.components || d['components'] || '',
           } as Item;
         });
         setItems(mapped);
@@ -413,13 +422,16 @@ function App() {
   const checkAnswer = () => {
     if (!quizItems[currentIndex]) return;
     
+    let correct = false;
+    const userInput = userAnswer.trim();
+    
+    // 通常モード: 読みを答える
     const correctReading = quizItems[currentIndex].reading;
     // 正解が「、」で区切られている場合、いずれかに一致すればOK
     const correctOptions = correctReading.split('、').map(r => r.trim());
-    const userInput = userAnswer.trim();
     
     // 各正解オプションについて、送り仮名を除いた部分で照合
-    const correct = correctOptions.some(option => {
+    correct = correctOptions.some(option => {
       const coreReading = extractReadingCore(option);
       return userInput === coreReading;
     });
@@ -500,7 +512,7 @@ function App() {
     }
   };
 
-  const levels: Level[] = [4, 5, 6, 7, 8];
+  const levels: Level[] = [4, 5, 6, 7, 8, 'extra'];
 
   return (
     <>
@@ -631,7 +643,7 @@ function App() {
             onClick={() => setSelectedLevel(level)}
             className={`level-button ${selectedLevel === level ? 'active' : ''}`}
           >
-            レベル{level}
+            {level === 'extra' ? 'エクストラ' : `レベル${level}`}
           </button>
         ))}
       </div>
@@ -789,6 +801,7 @@ function App() {
               </button>
             </div>
           </div>
+          {/* 通常レベルのグリッドレイアウト */}
           <div className="card-grid">
             {filteredItems.map((it, i) => {
               const key = it.filename || it.imageUrl;
@@ -843,6 +856,7 @@ function App() {
           </div>
 
           {/* 問題形式の選択 */}
+          {selectedLevel !== 'extra' && (
           <div className="quiz-format-selector">
             <button
               onClick={() => {
@@ -867,8 +881,46 @@ function App() {
               四択形式
             </button>
           </div>
+          )}
 
           <div className="quiz-card">
+            {selectedLevel === 'extra' ? (
+              // エクストラ用の問題表示
+              <div className="extra-quiz-content">
+                <div 
+                  className="extra-quiz-sentence"
+                  dangerouslySetInnerHTML={{ 
+                    __html: quizItems[currentIndex].sentence?.replace(
+                      quizItems[currentIndex].katakana || '',
+                      `<span class="katakana-highlight-large">${quizItems[currentIndex].katakana}</span>`
+                    ) || '' 
+                  }}
+                />
+                <div className="quiz-input-container">
+                  <label className="quiz-label">
+                    ハイライトされたカタカナを漢字に変換してください
+                  </label>
+                  <input
+                    type="text"
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !showResult) {
+                        checkAnswer();
+                      } else if (e.key === 'Enter' && showResult) {
+                        nextQuestion();
+                      }
+                    }}
+                    disabled={showResult}
+                    className="quiz-input"
+                    placeholder="漢字で入力"
+                    autoFocus
+                  />
+                </div>
+              </div>
+            ) : (
+              // 通常レベルの問題表示
+              <>
             <img 
               src={quizItems[currentIndex].imageUrl} 
               alt="問題の漢字" 
@@ -972,8 +1024,10 @@ function App() {
                 </div>
               </div>
             )}
+            </>
+            )}
 
-            {!showResult && quizFormat === 'input' && (
+            {!showResult && (selectedLevel === 'extra' || quizFormat === 'input') && (
               <div className="quiz-buttons">
                 <button
                   onClick={checkAnswer}
@@ -994,10 +1048,19 @@ function App() {
                   {isCorrect ? '✓ 正解！' : '✗ 不正解'}
                 </div>
                 <div className="correct-answer">
-                  {isCorrect ? '読み方: ' : '正解: '}
-                  <span className="correct-answer-text">
-                    {formatReadingWithOkurigana(quizItems[currentIndex].reading)}
-                  </span>
+                  {selectedLevel === 'extra' ? (
+                    <>
+                      {isCorrect ? '答え: ' : '正解: '}
+                      <span className="correct-answer-text">{quizItems[currentIndex].answer}</span>
+                    </>
+                  ) : (
+                    <>
+                      {isCorrect ? '読み方: ' : '正解: '}
+                      <span className="correct-answer-text">
+                        {formatReadingWithOkurigana(quizItems[currentIndex].reading)}
+                      </span>
+                    </>
+                  )}
                 </div>
                 <button onClick={nextQuestion} className="next-button">
                   {currentIndex < quizItems.length - 1 ? '次の問題へ' : '終了'}

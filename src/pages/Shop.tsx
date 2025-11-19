@@ -117,7 +117,7 @@ function Shop() {
       
       if (success && item.effect) {
         const count = parseInt(item.effect.replace('character_gacha_', ''));
-        const characters = pullCharacterGacha(count, item.rarity as 'common' | 'rare' | 'epic' | 'legendary' | undefined);
+        const characters = pullCharacterGacha(count, item.rarity as 'common' | 'rare' | 'epic' | 'legendary' | 'mythic' | undefined);
         setPulledCharacters(characters);
         setShowGachaModal(true);
         setPurchaseMessage(`${item.name}を引いています...`);
@@ -537,7 +537,8 @@ function Shop() {
                     <div style={{ fontWeight: '700', marginBottom: '0.25rem' }}>{char.name}</div>
                     <div style={{ 
                       fontSize: '0.8rem',
-                      color: char.rarity === 'legendary' ? '#ffd700' :
+                      color: char.rarity === 'mythic' ? '#ff4444' :
+                             char.rarity === 'legendary' ? '#ffd700' :
                              char.rarity === 'epic' ? '#a335ee' :
                              char.rarity === 'rare' ? '#0070dd' : '#9d9d9d',
                       marginBottom: '0.5rem',

@@ -6,6 +6,7 @@ function Characters() {
 
   const getRarityName = (rarity: string) => {
     switch (rarity) {
+      case 'mythic': return 'ミシック';
       case 'legendary': return 'レジェンダリー';
       case 'epic': return 'エピック';
       case 'rare': return 'レア';
@@ -229,7 +230,8 @@ function Characters() {
                     </div>
                     <div style={{ 
                       fontSize: '0.85rem',
-                      color: char.rarity === 'legendary' ? '#ffd700' :
+                      color: char.rarity === 'mythic' ? '#ff4444' :
+                             char.rarity === 'legendary' ? '#ffd700' :
                              char.rarity === 'epic' ? '#a335ee' :
                              char.rarity === 'rare' ? '#0070dd' : '#9d9d9d',
                       marginBottom: '0.25rem',

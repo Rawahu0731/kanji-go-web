@@ -1,5 +1,5 @@
 // キャラクター定義
-export type CharacterRarity = 'common' | 'rare' | 'epic' | 'legendary';
+export type CharacterRarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
 export type CharacterEffect = {
   type: 'xp_boost' | 'coin_boost' | 'both_boost' | 'streak_shield' | 'lucky';
@@ -23,6 +23,7 @@ export type OwnedCharacter = Character & {
 
 // レアリティの優先度（ソート用）
 export const RARITY_ORDER: Record<CharacterRarity, number> = {
+  mythic: 5,
   legendary: 4,
   epic: 3,
   rare: 2,
@@ -149,15 +150,42 @@ export const CHARACTERS: Record<string, Character> = {
     rarity: 'legendary',
     description: 'コインを60%増加',
     effect: { type: 'coin_boost', value: 1.6 }
+  },
+  
+  // ミシック（超レア）
+  celestial: {
+    id: 'celestial',
+    name: '天界の守護者',
+    icon: '🌟👼',
+    rarity: 'mythic',
+    description: 'XPとコインを200%増加（3倍）',
+    effect: { type: 'both_boost', value: 3.0 }
+  },
+  primordial: {
+    id: 'primordial',
+    name: '原初の存在',
+    icon: '🌌✨',
+    rarity: 'mythic',
+    description: 'XPを400%増加（5倍）',
+    effect: { type: 'xp_boost', value: 5.0 }
+  },
+  transcendent: {
+    id: 'transcendent',
+    name: '超越者',
+    icon: '⚡🔱',
+    rarity: 'mythic',
+    description: 'コインを400%増加（5倍）',
+    effect: { type: 'coin_boost', value: 5.0 }
   }
 };
 
 // ガチャの排出率
 export const GACHA_RATES = {
-  common: 60,    // 60%
-  rare: 30,      // 30%
-  epic: 9,       // 9%
-  legendary: 1   // 1%
+  common: 60,      // 60%
+  rare: 30,        // 30%
+  epic: 9,         // 9%
+  legendary: 0.9,  // 0.9%
+  mythic: 0.1      // 0.1%
 };
 
 // レアリティごとのキャラクターリストを取得
@@ -233,6 +261,7 @@ export const getRarityName = (rarity: CharacterRarity): string => {
     case 'rare': return 'レア';
     case 'epic': return 'エピック';
     case 'legendary': return 'レジェンダリー';
+    case 'mythic': return 'ミシック';
     default: return '';
   }
 };

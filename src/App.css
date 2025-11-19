@@ -883,3 +883,144 @@ h1 {
   margin-bottom: 0.5rem;
 }
 
+/* エクストラレベル用: 画像の代わりに漢字文字を表示 */
+.kanji-text-display {
+  width: 100%;
+  aspect-ratio: 1 / 1; /* 正方形を保証 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* font-size は JavaScript で動的に設定 */
+  font-weight: bold;
+  color: #1a1a1a;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+  border: 2px solid #e0e0e0;
+  line-height: 1.1;
+  text-align: center;
+  word-break: keep-all;
+  overflow: hidden;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.kanji-card:hover .kanji-text-display {
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  border-color: #1a1a1a;
+}
+
+/* 問題モード用の漢字文字表示 */
+.quiz-kanji-display {
+  width: 100%;
+  max-width: 350px;
+  aspect-ratio: 1 / 1; /* 正方形を保証 */
+  margin: 0 auto 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* font-size は JavaScript で動的に設定 */
+  font-weight: bold;
+  color: #1a1a1a;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.2);
+  transition: transform 0.3s;
+  border: 3px solid #e0e0e0;
+  line-height: 1.1;
+  text-align: center;
+  word-break: keep-all;
+  overflow: hidden;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.quiz-kanji-display:hover {
+  transform: scale(1.05);
+}
+
+/* エクストラレベル用のスタイル */
+.extra-list {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.extra-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.extra-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border-color: #667eea;
+}
+
+.extra-card.clickable {
+  cursor: pointer;
+}
+
+.extra-sentence {
+  font-size: 1.25rem;
+  line-height: 1.8;
+  margin-bottom: 1rem;
+  color: #1a1a1a;
+}
+
+.katakana-highlight {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  color: #1a1a1a;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 2px solid #f0c420;
+}
+
+.katakana-highlight-large {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  color: #1a1a1a;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 2px solid #f0c420;
+  font-size: 1.1em;
+}
+
+.extra-answer {
+  background: #f8f9fa;
+  color: #1a1a1a;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  border: 1px solid #e0e0e0;
+  font-weight: 600;
+}
+
+.extra-quiz-content {
+  width: 100%;
+}
+
+.extra-quiz-sentence {
+  font-size: 1.5rem;
+  line-height: 2;
+  margin-bottom: 2rem;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  text-align: center;
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #e0e0e0;
+}
+

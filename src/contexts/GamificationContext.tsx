@@ -54,7 +54,7 @@ type GamificationContextType = {
   getLevelProgress: () => number;
   addCardToCollection: (card: KanjiCard) => void;
   openCardPack: (packType: string) => KanjiCard[];
-  pullCharacterGacha: (count: number, guaranteedRarity?: 'common' | 'rare' | 'epic' | 'legendary') => Character[];
+  pullCharacterGacha: (count: number, guaranteedRarity?: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic') => Character[];
   equipCharacter: (character: OwnedCharacter | null) => void;
   getCharacterBoost: (type: 'xp' | 'coin') => number;
   addCharacterXp: (amount: number) => void;
@@ -551,7 +551,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   };
 
   // キャラクターガチャを引く
-  const pullCharacterGacha = (count: number, guaranteedRarity?: 'common' | 'rare' | 'epic' | 'legendary'): Character[] => {
+  const pullCharacterGacha = (count: number, guaranteedRarity?: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic'): Character[] => {
     const results = pullGacha(count, guaranteedRarity);
     
     setState(prev => {
