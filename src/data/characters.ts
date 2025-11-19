@@ -166,7 +166,7 @@ export const getCharactersByRarity = (rarity: CharacterRarity): Character[] => {
 };
 
 // ガチャを引く
-export const pullGacha = (count: number = 1): Character[] => {
+export const pullGacha = (count: number = 1, guaranteedRarity?: CharacterRarity): Character[] => {
   const results: Character[] = [];
   
   for (let i = 0; i < count; i++) {
@@ -187,6 +187,23 @@ export const pullGacha = (count: number = 1): Character[] => {
     const charactersOfRarity = getCharactersByRarity(selectedRarity);
     const randomChar = charactersOfRarity[Math.floor(Math.random() * charactersOfRarity.length)];
     results.push(randomChar);
+  }
+  
+  // 確定レアリティが指定されている場合、そのレアリティ以上が1体も出ていなければ最後の1体を置き換える
+  if (guaranteedRarity && count > 0) {
+    const hasGuaranteed = results.some(char => 
+      RARITY_ORDER[char.rarity] >= RARITY_ORDER[guaranteedRarity]
+    );
+    
+    if (!hasGuaranteed) {
+      // 確定レアリティ以上のキャラクターをランダムに選択
+      const guaranteedChars = Object.values(CHARACTERS).filter(char => 
+        RARITY_ORDER[char.rarity] >= RARITY_ORDER[guaranteedRarity]
+      );
+      const guaranteedChar = guaranteedChars[Math.floor(Math.random() * guaranteedChars.length)];
+      // 最後の1体を確定キャラクターに置き換える
+      results[results.length - 1] = guaranteedChar;
+    }
   }
   
   return results;

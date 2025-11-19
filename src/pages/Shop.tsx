@@ -117,7 +117,7 @@ function Shop() {
       
       if (success && item.effect) {
         const count = parseInt(item.effect.replace('character_gacha_', ''));
-        const characters = pullCharacterGacha(count);
+        const characters = pullCharacterGacha(count, item.rarity as 'common' | 'rare' | 'epic' | 'legendary' | undefined);
         setPulledCharacters(characters);
         setShowGachaModal(true);
         setPurchaseMessage(`${item.name}を引いています...`);

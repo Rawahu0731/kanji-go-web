@@ -54,7 +54,7 @@ type GamificationContextType = {
   getLevelProgress: () => number;
   addCardToCollection: (card: KanjiCard) => void;
   openCardPack: (packType: string) => KanjiCard[];
-  pullCharacterGacha: (count: number) => Character[];
+  pullCharacterGacha: (count: number, guaranteedRarity?: 'common' | 'rare' | 'epic' | 'legendary') => Character[];
   equipCharacter: (character: OwnedCharacter | null) => void;
   getCharacterBoost: (type: 'xp' | 'coin') => number;
   addCharacterXp: (amount: number) => void;
@@ -65,7 +65,7 @@ type GamificationContextType = {
 
 const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
 
-const CURRENT_VERSION = 1; // データバージョン
+const CURRENT_VERSION = 2; // データバージョン（バージョン2：ガチャ確定修正 + 10500コイン配布）
 
 const INITIAL_STATE: GamificationState = {
   version: CURRENT_VERSION,
@@ -103,6 +103,14 @@ function migrateData(data: any): GamificationState {
       data.coins = 0;
     }
     data.version = 1;
+  }
+  
+  // バージョン1から2へのマイグレーション
+  if (version < 2) {
+    // アップデート記念：10500コイン配布
+    console.log('アップデート記念コインを配布します！');
+    data.coins = (data.coins || 0) + 10500;
+    data.version = 2;
   }
   
   // キャラクター機能の追加（既存のデータにフィールドを追加）
@@ -543,8 +551,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   };
 
   // キャラクターガチャを引く
-  const pullCharacterGacha = (count: number): Character[] => {
-    const results = pullGacha(count);
+  const pullCharacterGacha = (count: number, guaranteedRarity?: 'common' | 'rare' | 'epic' | 'legendary'): Character[] => {
+    const results = pullGacha(count, guaranteedRarity);
     
     setState(prev => {
       const newCharacters = [...prev.characters];

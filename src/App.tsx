@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getKnownIssues } from './lib/microcms'
+import { getKnownIssues, getPatchNotes } from './lib/microcms'
 import type { Article } from './lib/microcms'
 import { useGamification } from './contexts/GamificationContext'
 import { DebugPanel } from './components/DebugPanel'
@@ -185,6 +185,10 @@ function App() {
   const [investigatingIssues, setInvestigatingIssues] = useState<Article[]>([]);
   const [showIssueBanner, setShowIssueBanner] = useState(true);
   
+  // お知らせバナー用のステート
+  const [latestAnnouncement, setLatestAnnouncement] = useState<Article | null>(null);
+  const [showAnnouncementBanner, setShowAnnouncementBanner] = useState(false);
+  
   // 四択: 正解のインデックスを保持（0-3）
   const [correctChoiceIndex, setCorrectChoiceIndex] = useState<number>(-1);
 
@@ -205,6 +209,29 @@ function App() {
     }
     
     fetchInvestigatingIssues();
+  }, []);
+
+  // 未読のお知らせをチェック
+  useEffect(() => {
+    async function checkUnreadAnnouncements() {
+      try {
+        const announcements = await getPatchNotes(1);
+        if (announcements.length > 0) {
+          const latest = announcements[0];
+          const LAST_READ_KEY = 'last_read_announcement';
+          const lastReadId = localStorage.getItem(LAST_READ_KEY);
+          
+          if (lastReadId !== latest.id) {
+            setLatestAnnouncement(latest);
+            setShowAnnouncementBanner(true);
+          }
+        }
+      } catch (error) {
+        console.error('お知らせの取得に失敗:', error);
+      }
+    }
+    
+    checkUnreadAnnouncements();
   }, []);
 
   // --- サービスワーカー登録: 画像キャッシュ用 ---
@@ -544,6 +571,29 @@ function App() {
           <AuthButton />
         </div>
       </div>
+
+      {/* 未読のお知らせバナー */}
+      {showAnnouncementBanner && latestAnnouncement && (
+        <div className="issue-banner">
+          <div className="issue-banner-content">
+            <span className="issue-icon">📢</span>
+            <span className="issue-text">
+              新しいお知らせがあります：{latestAnnouncement.title}
+              <Link to="/announcements" style={{ color: '#fff', textDecoration: 'underline', marginLeft: '0.5rem' }}>詳細を見る</Link>
+            </span>
+            <button
+              className="issue-close"
+              onClick={() => {
+                setShowAnnouncementBanner(false);
+                localStorage.setItem('last_read_announcement', latestAnnouncement.id);
+              }}
+              aria-label="閉じる"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 不具合情報バナー */}
       {investigatingIssues.length > 0 && showIssueBanner && (
@@ -960,6 +1010,8 @@ function App() {
 
       {/* フッター: 免責事項・パッチノートへのリンク */}
       <footer className="app-footer" style={{ marginTop: '2.5rem' }}>
+        <Link to="/announcements">お知らせ</Link>
+        <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
         <a href="/disclaimer.html" target="_blank" rel="noopener noreferrer">免責事項</a>
         <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
         <a href="/patch-notes.html" target="_blank" rel="noopener noreferrer">パッチノート</a>
