@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut as firebaseSignOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
@@ -74,6 +74,28 @@ export const signOut = async () => {
 export const onAuthStateChange = (callback: (user: User | null) => void) => {
   if (!auth) return () => {};
   return onAuthStateChanged(auth, callback);
+};
+
+// メールアドレス/パスワードでのサインアップ
+export const signUpWithEmail = async (email: string, password: string, username: string) => {
+  if (!auth) throw new Error('Firebase not initialized');
+  
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+  
+  // ユーザー名を設定
+  if (userCredential.user) {
+    await updateProfile(userCredential.user, {
+      displayName: username
+    });
+  }
+  
+  return userCredential;
+};
+
+// メールアドレス/パスワードでのサインイン
+export const signInWithEmail = async (email: string, password: string) => {
+  if (!auth) throw new Error('Firebase not initialized');
+  return signInWithEmailAndPassword(auth, email, password);
 };
 
 // Firestore関連

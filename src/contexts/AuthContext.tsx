@@ -1,12 +1,14 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from 'firebase/auth';
-import { onAuthStateChange, signInWithGoogle, signOut, isFirebaseEnabled } from '../lib/firebase';
+import { onAuthStateChange, signInWithGoogle, signUpWithEmail, signInWithEmail, signOut, isFirebaseEnabled } from '../lib/firebase';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: () => Promise<void>;
+  signInWithEmailAndPassword: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, username: string) => Promise<void>;
   signOut: () => Promise<void>;
   isFirebaseEnabled: boolean;
 }
@@ -49,11 +51,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const handleSignUp = async (email: string, password: string, username: string) => {
+    try {
+      await signUpWithEmail(email, password, username);
+    } catch (error) {
+      console.error('Sign up error:', error);
+      throw error;
+    }
+  };
+
+  const handleSignInWithEmail = async (email: string, password: string) => {
+    try {
+      await signInWithEmail(email, password);
+    } catch (error) {
+      console.error('Email sign in error:', error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       loading, 
       signIn: handleSignIn, 
+      signInWithEmailAndPassword: handleSignInWithEmail,
+      signUp: handleSignUp,
       signOut: handleSignOut,
       isFirebaseEnabled 
     }}>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useGamification } from '../contexts/GamificationContext';
+import EmailAuthForm from './EmailAuthForm';
 import './AuthButton.css';
 
 export default function AuthButton() {
@@ -9,6 +10,7 @@ export default function AuthButton() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showEmailAuth, setShowEmailAuth] = useState(false);
 
   const handleSignIn = async () => {
     try {
@@ -84,14 +86,26 @@ export default function AuthButton() {
           </button>
         </div>
       ) : (
-        <button 
-          onClick={handleSignIn}
-          disabled={isLoading}
-          className="auth-button signin-button"
-        >
-          {isLoading ? 'ログイン中...' : 'Googleでログイン'}
-        </button>
+        <>
+          <button 
+            onClick={() => setShowEmailAuth(true)}
+            disabled={isLoading}
+            className="auth-button signin-button"
+            style={{ marginBottom: '0.5rem' }}
+          >
+            メールアドレスでログイン
+          </button>
+          <button 
+            onClick={handleSignIn}
+            disabled={isLoading}
+            className="auth-button signin-button"
+          >
+            {isLoading ? 'ログイン中...' : 'Googleでログイン'}
+          </button>
+        </>
       )}
+      
+      {showEmailAuth && <EmailAuthForm onClose={() => setShowEmailAuth(false)} />}
     </div>
   );
 }
