@@ -65,7 +65,7 @@ type GamificationContextType = {
 
 const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
 
-const CURRENT_VERSION = 2; // データバージョン（バージョン2：ガチャ確定修正 + 10500コイン配布）
+const CURRENT_VERSION = 3; // データバージョン（バージョン3：統計データリセット）
 
 const INITIAL_STATE: GamificationState = {
   version: CURRENT_VERSION,
@@ -111,6 +111,20 @@ function migrateData(data: any): GamificationState {
     console.log('アップデート記念コインを配布します！');
     data.coins = (data.coins || 0) + 10500;
     data.version = 2;
+  }
+  
+  // バージョン2から3へのマイグレーション
+  if (version < 3) {
+    // 統計データの異常値をリセット
+    console.log('統計データをリセットします');
+    data.stats = {
+      totalQuizzes: 0,
+      correctAnswers: 0,
+      incorrectAnswers: 0,
+      currentStreak: 0,
+      bestStreak: 0
+    };
+    data.version = 3;
   }
   
   // キャラクター機能の追加（既存のデータにフィールドを追加）
@@ -237,7 +251,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       // - xp はローカルの進行を優先
       // - coins はローカルの値を優先（消費を反映するため）
       // - 配列はユニオン
-      // - stats の累積は合算、currentStreak/bestStreak は大きい方
+      // - stats は大きい方を採用（合算ではなく）
       const merged: GamificationState = {
         ...migratedRemote,
         ...state,
@@ -251,9 +265,9 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         characters: mergeCharacters(migratedRemote.characters || [], state.characters || []),
         equippedCharacter: state.equippedCharacter || migratedRemote.equippedCharacter || null,
         stats: {
-          totalQuizzes: (migratedRemote.stats?.totalQuizzes || 0) + (state.stats?.totalQuizzes || 0),
-          correctAnswers: (migratedRemote.stats?.correctAnswers || 0) + (state.stats?.correctAnswers || 0),
-          incorrectAnswers: (migratedRemote.stats?.incorrectAnswers || 0) + (state.stats?.incorrectAnswers || 0),
+          totalQuizzes: Math.max(migratedRemote.stats?.totalQuizzes || 0, state.stats?.totalQuizzes || 0),
+          correctAnswers: Math.max(migratedRemote.stats?.correctAnswers || 0, state.stats?.correctAnswers || 0),
+          incorrectAnswers: Math.max(migratedRemote.stats?.incorrectAnswers || 0, state.stats?.incorrectAnswers || 0),
           currentStreak: Math.max(migratedRemote.stats?.currentStreak || 0, state.stats?.currentStreak || 0),
           bestStreak: Math.max(migratedRemote.stats?.bestStreak || 0, state.stats?.bestStreak || 0)
         },
