@@ -2,13 +2,21 @@
 
 漢字レベル7・8の画像と読み方を学習できるWebアプリケーションです。不具合情報は microCMS で管理しています。
 
-## 機能
+## ✨ 機能
 
 - 漢字一覧表示（レベル7・8）
 - 問題モード（入力形式・四択形式）
 - 単語帳モード
 - ジャンル絞り込み
 - 検索機能（送り仮名検索、構成要素検索）
+- ゲーミフィケーション（経験値、レベル、コイン、バッジ）
+- カードコレクション
+- キャラクターガチャシステム
+- ストーリーモード
+- **🔥 新機能: Firebase連携**
+  - **ログイン機能** (Google認証)
+  - **ランキング機能** (全プレイヤーとの競争)
+  - **クロスデバイス同期** (別端末でも同じデータでプレイ可能)
 - 不具合情報（microCMS連携）
 
 ## セットアップ
@@ -62,20 +70,37 @@ npm install
 cp .env.example .env
 ```
 
-2. `.env` に microCMS の情報を記入:
+2. `.env` に microCMS と Firebase の情報を記入:
 
 ```env
+# microCMS設定
 VITE_MICROCMS_SERVICE_ID=your-service-id
 VITE_MICROCMS_API_KEY=your-api-key
+
+# Firebase設定（オプション: ランキング・ログイン機能を使う場合）
+VITE_FIREBASE_API_KEY=your-api-key-here
+VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+VITE_FIREBASE_APP_ID=your-app-id
 ```
 
 - `VITE_MICROCMS_SERVICE_ID`: microCMS のサービスID
 - `VITE_MICROCMS_API_KEY`: 読み取り専用の APIキー
+- Firebase設定: [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) を参照
 
 > **⚠️ セキュリティ注意**  
 > クライアントサイドで API キーを使用するため、**必ず読み取り専用（GET のみ）**のキーを使用してください。書き込み権限のあるキーは使用しないでください。
 
-### 3. 開発サーバーの起動
+### 3. Firebase の設定（オプション）
+
+ランキング機能とクロスデバイス同期を使いたい場合は、Firebaseの設定が必要です。
+詳しい手順は [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) をご覧ください。
+
+Firebaseを設定しない場合でも、アプリは正常に動作します（ローカルストレージのみでデータ管理）。
+
+### 4. 開発サーバーの起動
 
 ```bash
 npm run dev
@@ -83,7 +108,7 @@ npm run dev
 
 ブラウザで `http://localhost:5173` を開いてアクセスできます。
 
-### 4. ビルド
+### 5. ビルド
 
 ```bash
 npm run build
@@ -91,18 +116,25 @@ npm run build
 
 ビルドされたファイルは `dist/` ディレクトリに出力されます。
 
-## ページ構成
+## 📄 ページ構成
 
 - `/` - メイン画面（漢字学習）
-- `/patch-notes.html` - パッチノート（更新履歴）※静的HTML
+- `/profile` - プロフィール（レベル、経験値、統計）
+- `/characters` - キャラクターガチャ
+- `/shop` - ショップ（アイテム購入）
+- `/collection` - カードコレクション
+- `/story` - ストーリーモード
+- `/ranking` - ランキング（Firebase必須）
 - `/known-issues` - 既知の不具合（microCMS連携）
+- `/patch-notes.html` - パッチノート（更新履歴）※静的HTML
 
-## 技術スタック
+## 🛠 技術スタック
 
 - **フレームワーク**: React 19 + TypeScript
 - **ビルドツール**: Vite (rolldown-vite)
 - **ルーティング**: React Router
 - **CMS**: microCMS (不具合情報管理)
+- **バックエンド**: Firebase (Authentication, Firestore)
 - **スタイル**: CSS
 
 ## microCMS コンテンツの追加方法

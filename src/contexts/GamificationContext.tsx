@@ -7,6 +7,8 @@ import { CARD_PACK_CONFIG } from '../data/cardCollection';
 import { getRandomKanji } from '../data/allKanji';
 import type { Character, OwnedCharacter } from '../data/characters';
 import { pullGacha, getCharacterEffectValue, getXpForCharacterLevel, MAX_CHARACTER_LEVEL } from '../data/characters';
+import { saveUserData, loadUserData, isFirebaseEnabled } from '../lib/firebase';
+import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'kanji_gamification';
 
@@ -57,6 +59,8 @@ type GamificationContextType = {
   getCharacterBoost: (type: 'xp' | 'coin') => number;
   addCharacterXp: (amount: number) => void;
   getCollectionBoost: () => number;
+  syncWithFirebase: (userId: string) => Promise<void>;
+  loadFromFirebase: (userId: string) => Promise<void>;
 };
 
 const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
@@ -115,6 +119,50 @@ function migrateData(data: any): GamificationState {
   return data;
 }
 
+// ヘルパー: カードコレクションをマージ（filename をキーにユニオン）
+function mergeCardCollections(a: KanjiCard[], b: KanjiCard[]): KanjiCard[] {
+  const map = new Map<string, KanjiCard>();
+  for (const c of a) {
+    try {
+      const key = (c as any).filename || (c as any).imageUrl || (c as any).id || JSON.stringify(c);
+      map.set(key, c);
+    } catch (e) {
+      // ignore
+    }
+  }
+  for (const c of b) {
+    try {
+      const key = (c as any).filename || (c as any).imageUrl || (c as any).id || JSON.stringify(c);
+      map.set(key, c);
+    } catch (e) {
+      // ignore
+    }
+  }
+  return Array.from(map.values());
+}
+
+// ヘルパー: キャラクター配列をマージ（id または JSON をキーにユニオン）
+function mergeCharacters(a: OwnedCharacter[], b: OwnedCharacter[]): OwnedCharacter[] {
+  const map = new Map<string, OwnedCharacter>();
+  for (const c of a) {
+    try {
+      const key = (c as any).id || JSON.stringify(c);
+      map.set(key, c);
+    } catch (e) {
+      // ignore
+    }
+  }
+  for (const c of b) {
+    try {
+      const key = (c as any).id || JSON.stringify(c);
+      map.set(key, c);
+    } catch (e) {
+      // ignore
+    }
+  }
+  return Array.from(map.values());
+}
+
 // レベルアップに必要なXPを計算（指数関数的に増加）
 function getXpForLevel(level: number): number {
   return Math.floor(100 * Math.pow(1.5, level - 1));
@@ -122,6 +170,8 @@ function getXpForLevel(level: number): number {
 
 export function GamificationProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<GamificationState>(INITIAL_STATE);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const auth = useAuth();
 
   // 初期化：localStorageから読み込み
   useEffect(() => {
@@ -139,10 +189,104 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // 状態変更時にlocalStorageに保存
+  // ログイン時にFirebaseからデータを読み込み
+  useEffect(() => {
+    if (auth.user && isFirebaseEnabled) {
+      loadFromFirebase(auth.user.uid);
+    }
+  }, [auth.user]);
+
+  // 状態変更時にlocalStorageとFirebaseに保存
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    
+    // Firebaseにも自動保存（ログイン中の場合）
+    if (auth.user && isFirebaseEnabled && !isSyncing) {
+      syncWithFirebase(auth.user.uid);
+    }
   }, [state]);
+
+  // Firebaseへの同期
+  const syncWithFirebase = async (userId: string) => {
+    if (!isFirebaseEnabled || isSyncing) return;
+
+    try {
+      setIsSyncing(true);
+      // 競合を避けるため、まずサーバ側のデータを読み込み、マージしてから保存する
+      const remote = await loadUserData(userId);
+
+      if (!remote) {
+        // サーバ側にデータがなければそのまま保存
+        await saveUserData(userId, state);
+        console.log('Data synced to Firebase (no remote data)');
+        return;
+      }
+
+      const migratedRemote = migrateData(remote as any);
+
+      // マージ戦略：
+      // - totalXp は大きい方を採用
+      // - xp はローカルの進行を優先
+      // - coins は最大値を採用（重複付与を避けるため）
+      // - 配列はユニオン
+      // - stats の累積は合算、currentStreak/bestStreak は大きい方
+      const merged: GamificationState = {
+        ...migratedRemote,
+        ...state,
+        totalXp: Math.max(state.totalXp || 0, migratedRemote.totalXp || 0),
+        xp: state.xp,
+        level: Math.max(state.level, migratedRemote.level),
+        coins: Math.max(state.coins || 0, migratedRemote.coins || 0),
+        unlockedBadges: Array.from(new Set([...(migratedRemote.unlockedBadges || []), ...(state.unlockedBadges || [])])),
+        purchasedItems: Array.from(new Set([...(migratedRemote.purchasedItems || []), ...(state.purchasedItems || [])])),
+        cardCollection: mergeCardCollections(migratedRemote.cardCollection || [], state.cardCollection || []),
+        characters: mergeCharacters(migratedRemote.characters || [], state.characters || []),
+        equippedCharacter: state.equippedCharacter || migratedRemote.equippedCharacter || null,
+        stats: {
+          totalQuizzes: (migratedRemote.stats?.totalQuizzes || 0) + (state.stats?.totalQuizzes || 0),
+          correctAnswers: (migratedRemote.stats?.correctAnswers || 0) + (state.stats?.correctAnswers || 0),
+          incorrectAnswers: (migratedRemote.stats?.incorrectAnswers || 0) + (state.stats?.incorrectAnswers || 0),
+          currentStreak: Math.max(migratedRemote.stats?.currentStreak || 0, state.stats?.currentStreak || 0),
+          bestStreak: Math.max(migratedRemote.stats?.bestStreak || 0, state.stats?.bestStreak || 0)
+        },
+        activeTheme: state.activeTheme || migratedRemote.activeTheme,
+        activeIcon: state.activeIcon || migratedRemote.activeIcon,
+        customIconUrl: state.customIconUrl || migratedRemote.customIconUrl,
+        username: migratedRemote.username && migratedRemote.username !== 'プレイヤー' ? migratedRemote.username : state.username
+      };
+
+      // 更新日時をセット
+      // @ts-ignore - 任意フィールドとして保存
+      (merged as any).updatedAt = Date.now();
+
+      // ローカル状態をマージ結果で更新してから保存
+      setState(merged);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      await saveUserData(userId, merged);
+      console.log('Data merged and synced to Firebase');
+    } catch (error) {
+      console.error('Failed to sync with Firebase:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Firebaseからデータを読み込み
+  const loadFromFirebase = async (userId: string) => {
+    if (!isFirebaseEnabled) return;
+    
+    try {
+      const data = await loadUserData(userId);
+      if (data) {
+        const migrated = migrateData(data);
+        setState(migrated);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+        console.log('Data loaded from Firebase');
+      }
+    } catch (error) {
+      console.error('Failed to load from Firebase:', error);
+    }
+  };
 
   const addXp = (amount: number) => {
     setState(prev => {
@@ -584,7 +728,9 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       equipCharacter,
       getCharacterBoost,
       addCharacterXp,
-      getCollectionBoost
+      getCollectionBoost,
+      syncWithFirebase,
+      loadFromFirebase
     }}>
       {children}
     </GamificationContext.Provider>

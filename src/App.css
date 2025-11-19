@@ -99,6 +99,12 @@
   justify-content: center;
 }
 
+.auth-section {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
 .nav-link {
   padding: 0.6rem 1.2rem;
   background: #1a1a1a;

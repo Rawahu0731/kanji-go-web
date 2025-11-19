@@ -4,6 +4,7 @@ import { getKnownIssues } from './lib/microcms'
 import type { Article } from './lib/microcms'
 import { useGamification } from './contexts/GamificationContext'
 import { DebugPanel } from './components/DebugPanel'
+import AuthButton from './components/AuthButton'
 import './App.css'
 
 type Item = {
@@ -537,6 +538,10 @@ function App() {
           <Link to="/shop" className="nav-link">ショップ</Link>
           <Link to="/collection" className="nav-link">📚 コレクション</Link>
           <Link to="/story" className="nav-link">ストーリー</Link>
+          <Link to="/ranking" className="nav-link">🏆 ランキング</Link>
+        </div>
+        <div className="auth-section">
+          <AuthButton />
         </div>
       </div>
 
