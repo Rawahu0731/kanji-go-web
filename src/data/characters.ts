@@ -30,6 +30,15 @@ export const RARITY_ORDER: Record<CharacterRarity, number> = {
   common: 1
 };
 
+// レアリティごとのレベルあたりの効果上昇率（例: 0.02 = レベルごとに2%増加）
+export const RARITY_LEVEL_BONUS: Record<CharacterRarity, number> = {
+  common: 0.02,
+  rare: 0.03,
+  epic: 0.04,
+  legendary: 0.06,
+  mythic: 0.10
+};
+
 // キャラクターリスト
 export const CHARACTERS: Record<string, Character> = {
   // コモン（よく出る）
@@ -240,8 +249,9 @@ export const pullGacha = (count: number = 1, guaranteedRarity?: CharacterRarity)
 // キャラクターのレベルに応じた効果値を計算
 export const getCharacterEffectValue = (character: OwnedCharacter): number => {
   const baseValue = character.effect.value;
-  // レベルごとに2%ずつ効果が上昇（レベル1: 1.0倍、レベル2: 1.02倍、レベル3: 1.04倍...）
-  const levelBonus = 1 + (character.level - 1) * 0.02;
+  // レアリティに応じてレベルごとの上昇率を変える
+  const perLevel = RARITY_LEVEL_BONUS[character.rarity] ?? 0.02;
+  const levelBonus = 1 + (character.level - 1) * perLevel;
   return baseValue * levelBonus;
 };
 
