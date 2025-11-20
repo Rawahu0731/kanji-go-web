@@ -399,9 +399,9 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // コレクションボーナスを適用
+      // コレクションボーナスを適用（掛け算）
       const collectionBonus = calculateCollectionBonus(prev.cardCollection);
-      multiplier += collectionBonus;
+      multiplier *= (1 + collectionBonus);
       
       const boostedAmount = Math.floor(amount * multiplier);
       // xpとtotalXpは常に一致
@@ -456,9 +456,9 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // コレクションボーナスを適用
+      // コレクションボーナスを適用（掛け算）
       const collectionBonus = calculateCollectionBonus(prev.cardCollection);
-      multiplier += collectionBonus;
+      multiplier *= (1 + collectionBonus);
       
       const boostedAmount = Math.floor(amount * multiplier);
       return { ...prev, coins: prev.coins + boostedAmount };
