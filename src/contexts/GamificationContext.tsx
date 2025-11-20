@@ -532,7 +532,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   };
 
   const getXpForNextLevel = () => {
-    return getXpForLevel(state.level);
+    return getXpForLevel(state.level + 1);
   };
 
   const getLevelProgress = () => {
