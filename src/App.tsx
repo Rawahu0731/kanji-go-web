@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { getKnownIssues, getPatchNotes } from './lib/microcms'
 import type { Article } from './lib/microcms'
@@ -177,6 +177,9 @@ function App() {
   const [isCorrect, setIsCorrect] = useState(false);
   const [score, setScore] = useState({ correct: 0, incorrect: 0 });
   const [currentStreak, setCurrentStreak] = useState(0);
+  
+  // 入力欄への参照
+  const inputRef = useRef<HTMLInputElement>(null);
   
   // ゲーミフィケーションシステム
   const { addXp, addCoins, updateStats, addCharacterXp, state: gamificationState, getTotalXpForNextLevel, getLevelProgress } = useGamification();
@@ -374,6 +377,16 @@ function App() {
     }
   }, [mode, quizFormat, quizItems, currentIndex]);
 
+  // 問題が変わったとき、または結果をクリアしたときに入力欄にフォーカス
+  useEffect(() => {
+    if (mode === 'quiz' && quizFormat === 'input' && !showResult && inputRef.current) {
+      // 少し遅延させることで、DOM更新後に確実にフォーカス
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [mode, quizFormat, currentIndex, showResult]);
+
   // カードがクリックされたとき（単語帳モード時は読みを表示/非表示）
   const handleCardClick = (it: Item) => {
     if (!studyMode) return;
@@ -511,6 +524,48 @@ function App() {
       backToList();
     }
   };
+
+  // Enterキーの処理: 未解答なら解答チェック、結果表示中なら次へ
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && mode === 'quiz') {
+        if (showResult) {
+          // 結果表示中なら次の問題へ
+          e.preventDefault();
+          if (currentIndex < quizItems.length - 1) {
+            setCurrentIndex(prev => prev + 1);
+            setUserAnswer('');
+            setShowResult(false);
+          } else {
+            // 終了
+            alert(`問題終了！\n正解: ${score.correct}問\n不正解: ${score.incorrect}問`);
+            setMode('list');
+            setUserAnswer('');
+            setShowResult(false);
+          }
+        } else if (quizFormat === 'input') {
+          // 入力形式の場合
+          e.preventDefault();
+          if (userAnswer.trim()) {
+            // 入力がある場合は解答チェック
+            const submitButton = document.querySelector('.submit-button') as HTMLButtonElement;
+            if (submitButton && !submitButton.disabled) {
+              submitButton.click();
+            }
+          } else {
+            // 入力が空の場合は諦める
+            const giveUpButton = document.querySelector('.give-up-button') as HTMLButtonElement;
+            if (giveUpButton) {
+              giveUpButton.click();
+            }
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [showResult, mode, currentIndex, quizItems.length, score, quizFormat, userAnswer]);
 
   const levels: Level[] = [4, 5, 6, 7, 8, 'extra'];
 
@@ -901,16 +956,10 @@ function App() {
                     ハイライトされたカタカナを漢字に変換してください
                   </label>
                   <input
+                    ref={inputRef}
                     type="text"
                     value={userAnswer}
                     onChange={(e) => setUserAnswer(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !showResult) {
-                        checkAnswer();
-                      } else if (e.key === 'Enter' && showResult) {
-                        nextQuestion();
-                      }
-                    }}
                     disabled={showResult}
                     className="quiz-input"
                     placeholder="漢字で入力"
@@ -934,16 +983,10 @@ function App() {
                   この漢字の読みは？<br />（送り仮名（''で囲まれた部分）は入力しなくてもOK）
                 </label>
                 <input
+                  ref={inputRef}
                   type="text"
                   value={userAnswer}
                   onChange={(e) => setUserAnswer(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !showResult) {
-                      checkAnswer();
-                    } else if (e.key === 'Enter' && showResult) {
-                      nextQuestion();
-                    }
-                  }}
                   disabled={showResult}
                   className="quiz-input"
                   placeholder="ひらがなで入力"
