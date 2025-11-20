@@ -141,26 +141,27 @@ function migrateData(data: any): GamificationState {
     console.log('レベルアップ必要XPが増加しました。レベルを調整します。');
     const totalXp = data.totalXp || 0;
     let newLevel = 1;
-    let xpRequired = 0;
+    let accumulatedXp = 0;
     
     // 新しい計算式で適正レベルを計算
-    while (xpRequired <= totalXp) {
+    while (true) {
+      const nextLevelXp = Math.floor(100 * (newLevel + 1) * (newLevel + 1));
+      if (accumulatedXp + nextLevelXp > totalXp) {
+        break;
+      }
+      accumulatedXp += nextLevelXp;
       newLevel++;
-      xpRequired += Math.floor(100 * newLevel * newLevel);
     }
-    newLevel--; // 1つ戻す
     
     // レベルとXPを調整
-    if (newLevel < data.level) {
-      console.log(`レベルを ${data.level} から ${newLevel} に調整しました`);
-      data.level = newLevel;
-      
-      // 現在レベルまでに必要だったXPを計算
-      let usedXp = 0;
-      for (let i = 2; i <= newLevel; i++) {
-        usedXp += Math.floor(100 * i * i);
-      }
-      data.xp = totalXp - usedXp;
+    console.log(`レベルを ${data.level} から ${newLevel} に調整しました`);
+    data.level = newLevel;
+    data.xp = totalXp - accumulatedXp;
+    
+    // XPが次レベルの必要XPを超えていないか確認
+    const nextLevelRequirement = Math.floor(100 * (newLevel + 1) * (newLevel + 1));
+    if (data.xp >= nextLevelRequirement) {
+      data.xp = nextLevelRequirement - 1;
     }
     
     data.version = 5;
