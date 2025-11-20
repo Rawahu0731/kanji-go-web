@@ -65,7 +65,7 @@ type GamificationContextType = {
 
 const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
 
-const CURRENT_VERSION = 4; // データバージョン（バージョン4：XP計算式変更記念コイン配布）
+const CURRENT_VERSION = 5; // データバージョン（バージョン5：レベルアップ必要XP増加に伴うレベル調整）
 
 const INITIAL_STATE: GamificationState = {
   version: CURRENT_VERSION,
@@ -135,6 +135,37 @@ function migrateData(data: any): GamificationState {
     data.version = 4;
   }
   
+  // バージョン4から5へのマイグレーション
+  if (version < 5) {
+    // レベルアップ必要XP増加に伴うレベル調整
+    console.log('レベルアップ必要XPが増加しました。レベルを調整します。');
+    const totalXp = data.totalXp || 0;
+    let newLevel = 1;
+    let xpRequired = 0;
+    
+    // 新しい計算式で適正レベルを計算
+    while (xpRequired <= totalXp) {
+      newLevel++;
+      xpRequired += Math.floor(100 * newLevel * newLevel);
+    }
+    newLevel--; // 1つ戻す
+    
+    // レベルとXPを調整
+    if (newLevel < data.level) {
+      console.log(`レベルを ${data.level} から ${newLevel} に調整しました`);
+      data.level = newLevel;
+      
+      // 現在レベルまでに必要だったXPを計算
+      let usedXp = 0;
+      for (let i = 2; i <= newLevel; i++) {
+        usedXp += Math.floor(100 * i * i);
+      }
+      data.xp = totalXp - usedXp;
+    }
+    
+    data.version = 5;
+  }
+  
   // キャラクター機能の追加（既存のデータにフィールドを追加）
   if (!data.characters) {
     data.characters = [];
@@ -193,9 +224,9 @@ function mergeCharacters(a: OwnedCharacter[], b: OwnedCharacter[]): OwnedCharact
   return Array.from(map.values());
 }
 
-// レベルアップに必要なXPを計算(1.5次関数的に増加: level^1.5)
+// レベルアップに必要なXPを計算(2次関数的に増加: level^2)
 function getXpForLevel(level: number): number {
-  return Math.floor(50 * level * Math.sqrt(level));
+  return Math.floor(100 * level * level);
 }
 
 export function GamificationProvider({ children }: { children: ReactNode }) {
