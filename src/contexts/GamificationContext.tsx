@@ -34,6 +34,7 @@ export interface GamificationState {
   activeIcon: string;
   customIconUrl: string; // カスタムアイコンのURL
   username: string; // ユーザーネーム
+  lastInterestTime?: number; // 最後に利子を計算した時刻（ミリ秒）
 }
 
 
@@ -90,7 +91,8 @@ const INITIAL_STATE: GamificationState = {
   activeTheme: 'default',
   activeIcon: 'default',
   customIconUrl: '',
-  username: 'プレイヤー'
+  username: 'プレイヤー',
+  lastInterestTime: Date.now()
 };
 
 // データマイグレーション関数
@@ -205,6 +207,11 @@ function migrateData(data: any): GamificationState {
     data.equippedCharacter = null;
   }
   
+  // 負債利子計算のタイムスタンプを初期化
+  if (!data.lastInterestTime) {
+    data.lastInterestTime = Date.now();
+  }
+  
   // バージョン番号を最新に更新
   data.version = CURRENT_VERSION;
   
@@ -295,6 +302,50 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       loadFromFirebase(auth.user.uid);
     }
   }, [auth.user]);
+
+  // 負債の利子計算（5分ごと、複利10%）
+  useEffect(() => {
+    const calculateInterest = () => {
+      setState(prev => {
+        // コインが負の場合のみ利子を計算
+        if (prev.coins >= 0) {
+          return prev;
+        }
+
+        const now = Date.now();
+        const lastTime = prev.lastInterestTime || now;
+        const elapsedMinutes = (now - lastTime) / (1000 * 60);
+        
+        // 5分経過していない場合は何もしない
+        if (elapsedMinutes < 5) {
+          return prev;
+        }
+
+        // 5分単位で複利計算
+        const periods = Math.floor(elapsedMinutes / 5);
+        const interestRate = 0.10; // 10%の利子率
+        
+        // 複利計算: 負債 × (1 + 利子率)^期間
+        const newCoins = Math.floor(prev.coins * Math.pow(1 + interestRate, periods));
+        
+        console.log(`負債利子計算: ${prev.coins} → ${newCoins} (${periods}期間経過)`);
+
+        return {
+          ...prev,
+          coins: newCoins,
+          lastInterestTime: now
+        };
+      });
+    };
+
+    // 初回実行
+    calculateInterest();
+
+    // 1分ごとにチェック
+    const interval = setInterval(calculateInterest, 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // 状態変更時にlocalStorageとFirebaseに保存
   useEffect(() => {
@@ -461,7 +512,16 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       multiplier *= (1 + collectionBonus);
       
       const boostedAmount = Math.floor(amount * multiplier);
-      return { ...prev, coins: prev.coins + boostedAmount };
+      const newCoins = prev.coins + boostedAmount;
+      
+      // コインが負から正になった場合、または正から負になった場合にタイマーをリセット
+      const crossedZero = (prev.coins < 0 && newCoins >= 0) || (prev.coins >= 0 && newCoins < 0);
+      
+      return { 
+        ...prev, 
+        coins: newCoins,
+        lastInterestTime: crossedZero ? Date.now() : prev.lastInterestTime
+      };
     });
   };
 
@@ -488,7 +548,11 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   };
 
   const setCoins = (amount: number) => {
-    setState(prev => ({ ...prev, coins: amount }));
+    setState(prev => ({ 
+      ...prev, 
+      coins: amount,
+      lastInterestTime: Date.now() // コインを設定したら利子計算のタイマーをリセット
+    }));
   };
 
   const unlockBadge = (badgeId: string) => {
