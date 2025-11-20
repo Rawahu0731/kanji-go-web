@@ -980,9 +980,10 @@ h1 {
   background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
   color: #1a1a1a;
   font-weight: bold;
-  padding: 2px 6px;
+  padding: 4px 8px;
   border-radius: 4px;
   border: 2px solid #f0c420;
+  font-size: 1.15em;
 }
 
 .katakana-highlight-large {

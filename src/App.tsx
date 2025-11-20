@@ -266,8 +266,33 @@ function App() {
       setError(null);
       setItems(null);
 
-      // レベル7, 8以外は準備中（extraも準備中）
-      if (selectedLevel !== 7 && selectedLevel !== 8) {
+      // エクストラの期間限定チェック
+      if (selectedLevel === 'extra') {
+        // デバッグ用: URLパラメータで日時を上書き可能
+        // 例: ?debugDate=2025-11-21
+        const urlParams = new URLSearchParams(window.location.search);
+        const debugDateStr = urlParams.get('debugDate');
+        const now = debugDateStr ? new Date(debugDateStr) : new Date();
+        
+        const startDate = new Date('2025-11-21T00:00:00+09:00');
+        const endDate = new Date('2025-12-05T23:59:59+09:00');
+        
+        console.log('エクストラ期間チェック:', {
+          現在日時: now.toLocaleString('ja-JP'),
+          開始日時: startDate.toLocaleString('ja-JP'),
+          終了日時: endDate.toLocaleString('ja-JP'),
+          期間内: now >= startDate && now <= endDate
+        });
+        
+        if (now < startDate || now > endDate) {
+          setLoading(false);
+          setError(`エクストラモードは現在利用できません`);
+          return;
+        }
+      }
+
+      // レベル7, 8, extra以外は準備中
+      if (selectedLevel !== 7 && selectedLevel !== 8 && selectedLevel !== 'extra') {
         setLoading(false);
         setError('準備中です');
         return;
@@ -275,7 +300,9 @@ function App() {
 
       try {
         // CSV を fetch
-        const csvPath = `/kanji/level-${selectedLevel}/mappings.csv`;
+        const csvPath = selectedLevel === 'extra' 
+          ? `/kanji/extra/mappings.csv`
+          : `/kanji/level-${selectedLevel}/mappings.csv`;
         const res = await fetch(csvPath);
         if (!res.ok) {
           throw new Error(`CSV取得失敗: ${res.status}`);
@@ -296,26 +323,40 @@ function App() {
           return obj;
         });
 
-        // ヘッダ名は 'path' または 'filename' のどちらかが来る想定
-        const filenameField = header.includes('path') ? 'path' : (header.includes('filename') ? 'filename' : header[0]);
-        const kanjiField = header.includes('kanji') ? 'kanji' : null;
-
-          const mapped: Item[] = data.map(d => {
+        let mapped: Item[];
+        
+        if (selectedLevel === 'extra') {
+          // エクストラモード: sentence, katakana, answer 形式
+          mapped = data.map(d => ({
+            filename: d.answer || '',
+            reading: d.answer || '',
+            meaning: '',
+            imageUrl: '',
+            sentence: d.sentence || '',
+            katakana: d.katakana || '',
+            answer: d.answer || '',
+          } as Item));
+        } else {
           // 通常のレベル（4-8）
-          const fname = d[filenameField];
-          const kanjiChar = kanjiField ? d[kanjiField] : null;
-          const imageUrl = fname?.startsWith('/') ? fname : `/kanji/level-${selectedLevel}/${fname}`;
-          
-          return {
-            filename: fname || kanjiChar || '',
-            reading: d.reading || d['reading'] || '',
-            meaning: d.meaning,
-            imageUrl,
-            kanji: kanjiChar || null,
-            additionalInfo: d.additional_info || d['additional_info'] || '',
-            components: d.components || d['components'] || '',
-          } as Item;
-        });
+          const filenameField = header.includes('path') ? 'path' : (header.includes('filename') ? 'filename' : header[0]);
+          const kanjiField = header.includes('kanji') ? 'kanji' : null;
+
+          mapped = data.map(d => {
+            const fname = d[filenameField];
+            const kanjiChar = kanjiField ? d[kanjiField] : null;
+            const imageUrl = fname?.startsWith('/') ? fname : `/kanji/level-${selectedLevel}/${fname}`;
+            
+            return {
+              filename: fname || kanjiChar || '',
+              reading: d.reading || d['reading'] || '',
+              meaning: d.meaning,
+              imageUrl,
+              kanji: kanjiChar || null,
+              additionalInfo: d.additional_info || d['additional_info'] || '',
+              components: d.components || d['components'] || '',
+            } as Item;
+          });
+        }
         setItems(mapped);
       } catch (err) {
         console.error('読み込み失敗', err);
@@ -438,16 +479,21 @@ function App() {
     let correct = false;
     const userInput = userAnswer.trim();
     
-    // 通常モード: 読みを答える
-    const correctReading = quizItems[currentIndex].reading;
-    // 正解が「、」で区切られている場合、いずれかに一致すればOK
-    const correctOptions = correctReading.split('、').map(r => r.trim());
-    
-    // 各正解オプションについて、送り仮名を除いた部分で照合
-    correct = correctOptions.some(option => {
-      const coreReading = extractReadingCore(option);
-      return userInput === coreReading;
-    });
+    if (selectedLevel === 'extra') {
+      // エクストラモード: 正解の漢字と完全一致
+      correct = userInput === quizItems[currentIndex].answer;
+    } else {
+      // 通常モード: 読みを答える
+      const correctReading = quizItems[currentIndex].reading;
+      // 正解が「、」で区切られている場合、いずれかに一致すればOK
+      const correctOptions = correctReading.split('、').map(r => r.trim());
+      
+      // 各正解オプションについて、送り仮名を除いた部分で照合
+      correct = correctOptions.some(option => {
+        const coreReading = extractReadingCore(option);
+        return userInput === coreReading;
+      });
+    }
     
     setIsCorrect(correct);
     setShowResult(true);
@@ -698,7 +744,22 @@ function App() {
             onClick={() => setSelectedLevel(level)}
             className={`level-button ${selectedLevel === level ? 'active' : ''}`}
           >
-            {level === 'extra' ? 'エクストラ' : `レベル${level}`}
+            {level === 'extra' ? (
+              <>
+                エクストラ
+                <span style={{ 
+                  fontSize: '0.75em', 
+                  display: 'block', 
+                  marginTop: '2px',
+                  fontWeight: 'normal',
+                  opacity: 0.9
+                }}>
+                  期間限定
+                </span>
+              </>
+            ) : (
+              `レベル${level}`
+            )}
           </button>
         ))}
       </div>
@@ -766,9 +827,23 @@ function App() {
         return (
         <div>
           <div className="list-header">
-            <p>レベル{selectedLevel}: {filteredItems.length}問 {selectedGenre !== 'all' && `(${selectedGenre})`}</p>
+            <p>
+              レベル{selectedLevel}: {filteredItems.length}問 {selectedGenre !== 'all' && `(${selectedGenre})`}
+              {selectedLevel === 'extra' && (
+                <span style={{ 
+                  display: 'block', 
+                  fontSize: '0.85em', 
+                  color: '#667eea',
+                  marginTop: '4px',
+                  fontWeight: 'bold'
+                }}>
+                  ⏰ 期間限定: 2025/11/21 00:00 〜 2025/12/5 23:59
+                </span>
+              )}
+            </p>
             
-            {/* 検索ボックス */}
+            {/* 検索ボックス（エクストラ以外） */}
+            {selectedLevel !== 'extra' && (
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <label htmlFor="search-mode-select" style={{ fontWeight: 600, color: '#333' }}>
@@ -819,9 +894,11 @@ function App() {
                 </button>
               )}
             </div>
+            )}
             
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {/* ジャンル選択ドロップダウン */}
+              {/* ジャンル選択ドロップダウン（エクストラ以外） */}
+              {selectedLevel !== 'extra' && (
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <label htmlFor="genre-select" style={{ fontWeight: 600, color: '#333' }}>
                   ジャンル:
@@ -839,6 +916,7 @@ function App() {
                   ))}
                 </select>
               </div>
+              )}
               
               <button
                 onClick={() => {
@@ -856,41 +934,104 @@ function App() {
               </button>
             </div>
           </div>
-          {/* 通常レベルのグリッドレイアウト */}
-          <div className="card-grid">
-            {filteredItems.map((it, i) => {
-              const key = it.filename || it.imageUrl;
-              const isRevealed = revealed.has(key);
-              return (
+          {/* エクストラモードのリスト表示 */}
+          {selectedLevel === 'extra' ? (
+            <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+              {filteredItems.map((it, i) => {
+                const key = it.answer || String(i);
+                const isRevealed = revealed.has(key);
+                return (
                 <div
                   key={i}
-                  className={`kanji-card ${studyMode ? 'clickable' : ''}`}
-                  onClick={() => handleCardClick(it)}
+                  className={studyMode ? 'clickable' : ''}
+                  onClick={() => studyMode && handleCardClick({ ...it, filename: key })}
+                  style={{
+                    padding: '20px 24px',
+                    margin: '16px 0',
+                    backgroundColor: 'white',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    cursor: studyMode ? 'pointer' : 'default',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (studyMode) {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (studyMode) {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                    }
+                  }}
                 >
-                  <img src={it.imageUrl} alt={it.filename} />
+                  <div 
+                    style={{ marginBottom: '12px', fontSize: '20px', lineHeight: '1.8' }}
+                    dangerouslySetInnerHTML={{
+                      __html: it.sentence?.replace(
+                        it.katakana || '',
+                        `<span class="katakana-highlight">${it.katakana}</span>`
+                      ) || ''
+                    }}
+                  />
                   {studyMode ? (
                     isRevealed ? (
+                      <div style={{ color: '#667eea', fontWeight: 'bold', fontSize: '22px', marginTop: '8px' }}>
+                        答え: {it.answer}
+                      </div>
+                    ) : (
+                      <div style={{ color: '#999', fontSize: '18px', fontStyle: 'italic' }}>
+                        クリックで表示
+                      </div>
+                    )
+                  ) : (
+                    <div style={{ color: '#667eea', fontWeight: 'bold', fontSize: '22px', marginTop: '8px' }}>
+                      {it.katakana} → {it.answer}
+                    </div>
+                  )}
+                </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* 通常レベルのグリッドレイアウト */
+            <div className="card-grid">
+              {filteredItems.map((it, i) => {
+                const key = it.filename || it.imageUrl;
+                const isRevealed = revealed.has(key);
+                return (
+                  <div
+                    key={i}
+                    className={`kanji-card ${studyMode ? 'clickable' : ''}`}
+                    onClick={() => handleCardClick(it)}
+                  >
+                    <img src={it.imageUrl} alt={it.filename} />
+                    {studyMode ? (
+                      isRevealed ? (
+                        <>
+                          {it.additionalInfo && (
+                            <div className="additional-info">{it.additionalInfo}</div>
+                          )}
+                          <div className="reading">読み: {formatReadingWithOkurigana(it.reading)}</div>
+                        </>
+                      ) : (
+                        <div className="hidden-reading">クリックで表示</div>
+                      )
+                    ) : (
                       <>
                         {it.additionalInfo && (
                           <div className="additional-info">{it.additionalInfo}</div>
                         )}
                         <div className="reading">読み: {formatReadingWithOkurigana(it.reading)}</div>
                       </>
-                    ) : (
-                      <div className="hidden-reading">クリックで表示</div>
-                    )
-                  ) : (
-                    <>
-                      {it.additionalInfo && (
-                        <div className="additional-info">{it.additionalInfo}</div>
-                      )}
-                      <div className="reading">読み: {formatReadingWithOkurigana(it.reading)}</div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
         );
       })()}
