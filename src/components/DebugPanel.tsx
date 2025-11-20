@@ -51,8 +51,8 @@ export function DebugPanel() {
 
   const handleSetCoins = () => {
     const value = parseInt(coinsInput);
-    if (isNaN(value) || value < 0) {
-      setError('正しい数値を入力してください（0以上）');
+    if (isNaN(value)) {
+      setError('正しい数値を入力してください');
       return;
     }
     setCoins(value);
@@ -146,8 +146,7 @@ export function DebugPanel() {
                   type="number"
                   value={coinsInput}
                   onChange={(e) => setCoinsInput(e.target.value)}
-                  placeholder="コインを入力"
-                  min="0"
+                  placeholder="コインを入力（負の値も可）"
                 />
                 <button onClick={handleSetCoins} className="debug-set-btn">
                   設定
