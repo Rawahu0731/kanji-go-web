@@ -174,14 +174,15 @@ export const getUserRank = async (userId: string): Promise<number> => {
   const querySnapshot = await getDocs(q);
   
   let rank = 0;
+  let userRank = 0;
   querySnapshot.forEach((doc) => {
     rank++;
     if (doc.id === userId) {
-      return rank;
+      userRank = rank;
     }
   });
   
-  return rank;
+  return userRank;
 };
 
 export { auth, db, isFirebaseEnabled };
