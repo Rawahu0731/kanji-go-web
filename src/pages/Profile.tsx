@@ -5,7 +5,7 @@ import { useState } from 'react';
 import '../styles/Profile.css';
 
 function Profile() {
-  const { state, getXpForNextLevel, getLevelProgress, setUsername } = useGamification();
+  const { state, getTotalXpForNextLevel, getLevelProgress, setUsername } = useGamification();
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(state.username);
 
@@ -108,7 +108,7 @@ function Profile() {
               <div className="xp-bar" style={{ width: `${getLevelProgress()}%` }}></div>
             </div>
             <div className="xp-text">
-              {state.xp} / {getXpForNextLevel()} XP
+              {state.xp.toLocaleString()} / {getTotalXpForNextLevel().toLocaleString()} XP
             </div>
           </div>
         </div>

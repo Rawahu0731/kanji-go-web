@@ -179,7 +179,7 @@ function App() {
   const [currentStreak, setCurrentStreak] = useState(0);
   
   // ゲーミフィケーションシステム
-  const { addXp, addCoins, updateStats, addCharacterXp, state: gamificationState } = useGamification();
+  const { addXp, addCoins, updateStats, addCharacterXp, state: gamificationState, getTotalXpForNextLevel, getLevelProgress } = useGamification();
   const [choices, setChoices] = useState<string[]>([]); // 四択の選択肢
   // 単語帳モード: 一覧で読みを隠すかどうか
   const [studyMode, setStudyMode] = useState(false);
@@ -559,11 +559,11 @@ function App() {
             <div className="xp-bar-bg">
               <div 
                 className="xp-bar-fill" 
-                style={{ width: `${(gamificationState.xp / (50 * gamificationState.level * Math.sqrt(gamificationState.level))) * 100}%` }}
+                style={{ width: `${getLevelProgress()}%` }}
               ></div>
             </div>
             <span className="xp-text">
-              {gamificationState.xp} / {Math.floor(50 * gamificationState.level * Math.sqrt(gamificationState.level))} XP
+              {gamificationState.xp.toLocaleString()} / {getTotalXpForNextLevel().toLocaleString()} XP
             </span>
           </div>
           <div className="stat-item">

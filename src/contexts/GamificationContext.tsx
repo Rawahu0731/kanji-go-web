@@ -51,6 +51,8 @@ type GamificationContextType = {
   setCustomIconUrl: (url: string) => void;
   setUsername: (username: string) => void;
   getXpForNextLevel: () => number;
+  getTotalXpForCurrentLevel: () => number;
+  getTotalXpForNextLevel: () => number;
   getLevelProgress: () => number;
   addCardToCollection: (card: KanjiCard) => void;
   openCardPack: (packType: string) => KanjiCard[];
@@ -65,7 +67,7 @@ type GamificationContextType = {
 
 const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
 
-const CURRENT_VERSION = 5; // データバージョン（バージョン5：レベルアップ必要XP増加に伴うレベル調整）
+const CURRENT_VERSION = 7; // データバージョン（バージョン7：レベル計算の完全修正）
 
 const INITIAL_STATE: GamificationState = {
   version: CURRENT_VERSION,
@@ -137,13 +139,19 @@ function migrateData(data: any): GamificationState {
   
   // バージョン4から5へのマイグレーション
   if (version < 5) {
+    // XP計算式変更のための準備（バージョン5では何もしない）
+    data.version = 5;
+  }
+  
+  // バージョン5から6へのマイグレーション
+  if (version < 6) {
     // レベルアップ必要XP増加に伴うレベル調整
     console.log('レベルアップ必要XPが増加しました。レベルを調整します。');
     const totalXp = data.totalXp || 0;
     let newLevel = 1;
     let accumulatedXp = 0;
     
-    // 新しい計算式で適正レベルを計算（レベル2以降のXPを累積）
+    // 新しい計算式で適正レベルを計算
     while (true) {
       const nextLevelXp = Math.floor(100 * (newLevel + 1) * (newLevel + 1));
       if (accumulatedXp + nextLevelXp > totalXp) {
@@ -158,20 +166,36 @@ function migrateData(data: any): GamificationState {
     data.level = newLevel;
     data.xp = Math.max(0, totalXp - accumulatedXp);
     
-    // XPが次レベルの必要XPを超えている場合、さらにレベルアップ処理
-    let currentXp = data.xp;
-    let currentLevel = newLevel;
-    while (currentXp >= Math.floor(100 * (currentLevel + 1) * (currentLevel + 1))) {
-      const requiredXp = Math.floor(100 * (currentLevel + 1) * (currentLevel + 1));
-      currentXp -= requiredXp;
-      currentLevel++;
-    }
-    data.level = currentLevel;
-    data.xp = currentXp;
-
-    
-    data.version = 5;
+    data.version = 6;
   }
+  
+  // バージョン6から7へのマイグレーション
+  if (version < 7) {
+    // レベル計算ロジックの完全修正 - xpとtotalXpを常に一致させる
+    console.log('レベル計算を修正します（xp = totalXp）。');
+    const totalXp = data.totalXp || 0;
+    let newLevel = 1;
+    let accumulatedXp = 0;
+    
+    // totalXpから正しいレベルを再計算
+    while (true) {
+      const nextLevelXp = Math.floor(100 * (newLevel + 1) * (newLevel + 1));
+      if (accumulatedXp + nextLevelXp > totalXp) {
+        break;
+      }
+      accumulatedXp += nextLevelXp;
+      newLevel++;
+    }
+    
+    // レベルとXPを正しく設定（xpとtotalXpは常に一致）
+    console.log(`レベルを ${data.level} から ${newLevel} に修正しました (累積XP: ${totalXp})`);
+    data.level = newLevel;
+    data.xp = totalXp;
+    data.totalXp = totalXp;
+    
+    data.version = 7;
+  }
+  
   
   // キャラクター機能の追加（既存のデータにフィールドを追加）
   if (!data.characters) {
@@ -233,7 +257,15 @@ function mergeCharacters(a: OwnedCharacter[], b: OwnedCharacter[]): OwnedCharact
 
 // レベルアップに必要なXPを計算(2次関数的に増加: level^2)
 function getXpForLevel(level: number): number {
-  return Math.floor(100 * level * level);
+  // 序盤(レベル10まで)は2次関数、それ以降は緩やかに
+  if (level <= 10) {
+    return Math.floor(100 * level * level);
+  } else {
+    // レベル10以降は1.6次関数で緩やかに
+    const base = 100 * 10 * 10; // レベル10までの基準値
+    const additional = Math.floor(120 * Math.pow(level - 10, 1.6));
+    return base + additional;
+  }
 }
 
 export function GamificationProvider({ children }: { children: ReactNode }) {
@@ -372,12 +404,21 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       multiplier += collectionBonus;
       
       const boostedAmount = Math.floor(amount * multiplier);
+      // xpとtotalXpは常に一致
       const newXp = prev.xp + boostedAmount;
-      const newTotalXp = prev.totalXp + boostedAmount;
-      let newLevel = prev.level;
+      const newTotalXp = newXp;
       
-      // レベルアップ判定（XPは消費しない）
-      while (newXp >= getXpForLevel(newLevel)) {
+      // 累積XPから適正レベルを計算
+      let newLevel = 1;
+      let accumulatedXp = 0;
+      
+      // totalXpからレベルを逆算
+      while (true) {
+        const nextLevelXp = getXpForLevel(newLevel + 1);
+        if (accumulatedXp + nextLevelXp > newTotalXp) {
+          break;
+        }
+        accumulatedXp += nextLevelXp;
         newLevel++;
       }
 
@@ -426,12 +467,19 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
 
   const setXp = (amount: number) => {
     setState(prev => {
+      // xpとtotalXpは常に一致
       const newXp = amount;
       const newTotalXp = amount;
       let newLevel = 1;
+      let accumulatedXp = 0;
       
-      // XPからレベルを再計算（XPは消費されないので、累計XPと同じ）
-      while (newXp >= getXpForLevel(newLevel)) {
+      // totalXpからレベルを逆算
+      while (true) {
+        const nextLevelXp = getXpForLevel(newLevel + 1);
+        if (accumulatedXp + nextLevelXp > newTotalXp) {
+          break;
+        }
+        accumulatedXp += nextLevelXp;
         newLevel++;
       }
 
@@ -535,9 +583,30 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     return getXpForLevel(state.level + 1);
   };
 
+  // 現在のレベルまでに必要な累積XP
+  const getTotalXpForCurrentLevel = () => {
+    let accumulatedXp = 0;
+    for (let i = 2; i <= state.level; i++) {
+      accumulatedXp += getXpForLevel(i);
+    }
+    return accumulatedXp;
+  };
+
+  // 次のレベルまでに必要な累積XP
+  const getTotalXpForNextLevel = () => {
+    let accumulatedXp = 0;
+    for (let i = 2; i <= state.level + 1; i++) {
+      accumulatedXp += getXpForLevel(i);
+    }
+    return accumulatedXp;
+  };
+
   const getLevelProgress = () => {
-    const xpNeeded = getXpForNextLevel();
-    return (state.xp / xpNeeded) * 100;
+    const currentLevelXp = getTotalXpForCurrentLevel();
+    const nextLevelXp = getTotalXpForNextLevel();
+    const totalXpNeeded = nextLevelXp - currentLevelXp;
+    const currentProgress = state.xp - currentLevelXp;
+    return (currentProgress / totalXpNeeded) * 100;
   };
 
   const addCardToCollection = (card: KanjiCard) => {
@@ -789,6 +858,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       setCustomIconUrl,
       setUsername,
       getXpForNextLevel,
+      getTotalXpForCurrentLevel,
+      getTotalXpForNextLevel,
       getLevelProgress,
       addCardToCollection,
       openCardPack,
