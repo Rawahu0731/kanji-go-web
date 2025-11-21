@@ -74,7 +74,7 @@ type GamificationContextType = {
 
 const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
 
-const CURRENT_VERSION = 7; // データバージョン（バージョン7：レベル計算の完全修正）
+const CURRENT_VERSION = 8; // データバージョン（バージョン8：カードcountリセット）
 
 const INITIAL_STATE: GamificationState = {
   version: CURRENT_VERSION,
@@ -203,6 +203,19 @@ function migrateData(data: any): GamificationState {
     data.totalXp = totalXp;
     
     data.version = 7;
+  }
+  
+  // バージョン7から8へのマイグレーション
+  if (version < 8) {
+    // カードのcountをリセット（異常値を修正）
+    console.log('カードコレクションのcount値をリセットします');
+    if (data.cardCollection && Array.isArray(data.cardCollection)) {
+      data.cardCollection = data.cardCollection.map((card: any) => ({
+        ...card,
+        count: 1 // 全てのカードのcountを1にリセット
+      }));
+    }
+    data.version = 8;
   }
   
   
@@ -716,13 +729,14 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         : { ...card, attributes: getKanjiAttributes(card.kanji) };
 
       if (existingIndex === -1) {
-        newCollection.push({ ...cardWithAttributes, obtainedAt: Date.now(), count: card.count ?? 1 });
+        // 新規カードは常にcount=1で追加
+        newCollection.push({ ...cardWithAttributes, obtainedAt: Date.now(), count: 1 });
       } else {
         const existing = { ...newCollection[existingIndex] };
         // 最高レアを保持
         existing.rarity = rarityRank(card.rarity) > rarityRank(existing.rarity) ? card.rarity : existing.rarity;
-        // 被り回数を増やす
-        existing.count = (existing.count ?? 1) + (card.count ?? 1);
+        // 被り回数を1増やす（新しく引いたカードは常に1枚）
+        existing.count = (existing.count ?? 1) + 1;
         // obtainedAt は最初に入手した日時を保持
         existing.obtainedAt = existing.obtainedAt ?? Date.now();
         // 属性情報を更新
