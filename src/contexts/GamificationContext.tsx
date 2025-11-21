@@ -219,24 +219,48 @@ function migrateData(data: any): GamificationState {
 }
 
 // ヘルパー: カードコレクションをマージ（filename をキーにユニオン）
+function rarityRank(r: CardRarity) {
+  switch (r) {
+    case 'common': return 1;
+    case 'rare': return 2;
+    case 'epic': return 3;
+    case 'legendary': return 4;
+    default: return 0;
+  }
+}
+
+// ヘルパー: カードコレクションをマージ（同一漢字で統合し、最高レアに昇格、count を合算）
 function mergeCardCollections(a: KanjiCard[], b: KanjiCard[]): KanjiCard[] {
   const map = new Map<string, KanjiCard>();
-  for (const c of a) {
-    try {
-      const key = (c as any).filename || (c as any).imageUrl || (c as any).id || JSON.stringify(c);
-      map.set(key, c);
-    } catch (e) {
-      // ignore
+
+  const mergeInto = (c: KanjiCard) => {
+    const key = c.kanji;
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, { ...c, count: c.count ?? 1 });
+      return;
     }
+
+    // 既存と新しいカードをマージ
+    const higherRarity = rarityRank(c.rarity) > rarityRank(existing.rarity) ? c.rarity : existing.rarity;
+    const newCount = (existing.count ?? 1) + (c.count ?? 1);
+    const obtainedAt = existing.obtainedAt ?? c.obtainedAt;
+
+    map.set(key, {
+      ...existing,
+      rarity: higherRarity,
+      count: newCount,
+      obtainedAt
+    });
+  };
+
+  for (const c of a) {
+    try { mergeInto(c); } catch (e) { /* ignore */ }
   }
   for (const c of b) {
-    try {
-      const key = (c as any).filename || (c as any).imageUrl || (c as any).id || JSON.stringify(c);
-      map.set(key, c);
-    } catch (e) {
-      // ignore
-    }
+    try { mergeInto(c); } catch (e) { /* ignore */ }
   }
+
   return Array.from(map.values());
 }
 
@@ -674,10 +698,26 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   };
 
   const addCardToCollection = (card: KanjiCard) => {
-    setState(prev => ({
-      ...prev,
-      cardCollection: [...prev.cardCollection, { ...card, obtainedAt: Date.now() }]
-    }));
+    setState(prev => {
+      const existingIndex = prev.cardCollection.findIndex(c => c.kanji === card.kanji);
+      // 深くコピーして不変性を保持
+      const newCollection = [...prev.cardCollection];
+
+      if (existingIndex === -1) {
+        newCollection.push({ ...card, obtainedAt: Date.now(), count: card.count ?? 1 });
+      } else {
+        const existing = { ...newCollection[existingIndex] };
+        // 最高レアを保持
+        existing.rarity = rarityRank(card.rarity) > rarityRank(existing.rarity) ? card.rarity : existing.rarity;
+        // 被り回数を増やす
+        existing.count = (existing.count ?? 1) + (card.count ?? 1);
+        // obtainedAt は最初に入手した日時を保持
+        existing.obtainedAt = existing.obtainedAt ?? Date.now();
+        newCollection[existingIndex] = existing;
+      }
+
+      return { ...prev, cardCollection: newCollection };
+    });
   };
 
   const openCardPack = (packType: string): KanjiCard[] => {
@@ -787,14 +827,17 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const calculateCollectionBonus = (cards: KanjiCard[]): number => {
     if (cards.length === 0) return 0;
 
-    // 被り枚数を計算
+    // 被り枚数を計算（同一漢字は最高レアを反映し、count を合算）
     const cardCounts = new Map<string, { count: number; rarity: CardRarity }>();
     cards.forEach(card => {
-      const current = cardCounts.get(card.kanji);
-      if (current) {
-        current.count++;
+      const existing = cardCounts.get(card.kanji);
+      const cCount = card.count ?? 1;
+      if (existing) {
+        existing.count += cCount;
+        // 最高レアを優先
+        existing.rarity = rarityRank(card.rarity) > rarityRank(existing.rarity) ? card.rarity : existing.rarity;
       } else {
-        cardCounts.set(card.kanji, { count: 1, rarity: card.rarity });
+        cardCounts.set(card.kanji, { count: cCount, rarity: card.rarity });
       }
     });
 

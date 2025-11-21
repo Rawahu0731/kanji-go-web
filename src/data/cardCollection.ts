@@ -11,6 +11,7 @@ export type KanjiCard = {
   imageUrl: string;
   rarity: CardRarity;
   obtainedAt?: number; // タイムスタンプ
+  count?: number; // 所持枚数（被り回数を記録）
 };
 
 // カードパック設定型
