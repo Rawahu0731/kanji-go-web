@@ -436,9 +436,11 @@ function CardCollection() {
                         <div className={`card-rarity-overlay rarity-${card.rarity}`}>
                           {getRarityName(card.rarity)}
                         </div>
-                        <div className="card-element-badge-small" style={{ background: elementInfo.color }}>
-                          {elementInfo.emoji}
-                        </div>
+                        {deckModeEnabled && (
+                          <div className="card-element-badge-small" style={{ background: elementInfo.color }}>
+                            {elementInfo.emoji}
+                          </div>
+                        )}
                         {count > 1 && (
                           <div className="card-count-badge">×{count}</div>
                         )}
@@ -453,13 +455,17 @@ function CardCollection() {
                     {isOwned ? (
                       <>
                         <div className="card-kanji-large">{card.kanji}</div>
-                        <div className="card-skill-mini">
-                          {skillInfo.icon} {skillInfo.name}
-                        </div>
-                        <div className="card-stats-mini">
-                          <span className="mini-xp">⭐{attrs.xpBoost}%</span>
-                          <span className="mini-coin">💰{attrs.coinBoost}%</span>
-                        </div>
+                        {deckModeEnabled && (
+                          <>
+                            <div className="card-skill-mini">
+                              {skillInfo.icon} {skillInfo.name}
+                            </div>
+                            <div className="card-stats-mini">
+                              <span className="mini-xp">⭐{attrs.xpBoost}%</span>
+                              <span className="mini-coin">💰{attrs.coinBoost}%</span>
+                            </div>
+                          </>
+                        )}
                         {card.obtainedAt && card.obtainedAt > 0 && (
                           <div className="card-obtained-date">
                             {new Date(card.obtainedAt).toLocaleDateString('ja-JP')}
