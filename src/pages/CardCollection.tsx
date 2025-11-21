@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useGamification } from '../contexts/GamificationContext';
 import type { CardRarity, KanjiCard } from '../data/cardCollection';
@@ -161,10 +161,6 @@ function CardCollection() {
     if (state.coins >= cost) {
       upgradeCardInDeck(kanji, cost);
     }
-  };
-
-  const getDeckCard = (kanji: string) => {
-    return deck.find(d => d.kanji === kanji);
   };
 
   const getUpgradeCost = (level: number) => {
