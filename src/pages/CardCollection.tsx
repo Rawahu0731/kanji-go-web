@@ -114,7 +114,7 @@ function CardCollection() {
 
   // コレクションボーナスを計算
   const collectionBonus = gamification.getCollectionBoost();
-  const bonusPercentage = Math.round(collectionBonus * 100);
+  const bonusPercentage = (collectionBonus * 100).toFixed(2);
 
   // デッキ関連の処理
   const MAX_DECK_SIZE = 5;
@@ -358,7 +358,7 @@ function CardCollection() {
               </div>
               <div className="bonus-detail-item">
                 <span>ボーナス計算式:</span>
-                <span>{totalCardCount}枚 × 1% = {bonusPercentage}%</span>
+                <span>{totalCardCount}枚 × 0.01% = {bonusPercentage}%</span>
               </div>
             </div>
           </div>

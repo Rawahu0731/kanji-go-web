@@ -850,8 +850,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       totalCount += cCount;
     });
 
-    // 所持数×1%（青天井）
-    const bonus = totalCount * 0.01;
+    // 所持数×0.01%（1枚で+0.01%、100枚で+1%）
+    const bonus = totalCount * 0.0001;
     return bonus;
   };
 
