@@ -11,7 +11,8 @@ function CardCollection() {
   const [searchParams] = useSearchParams();
   const deckModeEnabled = searchParams.get('deck') === 'true';
   
-  const { state, upgradeCardInDeck } = useGamification();
+  const gamification = useGamification();
+  const { state, upgradeCardInDeck, addCardsToDeck, removeCardFromDeck } = gamification;
   const [selectedRarity, setSelectedRarity] = useState<'all' | CardRarity>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'level' | 'rarity'>('recent');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('all');
@@ -114,7 +115,7 @@ function CardCollection() {
   };
 
   // コレクションボーナスを計算
-  const collectionBonus = useGamification().getCollectionBoost();
+  const collectionBonus = gamification.getCollectionBoost();
   const bonusPercentage = Math.round(collectionBonus * 100);
 
   // デッキ関連の処理
@@ -135,7 +136,7 @@ function CardCollection() {
     setSelectedCards(newSelected);
   };
 
-  const addCardsToDeck = () => {
+  const addCardsToMyDeck = () => {
     if (selectedCards.size === 0) return;
     
     const cardsToAdd: KanjiCard[] = [];
@@ -147,14 +148,14 @@ function CardCollection() {
     });
     
     if (cardsToAdd.length > 0) {
-      useGamification().addCardsToDeck(cardsToAdd);
+      addCardsToDeck(cardsToAdd);
       setSelectedCards(new Set());
       setShowDeckPanel(true);
     }
   };
 
   const removeFromDeck = (kanji: string) => {
-    useGamification().removeCardFromDeck(kanji);
+    removeCardFromDeck(kanji);
   };
 
   const upgradeCard = (kanji: string, cost: number) => {
@@ -244,7 +245,7 @@ function CardCollection() {
                 {selectedCards.size > 0 && (
                   <button
                     className="add-to-deck-btn"
-                    onClick={addCardsToDeck}
+                    onClick={addCardsToMyDeck}
                     disabled={deck.length + selectedCards.size > MAX_DECK_SIZE}
                   >
                     選択中のカードをデッキに追加 ({selectedCards.size}枚)
@@ -273,7 +274,7 @@ function CardCollection() {
         {/* 統計情報 */}
         <div className="rarity-stats">
           <div className="rarity-stat-item rarity-common">
-            <span className="rarity-icon">⚪</span>
+            <span className="rarity-icon">⬜</span>
             <span className="rarity-name">コモン</span>
             <span className="rarity-count">{stats.common}</span>
           </div>
