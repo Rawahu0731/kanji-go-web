@@ -8,16 +8,43 @@ import { getRandomKanji } from '../data/allKanji';
 import type { Character, OwnedCharacter } from '../data/characters';
 import { pullGacha, getCharacterEffectValue, getXpForCharacterLevel, MAX_CHARACTER_LEVEL } from '../data/characters';
 import { getKanjiAttributes } from '../data/kanjiAttributes';
+import { SKILLS, type SkillLevel } from '../data/skillTree';
 import { saveUserData, loadUserData, isFirebaseEnabled } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'kanji_gamification';
+
+// メダルシステムの有効化日（2025年11月26日 00:00:00 JST）
+const MEDAL_SYSTEM_START_DATE = new Date('2025-11-26T00:00:00+09:00').getTime();
+
+// デバッグ用の日付をURLパラメータから取得
+const getDebugDate = (): number | null => {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const debugDate = params.get('debugDate');
+  if (debugDate) {
+    const parsed = new Date(debugDate).getTime();
+    if (!isNaN(parsed)) {
+      console.log(`🐛 デバッグモード: 日付を ${debugDate} に設定`);
+      return parsed;
+    }
+  }
+  return null;
+};
+
+// メダルシステムが有効かどうかを判定
+export const isMedalSystemEnabled = (): boolean => {
+  const debugDate = getDebugDate();
+  const currentTime = debugDate !== null ? debugDate : Date.now();
+  return currentTime >= MEDAL_SYSTEM_START_DATE;
+};
 
 export interface GamificationState {
   version?: number; // データバージョン
   xp: number;
   level: number;
   coins: number;
+  medals: number; // 新通貨メダル
   totalXp: number; // 累計XP（ストーリー解放などの判定に使用）
   unlockedBadges: string[];
   purchasedItems: string[];
@@ -25,6 +52,8 @@ export interface GamificationState {
   deck?: KanjiCard[]; // デッキ（試験的機能）
   characters: OwnedCharacter[]; // 所持キャラクター
   equippedCharacter: OwnedCharacter | null; // 装備中のキャラクター
+  skillLevels: SkillLevel[]; // スキルツリーのレベル情報
+  streakProtectionCount: number; // ストリーク保護の残り使用回数
   stats: {
     totalQuizzes: number;
     correctAnswers: number;
@@ -42,10 +71,13 @@ export interface GamificationState {
 
 type GamificationContextType = {
   state: GamificationState;
+  isMedalSystemEnabled: boolean;
   addXp: (amount: number) => void;
   addCoins: (amount: number) => void;
+  addMedals: (amount: number) => void;
   setXp: (amount: number) => void;
   setCoins: (amount: number) => void;
+  setMedals: (amount: number) => void;
   unlockBadge: (badgeId: string) => void;
   purchaseItem: (itemId: string, price: number, addToPurchased?: boolean) => boolean;
   updateStats: (updates: Partial<GamificationState['stats']>) => void;
@@ -68,6 +100,10 @@ type GamificationContextType = {
   removeCardFromDeck: (kanji: string) => void;
   upgradeCardInDeck: (kanji: string, cost: number) => void;
   getDeckBoost: () => { xp: number; coin: number };
+  upgradeSkill: (skillId: string) => boolean;
+  getSkillLevel: (skillId: string) => number;
+  getSkillBoost: (type: 'xp_boost' | 'coin_boost' | 'medal_boost' | 'double_reward' | 'critical_hit' | 'lucky_coin' | 'xp_multiplier' | 'time_bonus') => number;
+  useStreakProtection: () => boolean;
   syncWithFirebase: (userId: string) => Promise<void>;
   loadFromFirebase: (userId: string) => Promise<void>;
 };
@@ -81,6 +117,7 @@ const INITIAL_STATE: GamificationState = {
   xp: 0,
   level: 1,
   coins: 0,
+  medals: 0,
   totalXp: 0,
   unlockedBadges: [],
   purchasedItems: [],
@@ -88,6 +125,8 @@ const INITIAL_STATE: GamificationState = {
   deck: [],
   characters: [],
   equippedCharacter: null,
+  skillLevels: [],
+  streakProtectionCount: 0,
   stats: {
     totalQuizzes: 0,
     correctAnswers: 0,
@@ -231,6 +270,17 @@ function migrateData(data: any): GamificationState {
   if (!data.lastInterestTime) {
     data.lastInterestTime = Date.now();
   }
+
+  // メダルとスキルツリーの初期化
+  if (data.medals === undefined) {
+    data.medals = 0;
+  }
+  if (!data.skillLevels) {
+    data.skillLevels = [];
+  }
+  if (data.streakProtectionCount === undefined) {
+    data.streakProtectionCount = 0;
+  }
   
   // バージョン番号を最新に更新
   data.version = CURRENT_VERSION;
@@ -322,7 +372,29 @@ function getXpForLevel(level: number): number {
 export function GamificationProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<GamificationState>(INITIAL_STATE);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [medalSystemEnabled, setMedalSystemEnabled] = useState(isMedalSystemEnabled());
   const auth = useAuth();
+
+  // URLパラメータの変化を監視してメダルシステムの有効状態を更新
+  useEffect(() => {
+    const handleUrlChange = () => {
+      setMedalSystemEnabled(isMedalSystemEnabled());
+    };
+    
+    // 初回チェック
+    handleUrlChange();
+    
+    // URLが変わったときに再チェック（popstateイベント）
+    window.addEventListener('popstate', handleUrlChange);
+    
+    // 定期的にチェック（URLパラメータが変わった可能性があるため）
+    const interval = setInterval(handleUrlChange, 1000);
+    
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      clearInterval(interval);
+    };
+  }, []);
 
   // 初期化：localStorageから読み込み
   useEffect(() => {
@@ -597,6 +669,15 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       coins: amount,
       lastInterestTime: Date.now() // コインを設定したら利子計算のタイマーをリセット
     }));
+  };
+
+  const addMedals = (amount: number) => {
+    if (!isMedalSystemEnabled()) return; // メダルシステムが無効な場合は何もしない
+    setState(prev => ({ ...prev, medals: prev.medals + amount }));
+  };
+
+  const setMedals = (amount: number) => {
+    setState(prev => ({ ...prev, medals: amount }));
   };
 
   const unlockBadge = (badgeId: string) => {
@@ -1008,13 +1089,102 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     return { xp: xpBoost, coin: coinBoost };
   };
 
+  // スキルをアップグレード
+  const upgradeSkill = (skillId: string): boolean => {
+    const skill = SKILLS.find(s => s.id === skillId);
+    if (!skill) return false;
+
+    const currentLevel = getSkillLevel(skillId);
+    if (currentLevel >= skill.maxLevel) return false;
+
+    // 前提スキルのチェック（配列に対応）
+    if (skill.prerequisite && skill.prerequisite.length > 0) {
+      const allPrereqsMet = skill.prerequisite.every(prereqId => {
+        const prereqLevel = getSkillLevel(prereqId);
+        return prereqLevel > 0; // 少なくとも1レベル必要
+      });
+      
+      if (!allPrereqsMet) {
+        return false; // 前提スキルが満たされていない
+      }
+    }
+
+    // コストチェック（固定コスト）
+    const cost = skill.cost;
+    if (state.medals < cost) return false;
+
+    setState(prev => {
+      const newSkillLevels = [...prev.skillLevels];
+      const existingIndex = newSkillLevels.findIndex(sl => sl.skillId === skillId);
+      
+      if (existingIndex >= 0) {
+        newSkillLevels[existingIndex] = {
+          ...newSkillLevels[existingIndex],
+          level: newSkillLevels[existingIndex].level + 1
+        };
+      } else {
+        newSkillLevels.push({ skillId, level: 1 });
+      }
+
+      // ストリーク保護スキルの場合、使用可能回数を増やす
+      let newStreakProtectionCount = prev.streakProtectionCount;
+      if (skill.effect.type === 'streak_protection') {
+        newStreakProtectionCount += skill.effect.value;
+      }
+
+      return {
+        ...prev,
+        medals: prev.medals - cost,
+        skillLevels: newSkillLevels,
+        streakProtectionCount: newStreakProtectionCount
+      };
+    });
+
+    return true;
+  };
+
+  // スキルレベルを取得
+  const getSkillLevel = (skillId: string): number => {
+    const skillLevel = state.skillLevels.find(sl => sl.skillId === skillId);
+    return skillLevel?.level || 0;
+  };
+
+  // スキルのブースト効果を取得
+  const getSkillBoost = (type: 'xp_boost' | 'coin_boost' | 'medal_boost' | 'double_reward' | 'critical_hit' | 'lucky_coin' | 'xp_multiplier' | 'time_bonus'): number => {
+    let totalBoost = 0;
+    
+    state.skillLevels.forEach(sl => {
+      const skill = SKILLS.find(s => s.id === sl.skillId);
+      if (skill && skill.effect.type === type) {
+        totalBoost += skill.effect.value * sl.level;
+      }
+    });
+    
+    return totalBoost / 100; // パーセンテージから倍率に変換
+  };
+
+  // ストリーク保護を使用
+  const useStreakProtection = (): boolean => {
+    if (state.streakProtectionCount <= 0) return false;
+    
+    setState(prev => ({
+      ...prev,
+      streakProtectionCount: prev.streakProtectionCount - 1
+    }));
+    
+    return true;
+  };
+
   return (
     <GamificationContext.Provider value={{
       state,
+      isMedalSystemEnabled: medalSystemEnabled,
       addXp,
       addCoins,
+      addMedals,
       setXp,
       setCoins,
+      setMedals,
       unlockBadge,
       purchaseItem,
       updateStats,
@@ -1037,6 +1207,10 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       removeCardFromDeck,
       upgradeCardInDeck,
       getDeckBoost,
+      upgradeSkill,
+      getSkillLevel,
+      getSkillBoost,
+      useStreakProtection,
       syncWithFirebase,
       loadFromFirebase
     }}>

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import '../styles/Profile.css';
 
 function Profile() {
-  const { state, getTotalXpForNextLevel, getLevelProgress, setUsername } = useGamification();
+  const { state, isMedalSystemEnabled, getTotalXpForNextLevel, getLevelProgress, setUsername } = useGamification();
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(state.username);
 
@@ -122,6 +122,13 @@ function Profile() {
               <div className="stat-value">{state.coins}</div>
               <div className="stat-label">コイン</div>
             </div>
+            {isMedalSystemEnabled && (
+              <div className="stat-card">
+                <div className="stat-icon">🪙</div>
+                <div className="stat-value">{state.medals}</div>
+                <div className="stat-label">メダル</div>
+              </div>
+            )}
             <div className="stat-card">
               <div className="stat-icon">📝</div>
               <div className="stat-value">{state.stats.totalQuizzes}</div>

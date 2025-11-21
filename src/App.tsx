@@ -87,8 +87,16 @@ function extractReadingCore(reading: string): string {
   return reading.replace(/'[^']*'/g, '');
 }
 
+// メダル獲得の判定
+function tryGetMedal(quizFormat: QuizFormat, medalBoost: number): number {
+  const baseChance = quizFormat === 'input' ? 10 : 2.5; // 入力形式: 10%, 四択: 2.5%
+  const totalChance = baseChance + (baseChance * medalBoost); // スキルブーストを適用
+  const random = Math.random() * 100;
+  return random < totalChance ? 1 : 0;
+}
+
 // XP/コイン獲得時のポップアップ表示
-function showRewardPopup(xp: number, coins: number) {
+function showRewardPopup(xp: number, coins: number, medals?: number, showMedals: boolean = true) {
   const popup = document.createElement('div');
   popup.style.cssText = `
     position: fixed;
@@ -105,7 +113,9 @@ function showRewardPopup(xp: number, coins: number) {
     animation: rewardPop 0.6s ease-out;
     pointer-events: none;
   `;
-  popup.innerHTML = `+${xp} XP &nbsp;&nbsp; +${coins} コイン`;
+  popup.innerHTML = (medals && showMedals)
+    ? `+${xp} XP &nbsp;&nbsp; +${coins} コイン &nbsp;&nbsp; <span style="color: #ffd700;">+${medals} メダル🏅</span>`
+    : `+${xp} XP &nbsp;&nbsp; +${coins} コイン`;
   document.body.appendChild(popup);
   
   setTimeout(() => {
@@ -183,7 +193,19 @@ function App() {
   const inputRef = useRef<HTMLInputElement>(null);
   
   // ゲーミフィケーションシステム
-  const { addXp, addCoins, updateStats, addCharacterXp, state: gamificationState, getTotalXpForNextLevel, getLevelProgress } = useGamification();
+  const { 
+    addXp, 
+    addCoins, 
+    addMedals, 
+    updateStats, 
+    addCharacterXp, 
+    getSkillBoost,
+    useStreakProtection,
+    state: gamificationState,
+    isMedalSystemEnabled,
+    getTotalXpForNextLevel, 
+    getLevelProgress 
+  } = useGamification();
   const [choices, setChoices] = useState<string[]>([]); // 四択の選択肢
   // 単語帳モード: 一覧で読みを隠すかどうか
   const [studyMode, setStudyMode] = useState(false);
@@ -502,11 +524,30 @@ function App() {
     if (correct) {
       setScore(prev => ({ ...prev, correct: prev.correct + 1 }));
       
+      // スキルブーストを取得
+      const xpBoost = getSkillBoost('xp_boost');
+      const coinBoost = getSkillBoost('coin_boost');
+      const medalBoost = getSkillBoost('medal_boost');
+      const doubleRewardChance = getSkillBoost('double_reward');
+      
+      // ダブル報酬の判定
+      const isDouble = Math.random() < doubleRewardChance;
+      const multiplier = isDouble ? 2 : 1;
+      
       // XPとコインを付与（入力形式は難しいので報酬が多い）
-      const xpGain = 150;
-      const coinGain = 100;
+      const baseXp = 150;
+      const baseCoin = 100;
+      const xpGain = Math.floor(baseXp * (1 + xpBoost) * multiplier);
+      const coinGain = Math.floor(baseCoin * (1 + coinBoost) * multiplier);
+      
       addXp(xpGain);
       addCoins(coinGain);
+      
+      // メダル獲得判定
+      const medalGain = tryGetMedal(quizFormat, medalBoost);
+      if (medalGain > 0) {
+        addMedals(medalGain);
+      }
       
       // キャラクターに経験値を付与（入力形式: 20XP）
       addCharacterXp(20);
@@ -523,20 +564,79 @@ function App() {
         bestStreak: Math.max(gamificationState.stats.bestStreak, newStreak)
       });
       
-      // XP/コイン獲得の視覺的フィードバック
-      showRewardPopup(xpGain, coinGain);
+      // XP/コイン/メダル獲得の視覺的フィードバック
+      showRewardPopup(xpGain, coinGain, medalGain > 0 ? medalGain : undefined, isMedalSystemEnabled);
+      
+      // ダブル報酬の通知
+      if (isDouble) {
+        setTimeout(() => {
+          const popup = document.createElement('div');
+          popup.style.cssText = `
+            position: fixed;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            z-index: 9999;
+            box-shadow: 0 10px 30px rgba(245, 87, 108, 0.5);
+            animation: rewardPop 0.6s ease-out;
+            pointer-events: none;
+          `;
+          popup.textContent = '✨ ダブル報酬！';
+          document.body.appendChild(popup);
+          setTimeout(() => popup.remove(), 1500);
+        }, 300);
+      }
     } else {
       setScore(prev => ({ ...prev, incorrect: prev.incorrect + 1 }));
       
-      // ストリークリセット
-      setCurrentStreak(0);
+      // ストリーク保護の使用を試みる
+      const protectionUsed = useStreakProtection();
       
-      // 統計更新
-      updateStats({
-        totalQuizzes: gamificationState.stats.totalQuizzes + 1,
-        incorrectAnswers: gamificationState.stats.incorrectAnswers + 1,
-        currentStreak: 0
-      });
+      if (protectionUsed) {
+        // ストリーク保護が使用された場合、ストリークを維持
+        const popup = document.createElement('div');
+        popup.style.cssText = `
+          position: fixed;
+          top: 60%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 1rem 2rem;
+          border-radius: 12px;
+          font-weight: 700;
+          font-size: 1.2rem;
+          z-index: 9999;
+          box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+          animation: rewardPop 0.6s ease-out;
+          pointer-events: none;
+        `;
+        popup.textContent = '🛡️ ストリーク保護発動！';
+        document.body.appendChild(popup);
+        setTimeout(() => popup.remove(), 1500);
+        
+        // 統計更新（ストリークは維持）
+        updateStats({
+          totalQuizzes: gamificationState.stats.totalQuizzes + 1,
+          incorrectAnswers: gamificationState.stats.incorrectAnswers + 1
+        });
+      } else {
+        // ストリークリセット
+        setCurrentStreak(0);
+        
+        // 統計更新
+        updateStats({
+          totalQuizzes: gamificationState.stats.totalQuizzes + 1,
+          incorrectAnswers: gamificationState.stats.incorrectAnswers + 1,
+          currentStreak: 0
+        });
+      }
     }
   };
 
@@ -672,11 +772,18 @@ function App() {
             <span className="stat-label">💰</span>
             <span className="stat-value">{gamificationState.coins}</span>
           </div>
+          {isMedalSystemEnabled && (
+            <div className="stat-item">
+              <span className="stat-label">🏅</span>
+              <span className="stat-value">{gamificationState.medals}</span>
+            </div>
+          )}
         </div>
         <div className="nav-links">
           <Link to="/profile" className="nav-link">プロフィール</Link>
           <Link to="/characters" className="nav-link">⭐ キャラクター</Link>
           <Link to="/shop" className="nav-link">ショップ</Link>
+          <Link to="/skill-tree" className="nav-link">🌳 スキルツリー</Link>
           <Link to="/collection" className="nav-link">📚 コレクション</Link>
           <Link to="/story" className="nav-link">ストーリー</Link>
           <Link to="/ranking" className="nav-link">🏆 ランキング</Link>
@@ -1156,16 +1263,32 @@ function App() {
                           if (correct) {
                             setScore(prev => ({ ...prev, correct: prev.correct + 1 }));
                             
+                            // スキルブーストを取得
+                            const xpBoost = getSkillBoost('xp_boost');
+                            const coinBoost = getSkillBoost('coin_boost');
+                            const medalBoost = getSkillBoost('medal_boost');
+                            const doubleRewardChance = getSkillBoost('double_reward');
+                            
+                            // ダブル報酬の判定
+                            const isDouble = Math.random() < doubleRewardChance;
+                            const multiplier = isDouble ? 2 : 1;
+                            
                             // XPとコインを付与（四択形式は簡単なので報酬が少ない）
-                            const xpGain = 50;
-                            const coinGain = 30;
+                            const baseXp = 50;
+                            const baseCoin = 30;
+                            const xpGain = Math.floor(baseXp * (1 + xpBoost) * multiplier);
+                            const coinGain = Math.floor(baseCoin * (1 + coinBoost) * multiplier);
+                            
                             addXp(xpGain);
                             addCoins(coinGain);
                             
-                            // キャラクターに経験値を付与（四択形式: 5XP）
-                            addCharacterXp(5);
+                            // メダル獲得判定
+                            const medalGain = tryGetMedal(quizFormat, medalBoost);
+                            if (medalGain > 0) {
+                              addMedals(medalGain);
+                            }
                             
-                            // ストリーク更新
+                            // キャラクターに経験値を付与（四択形式: 5XP）
                             addCharacterXp(5);
                             
                             // ストリーク更新
@@ -1180,19 +1303,78 @@ function App() {
                               bestStreak: Math.max(gamificationState.stats.bestStreak, newStreak)
                             });
                             
-                            showRewardPopup(xpGain, coinGain);
+                            showRewardPopup(xpGain, coinGain, medalGain > 0 ? medalGain : undefined, isMedalSystemEnabled);
+                            
+                            // ダブル報酬の通知
+                            if (isDouble) {
+                              setTimeout(() => {
+                                const popup = document.createElement('div');
+                                popup.style.cssText = `
+                                  position: fixed;
+                                  top: 60%;
+                                  left: 50%;
+                                  transform: translate(-50%, -50%);
+                                  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                                  color: white;
+                                  padding: 1rem 2rem;
+                                  border-radius: 12px;
+                                  font-weight: 700;
+                                  font-size: 1.2rem;
+                                  z-index: 9999;
+                                  box-shadow: 0 10px 30px rgba(245, 87, 108, 0.5);
+                                  animation: rewardPop 0.6s ease-out;
+                                  pointer-events: none;
+                                `;
+                                popup.textContent = '✨ ダブル報酬！';
+                                document.body.appendChild(popup);
+                                setTimeout(() => popup.remove(), 1500);
+                              }, 300);
+                            }
                           } else {
                             setScore(prev => ({ ...prev, incorrect: prev.incorrect + 1 }));
                             
-                            // ストリークリセット
-                            setCurrentStreak(0);
+                            // ストリーク保護の使用を試みる
+                            const protectionUsed = useStreakProtection();
                             
-                            // 統計更新
-                            updateStats({
-                              totalQuizzes: gamificationState.stats.totalQuizzes + 1,
-                              incorrectAnswers: gamificationState.stats.incorrectAnswers + 1,
-                              currentStreak: 0
-                            });
+                            if (protectionUsed) {
+                              // ストリーク保護が使用された場合、ストリークを維持
+                              const popup = document.createElement('div');
+                              popup.style.cssText = `
+                                position: fixed;
+                                top: 60%;
+                                left: 50%;
+                                transform: translate(-50%, -50%);
+                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                color: white;
+                                padding: 1rem 2rem;
+                                border-radius: 12px;
+                                font-weight: 700;
+                                font-size: 1.2rem;
+                                z-index: 9999;
+                                box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+                                animation: rewardPop 0.6s ease-out;
+                                pointer-events: none;
+                              `;
+                              popup.textContent = '🛡️ ストリーク保護発動！';
+                              document.body.appendChild(popup);
+                              setTimeout(() => popup.remove(), 1500);
+                              
+                              // 統計更新（ストリークは維持）
+                              updateStats({
+                                totalQuizzes: gamificationState.stats.totalQuizzes + 1,
+                                incorrectAnswers: gamificationState.stats.incorrectAnswers + 1
+                              });
+                            } else {
+                              // ストリークリセット
+                              setCurrentStreak(0);
+                              
+                              // 統計更新
+                              updateStats({
+                                totalQuizzes: gamificationState.stats.totalQuizzes + 1,
+                                incorrectAnswers: gamificationState.stats.incorrectAnswers + 1,
+                                currentStreak: 0
+                              });
+                            }
                           }
                         }
                       }}
