@@ -729,21 +729,19 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         : { ...card, attributes: getKanjiAttributes(card.kanji) };
 
       if (existingIndex === -1) {
-        // 新規カードは常にcount=1で追加
-        newCollection.push({ ...cardWithAttributes, obtainedAt: Date.now(), count: 1 });
+        // 新規カードのみ追加（被りは無視）
+        newCollection.push({ ...cardWithAttributes, obtainedAt: Date.now() });
       } else {
+        // 既に持っている場合は最高レアリティのみ更新
         const existing = { ...newCollection[existingIndex] };
-        // 最高レアを保持
-        existing.rarity = rarityRank(card.rarity) > rarityRank(existing.rarity) ? card.rarity : existing.rarity;
-        // 被り回数を1増やす（新しく引いたカードは常に1枚）
-        existing.count = (existing.count ?? 1) + 1;
-        // obtainedAt は最初に入手した日時を保持
-        existing.obtainedAt = existing.obtainedAt ?? Date.now();
-        // 属性情報を更新
-        if (!existing.attributes) {
-          existing.attributes = getKanjiAttributes(existing.kanji);
+        if (rarityRank(card.rarity) > rarityRank(existing.rarity)) {
+          existing.rarity = card.rarity;
+          // 属性情報を更新
+          if (!existing.attributes) {
+            existing.attributes = getKanjiAttributes(existing.kanji);
+          }
+          newCollection[existingIndex] = existing;
         }
-        newCollection[existingIndex] = existing;
       }
 
       return { ...prev, cardCollection: newCollection };
@@ -857,15 +855,25 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const calculateCollectionBonus = (cards: KanjiCard[]): number => {
     if (cards.length === 0) return 0;
 
-    // 被りを含めた合計所持数を計算
-    let totalCount = 0;
+    // レアリティに応じたボーナスを計算（被りカウントは廃止）
+    let bonus = 0;
     cards.forEach(card => {
-      const cCount = card.count ?? 1;
-      totalCount += cCount;
+      switch (card.rarity) {
+        case 'common':
+          bonus += 0.01; // 1%
+          break;
+        case 'rare':
+          bonus += 0.025; // 2.5%
+          break;
+        case 'epic':
+          bonus += 0.05; // 5%
+          break;
+        case 'legendary':
+          bonus += 0.1; // 10%
+          break;
+      }
     });
 
-    // 所持数×1%（青天井）
-    const bonus = totalCount * 0.01;
     return bonus;
   };
 

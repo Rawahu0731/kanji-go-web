@@ -95,21 +95,19 @@ function CardCollection() {
   const uniqueOwned = new Set(state.cardCollection.map(c => c.kanji)).size;
   const totalKanji = ALL_KANJI.length;
   
-  // 被りを含めた合計所持数を計算
-  let totalCardCount = 0;
-  state.cardCollection.forEach(card => {
-    const cCount = card.count ?? 1;
-    totalCardCount += cCount;
-  });
+  // レアリティ別の枚数を計算
+  const rarityCount = {
+    common: state.cardCollection.filter(c => c.rarity === 'common').length,
+    rare: state.cardCollection.filter(c => c.rarity === 'rare').length,
+    epic: state.cardCollection.filter(c => c.rarity === 'epic').length,
+    legendary: state.cardCollection.filter(c => c.rarity === 'legendary').length,
+  };
   
   const stats = {
     owned: uniqueOwned,
     total: totalKanji,
     percentage: Math.round((uniqueOwned / totalKanji) * 100),
-    common: state.cardCollection.filter(c => c.rarity === 'common').length,
-    rare: state.cardCollection.filter(c => c.rarity === 'rare').length,
-    epic: state.cardCollection.filter(c => c.rarity === 'epic').length,
-    legendary: state.cardCollection.filter(c => c.rarity === 'legendary').length,
+    ...rarityCount,
   };
 
   // コレクションボーナスを計算
@@ -353,12 +351,20 @@ function CardCollection() {
             <div className="bonus-value">+{bonusPercentage}% XP/コイン</div>
             <div className="bonus-details">
               <div className="bonus-detail-item">
-                <span>合計カード所持数:</span>
-                <span>{totalCardCount}枚</span>
+                <span>⬜ コモン: {rarityCount.common}枚</span>
+                <span>+{rarityCount.common}%</span>
               </div>
               <div className="bonus-detail-item">
-                <span>ボーナス計算式:</span>
-                <span>{totalCardCount}枚 × 1% = {bonusPercentage}%</span>
+                <span>🔵 レア: {rarityCount.rare}枚</span>
+                <span>+{Math.round(rarityCount.rare * 2.5)}%</span>
+              </div>
+              <div className="bonus-detail-item">
+                <span>🟣 エピック: {rarityCount.epic}枚</span>
+                <span>+{rarityCount.epic * 5}%</span>
+              </div>
+              <div className="bonus-detail-item">
+                <span>🌟 レジェンダリー: {rarityCount.legendary}枚</span>
+                <span>+{rarityCount.legendary * 10}%</span>
               </div>
             </div>
           </div>
