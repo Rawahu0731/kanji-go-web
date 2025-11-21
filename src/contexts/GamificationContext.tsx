@@ -843,9 +843,15 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const calculateCollectionBonus = (cards: KanjiCard[]): number => {
     if (cards.length === 0) return 0;
 
-    // カードの種類数×1%（青天井）
-    // 配列の長さ = ユニーク種類数（被りは同じカードのcountで管理されている）
-    const bonus = cards.length * 0.01;
+    // 被りを含めた合計所持数を計算
+    let totalCount = 0;
+    cards.forEach(card => {
+      const cCount = card.count ?? 1;
+      totalCount += cCount;
+    });
+
+    // 所持数×1%（青天井）
+    const bonus = totalCount * 0.01;
     return bonus;
   };
 

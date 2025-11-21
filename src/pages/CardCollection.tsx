@@ -95,8 +95,12 @@ function CardCollection() {
   const uniqueOwned = new Set(state.cardCollection.map(c => c.kanji)).size;
   const totalKanji = ALL_KANJI.length;
   
-  // 所持カード数（ユニーク種類数）をボーナス計算に使用
-  const totalCardCount = state.cardCollection.length;
+  // 被りを含めた合計所持数を計算
+  let totalCardCount = 0;
+  state.cardCollection.forEach(card => {
+    const cCount = card.count ?? 1;
+    totalCardCount += cCount;
+  });
   
   const stats = {
     owned: uniqueOwned,
