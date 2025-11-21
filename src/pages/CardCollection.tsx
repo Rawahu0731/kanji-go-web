@@ -169,6 +169,25 @@ function CardCollection() {
     return Math.floor(100 * Math.pow(1.5, level));
   };
 
+  // デッキ全体の強化効果を計算
+  const calculateDeckTotalBoost = () => {
+    let totalXpBoost = 0;
+    let totalCoinBoost = 0;
+    
+    deck.forEach(card => {
+      const attrs = card.attributes || getKanjiAttributes(card.kanji);
+      const level = card.deckLevel || 0;
+      
+      // 基本値 + レベルごとの追加（レベル×5%）
+      totalXpBoost += attrs.xpBoost + (level * 5);
+      totalCoinBoost += attrs.coinBoost + (level * 3);
+    });
+    
+    return { totalXpBoost, totalCoinBoost };
+  };
+
+  const deckBoost = calculateDeckTotalBoost();
+
   return (
     <div className="card-collection-container">
       <header className="collection-header">
@@ -196,6 +215,17 @@ function CardCollection() {
             </div>
             {showDeckPanel && (
               <div className="deck-content">
+                {/* デッキ全体の合計値表示 */}
+                {deck.length > 0 && (
+                  <div className="deck-total-stats">
+                    <div className="deck-total-title">デッキ合計効果</div>
+                    <div className="deck-total-values">
+                      <div className="total-stat-xp">⭐ XP +{deckBoost.totalXpBoost}%</div>
+                      <div className="total-stat-coin">💰 コイン +{deckBoost.totalCoinBoost}%</div>
+                    </div>
+                  </div>
+                )}
+                
                 {deck.length === 0 ? (
                   <p className="deck-empty">デッキが空です。カードを選択してデッキに追加してください。</p>
                 ) : (
@@ -206,6 +236,11 @@ function CardCollection() {
                       const attrs = card.attributes || getKanjiAttributes(card.kanji);
                       const elementInfo = ELEMENT_INFO[attrs.element];
                       const skillInfo = SKILL_INFO[attrs.skill];
+                      const cardLevel = card.deckLevel || 0;
+                      
+                      // レベルによる強化効果
+                      const currentXp = attrs.xpBoost + (cardLevel * 5);
+                      const currentCoin = attrs.coinBoost + (cardLevel * 3);
                       
                       return (
                         <div key={card.kanji} className={`deck-card rarity-${card.rarity}`}>
@@ -223,13 +258,19 @@ function CardCollection() {
                           </div>
                           <div className="deck-card-info">
                             <div className="deck-card-kanji">{card.kanji}</div>
-                            <div className="deck-card-level">Lv.{card.deckLevel || 0}</div>
+                            <div className="deck-card-level">Lv.{cardLevel}</div>
                             <div className="deck-card-skill">
                               {skillInfo.icon} {skillInfo.name}
                             </div>
                             <div className="deck-card-stats">
-                              <div className="stat-xp">⭐XP +{attrs.xpBoost}%</div>
-                              <div className="stat-coin">💰コイン +{attrs.coinBoost}%</div>
+                              <div className="stat-xp">
+                                ⭐XP +{currentXp}%
+                                {cardLevel > 0 && <span className="stat-bonus"> (+{cardLevel * 5})</span>}
+                              </div>
+                              <div className="stat-coin">
+                                💰コイン +{currentCoin}%
+                                {cardLevel > 0 && <span className="stat-bonus"> (+{cardLevel * 3})</span>}
+                              </div>
                             </div>
                           </div>
                           <div className="deck-card-actions">
@@ -365,6 +406,11 @@ function CardCollection() {
               const isSelected = selectedCards.has(card.kanji);
               const inDeck = deck.some(d => d.kanji === card.kanji);
               
+              // 属性情報を取得
+              const attrs = isOwned && card.attributes ? card.attributes : getKanjiAttributes(card.kanji);
+              const elementInfo = ELEMENT_INFO[attrs.element];
+              const skillInfo = SKILL_INFO[attrs.skill];
+              
               return (
                 <div 
                   key={`${card.kanji}-${index}`} 
@@ -390,6 +436,9 @@ function CardCollection() {
                         <div className={`card-rarity-overlay rarity-${card.rarity}`}>
                           {getRarityName(card.rarity)}
                         </div>
+                        <div className="card-element-badge-small" style={{ background: elementInfo.color }}>
+                          {elementInfo.emoji}
+                        </div>
                         {count > 1 && (
                           <div className="card-count-badge">×{count}</div>
                         )}
@@ -404,6 +453,13 @@ function CardCollection() {
                     {isOwned ? (
                       <>
                         <div className="card-kanji-large">{card.kanji}</div>
+                        <div className="card-skill-mini">
+                          {skillInfo.icon} {skillInfo.name}
+                        </div>
+                        <div className="card-stats-mini">
+                          <span className="mini-xp">⭐{attrs.xpBoost}%</span>
+                          <span className="mini-coin">💰{attrs.coinBoost}%</span>
+                        </div>
                         {card.obtainedAt && card.obtainedAt > 0 && (
                           <div className="card-obtained-date">
                             {new Date(card.obtainedAt).toLocaleDateString('ja-JP')}

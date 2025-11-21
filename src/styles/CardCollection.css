@@ -789,3 +789,41 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Collection grid card styles */
+.card-element-badge-small {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 5;
+}
+
+.card-skill-mini {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 0.25rem 0;
+  text-align: center;
+}
+
+.card-stats-mini {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0.25rem 0;
+}
+
+.mini-xp {
+  color: #667eea;
+}
+
+.mini-coin {
+  color: #f59e0b;
+}
