@@ -80,17 +80,6 @@ function CardCollection() {
     }
   });
 
-  // コンプリート報酬を計算
-  const getCompleteBonus = (uniqueCount: number): number => {
-    if (uniqueCount >= 2136) return 0.25; // 常用漢字全種コンプリート！
-    if (uniqueCount >= 1500) return 0.15;
-    if (uniqueCount >= 1000) return 0.1;
-    if (uniqueCount >= 500) return 0.06;
-    if (uniqueCount >= 250) return 0.04;
-    if (uniqueCount >= 100) return 0.02;
-    return 0;
-  };
-
   // レアリティの日本語名
   const getRarityName = (rarity: string): string => {
     switch (rarity) {
@@ -105,6 +94,14 @@ function CardCollection() {
   // 統計情報
   const uniqueOwned = new Set(state.cardCollection.map(c => c.kanji)).size;
   const totalKanji = ALL_KANJI.length;
+  
+  // 被りを含めた合計所持数を計算
+  let totalCardCount = 0;
+  state.cardCollection.forEach(card => {
+    const cCount = card.count ?? 1;
+    totalCardCount += cCount;
+  });
+  
   const stats = {
     owned: uniqueOwned,
     total: totalKanji,
@@ -356,12 +353,12 @@ function CardCollection() {
             <div className="bonus-value">+{bonusPercentage}% XP/コイン</div>
             <div className="bonus-details">
               <div className="bonus-detail-item">
-                <span>被りボーナス:</span>
-                <span>{Math.round((collectionBonus - getCompleteBonus(uniqueOwned)) * 100)}%</span>
+                <span>合計カード所持数:</span>
+                <span>{totalCardCount}枚</span>
               </div>
               <div className="bonus-detail-item">
-                <span>コンプリート報酬:</span>
-                <span>{Math.round(getCompleteBonus(uniqueOwned) * 100)}%</span>
+                <span>ボーナス計算式:</span>
+                <span>{totalCardCount}枚 × 1% = {bonusPercentage}%</span>
               </div>
             </div>
           </div>

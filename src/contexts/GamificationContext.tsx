@@ -843,59 +843,16 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const calculateCollectionBonus = (cards: KanjiCard[]): number => {
     if (cards.length === 0) return 0;
 
-    // 被り枚数を計算（同一漢字は最高レアを反映し、count を合算）
-    const cardCounts = new Map<string, { count: number; rarity: CardRarity }>();
+    // 被りを含めた合計所持数を計算
+    let totalCount = 0;
     cards.forEach(card => {
-      const existing = cardCounts.get(card.kanji);
       const cCount = card.count ?? 1;
-      if (existing) {
-        existing.count += cCount;
-        // 最高レアを優先
-        existing.rarity = rarityRank(card.rarity) > rarityRank(existing.rarity) ? card.rarity : existing.rarity;
-      } else {
-        cardCounts.set(card.kanji, { count: cCount, rarity: card.rarity });
-      }
+      totalCount += cCount;
     });
 
-    // レアリティボーナス（被り枚数に応じて）
-    let rarityBonus = 0;
-    cardCounts.forEach(({ count, rarity }) => {
-      switch (rarity) {
-        case 'common':
-          rarityBonus += count * 0.001; // 0.1%
-          break;
-        case 'rare':
-          rarityBonus += count * 0.0025; // 0.25%
-          break;
-        case 'epic':
-          rarityBonus += count * 0.005; // 0.5%
-          break;
-        case 'legendary':
-          rarityBonus += count * 0.01; // 1%
-          break;
-      }
-    });
-
-    // コンプリート報酬（ユニーク種類数）
-    const uniqueCount = cardCounts.size;
-    let completeBonus = 0;
-    if (uniqueCount >= 2136) {
-      completeBonus = 0.25; // 25% - 常用漢字全種コンプリート！
-    } else if (uniqueCount >= 1500) {
-      completeBonus = 0.15; // 15%
-    } else if (uniqueCount >= 1000) {
-      completeBonus = 0.1; // 10%
-    } else if (uniqueCount >= 500) {
-      completeBonus = 0.06; // 6%
-    } else if (uniqueCount >= 250) {
-      completeBonus = 0.04; // 4%
-    } else if (uniqueCount >= 100) {
-      completeBonus = 0.02; // 2%
-    }
-
-    // 合計ボーナス（上限50%）
-    const totalBonus = Math.min(rarityBonus + completeBonus, 0.5);
-    return totalBonus;
+    // 所持数×1%（青天井）
+    const bonus = totalCount * 0.01;
+    return bonus;
   };
 
   // コレクションボーナスを取得（外部公開用）
