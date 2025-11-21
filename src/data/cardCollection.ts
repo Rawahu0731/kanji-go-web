@@ -1,3 +1,5 @@
+import type { KanjiAttributes } from './kanjiAttributes';
+
 // カードのレアリティ定義
 export type CardRarity = 'common' | 'rare' | 'epic' | 'legendary';
 
@@ -13,6 +15,7 @@ export type KanjiCard = {
   obtainedAt?: number; // タイムスタンプ
   count?: number; // 所持枚数（被り回数を記録）
   deckLevel?: number; // デッキでの強化レベル（試験的機能）
+  attributes?: KanjiAttributes; // 属性・スキル情報（試験的機能）
 };
 
 // カードパック設定型

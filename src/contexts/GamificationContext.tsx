@@ -7,6 +7,7 @@ import { CARD_PACK_CONFIG } from '../data/cardCollection';
 import { getRandomKanji } from '../data/allKanji';
 import type { Character, OwnedCharacter } from '../data/characters';
 import { pullGacha, getCharacterEffectValue, getXpForCharacterLevel, MAX_CHARACTER_LEVEL } from '../data/characters';
+import { getKanjiAttributes } from '../data/kanjiAttributes';
 import { saveUserData, loadUserData, isFirebaseEnabled } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 
@@ -709,8 +710,13 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       // 深くコピーして不変性を保持
       const newCollection = [...prev.cardCollection];
 
+      // 属性情報を付与（まだない場合）
+      const cardWithAttributes = card.attributes 
+        ? card 
+        : { ...card, attributes: getKanjiAttributes(card.kanji) };
+
       if (existingIndex === -1) {
-        newCollection.push({ ...card, obtainedAt: Date.now(), count: card.count ?? 1 });
+        newCollection.push({ ...cardWithAttributes, obtainedAt: Date.now(), count: card.count ?? 1 });
       } else {
         const existing = { ...newCollection[existingIndex] };
         // 最高レアを保持
@@ -719,6 +725,10 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         existing.count = (existing.count ?? 1) + (card.count ?? 1);
         // obtainedAt は最初に入手した日時を保持
         existing.obtainedAt = existing.obtainedAt ?? Date.now();
+        // 属性情報を更新
+        if (!existing.attributes) {
+          existing.attributes = getKanjiAttributes(existing.kanji);
+        }
         newCollection[existingIndex] = existing;
       }
 

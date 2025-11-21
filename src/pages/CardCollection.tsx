@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useGamification } from '../contexts/GamificationContext';
 import type { CardRarity, KanjiCard } from '../data/cardCollection';
+import { ELEMENT_INFO, SKILL_INFO, getKanjiAttributes } from '../data/kanjiAttributes';
 import { ALL_KANJI } from '../data/allKanji';
 import '../styles/CardCollection.css';
 
@@ -202,6 +203,9 @@ function CardCollection() {
                     {deck.map(card => {
                       const upgradeCost = getUpgradeCost(card.deckLevel || 0);
                       const canUpgrade = state.coins >= upgradeCost;
+                      const attrs = card.attributes || getKanjiAttributes(card.kanji);
+                      const elementInfo = ELEMENT_INFO[attrs.element];
+                      const skillInfo = SKILL_INFO[attrs.skill];
                       
                       return (
                         <div key={card.kanji} className={`deck-card rarity-${card.rarity}`}>
@@ -213,13 +217,19 @@ function CardCollection() {
                                 e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="%23667eea"/><text x="50%" y="50%" font-size="100" fill="white" text-anchor="middle" dy=".35em">${card.kanji}</text></svg>`;
                               }}
                             />
+                            <div className="card-element-badge" style={{ background: elementInfo.color }}>
+                              {elementInfo.emoji}
+                            </div>
                           </div>
                           <div className="deck-card-info">
                             <div className="deck-card-kanji">{card.kanji}</div>
                             <div className="deck-card-level">Lv.{card.deckLevel || 0}</div>
+                            <div className="deck-card-skill">
+                              {skillInfo.icon} {skillInfo.name}
+                            </div>
                             <div className="deck-card-stats">
-                              <div>XP: +{Math.floor((card.deckLevel || 0) * 5)}%</div>
-                              <div>Coin: +{Math.floor((card.deckLevel || 0) * 3)}%</div>
+                              <div className="stat-xp">⭐XP +{attrs.xpBoost}%</div>
+                              <div className="stat-coin">💰コイン +{attrs.coinBoost}%</div>
                             </div>
                           </div>
                           <div className="deck-card-actions">
