@@ -17,6 +17,7 @@ function Shop() {
   const [previewImage, setPreviewImage] = useState<string>('');
   const [showCardPackModal, setShowCardPackModal] = useState(false);
   const [openedCards, setOpenedCards] = useState<KanjiCard[]>([]);
+  const [previousOwnedKanji, setPreviousOwnedKanji] = useState<Set<string>>(new Set());
   const [showGachaModal, setShowGachaModal] = useState(false);
   const [pulledCharacters, setPulledCharacters] = useState<Character[]>([]);
 
@@ -81,6 +82,10 @@ function Shop() {
         const success = purchaseItem(item.id, item.price, false);
         
         if (success && item.effect) {
+          // 開封前の所持漢字リストを保存
+          const ownedKanjiBeforeOpen = new Set(state.cardCollection.map(c => c.kanji));
+          setPreviousOwnedKanji(ownedKanjiBeforeOpen);
+          
           const cards = openCardPack(item.effect);
           cards.forEach(card => addCardToCollection(card));
           setOpenedCards(cards);
@@ -431,27 +436,36 @@ function Shop() {
             </div>
             <div className="modal-body">
               <div className="opened-cards-grid">
-                {openedCards.map((card, index) => (
-                  <div 
-                    key={card.id} 
-                    className={`card-item rarity-${card.rarity}`}
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <div className="card-image-container">
-                      <img 
-                        src={card.imageUrl} 
-                        alt={card.kanji}
-                        onError={(e) => {
-                          e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="50%" y="50%" font-size="60" text-anchor="middle" dy=".3em">' + card.kanji + '</text></svg>';
-                        }}
-                      />
-                      <div className="card-kanji">{card.kanji}</div>
-                      <div className={`card-rarity-badge rarity-${card.rarity}`}>
-                        {getRarityName(card.rarity)}
+                {openedCards.map((card, index) => {
+                  // このカードが新規取得かどうかを判定
+                  // 開封前のコレクションに含まれていなければ新規
+                  const isNewCard = !previousOwnedKanji.has(card.kanji);
+                  
+                  return (
+                    <div 
+                      key={card.id} 
+                      className={`card-item rarity-${card.rarity}`}
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      <div className="card-image-container">
+                        <img 
+                          src={card.imageUrl} 
+                          alt={card.kanji}
+                          onError={(e) => {
+                            e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="50%" y="50%" font-size="60" text-anchor="middle" dy=".3em">' + card.kanji + '</text></svg>';
+                          }}
+                        />
+                        <div className="card-kanji">{card.kanji}</div>
+                        <div className={`card-rarity-badge rarity-${card.rarity}`}>
+                          {getRarityName(card.rarity)}
+                        </div>
+                        {isNewCard && (
+                          <div className="card-new-badge-gacha">NEW!</div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <div style={{
                 display: 'flex',

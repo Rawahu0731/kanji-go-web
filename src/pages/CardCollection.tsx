@@ -27,8 +27,15 @@ function CardCollection() {
     cardCounts.set(card.kanji, count + 1);
   });
 
-  // 取得済み漢字のSet
+  // 取得済み漢字のSetと最初の取得日時のMap
   const ownedKanjiSet = new Set(state.cardCollection.map(c => c.kanji));
+  const firstObtainedMap = new Map<string, number>();
+  state.cardCollection.forEach(card => {
+    const currentFirst = firstObtainedMap.get(card.kanji);
+    if (!currentFirst || (card.obtainedAt && card.obtainedAt < currentFirst)) {
+      firstObtainedMap.set(card.kanji, card.obtainedAt || 0);
+    }
+  });
 
   // 表示するカードリスト
   const displayCards = displayMode === 'owned'
@@ -409,6 +416,10 @@ function CardCollection() {
               const isSelected = selectedCards.has(card.kanji);
               const inDeck = deck.some(d => d.kanji === card.kanji);
               
+              // 新規取得判定（最初の取得から24時間以内）
+              const firstObtainedAt = firstObtainedMap.get(card.kanji) || 0;
+              const isNew = isOwned && firstObtainedAt > 0 && (Date.now() - firstObtainedAt < 24 * 60 * 60 * 1000);
+              
               // 属性情報を取得
               const attrs = isOwned && card.attributes ? card.attributes : getKanjiAttributes(card.kanji);
               const elementInfo = ELEMENT_INFO[attrs.element];
@@ -446,6 +457,9 @@ function CardCollection() {
                         )}
                         {count > 1 && (
                           <div className="card-count-badge">×{count}</div>
+                        )}
+                        {isNew && (
+                          <div className="card-new-badge">NEW</div>
                         )}
                       </>
                     ) : (

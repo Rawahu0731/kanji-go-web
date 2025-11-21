@@ -364,6 +364,33 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
+.card-new-badge {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.5);
+  animation: newBadgePulse 2s ease-in-out infinite;
+  z-index: 10;
+}
+
+@keyframes newBadgePulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(255, 107, 107, 0.5);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.8);
+  }
+}
+
 .card-rarity-overlay {
   position: absolute;
   top: 10px;
