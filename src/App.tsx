@@ -6,6 +6,7 @@ import { useGamification } from './contexts/GamificationContext'
 import { DebugPanel } from './components/DebugPanel'
 import AuthButton from './components/AuthButton'
 import './App.css'
+import shuffleArray from './lib/shuffle'
 
 type Item = {
   filename: string;
@@ -372,8 +373,8 @@ function App() {
   const startQuiz = () => {
     if (!items || items.length === 0) return;
     
-    // シャッフル
-    const shuffled = [...items].sort(() => Math.random() - 0.5);
+    // シャッフル（Fisher–Yates）
+    const shuffled = shuffleArray(items);
     setQuizItems(shuffled);
     setCurrentIndex(0);
     setUserAnswer('');
@@ -387,7 +388,7 @@ function App() {
   const generateChoices = (correctItem: Item, allItems: Item[]): { choices: string[], correctIndex: number } => {
     const correct = correctItem.reading;
     const others = allItems.filter(it => it.reading !== correct);
-    const shuffledOthers = [...others].sort(() => Math.random() - 0.5);
+    const shuffledOthers = shuffleArray(others);
     const wrongChoices = shuffledOthers.slice(0, 3).map(it => it.reading);
     
     // 正解を含む4つの選択肢を作成
