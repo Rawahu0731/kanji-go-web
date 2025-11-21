@@ -1,17 +1,22 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useGamification } from '../contexts/GamificationContext';
-import type { CardRarity } from '../data/cardCollection';
+import type { CardRarity, KanjiCard } from '../data/cardCollection';
 import { ALL_KANJI } from '../data/allKanji';
 import '../styles/CardCollection.css';
 
 type DisplayMode = 'owned' | 'all';
 
 function CardCollection() {
-  const { state } = useGamification();
+  const [searchParams] = useSearchParams();
+  const deckModeEnabled = searchParams.get('deck') === 'true';
+  
+  const { state, upgradeCardInDeck } = useGamification();
   const [selectedRarity, setSelectedRarity] = useState<'all' | CardRarity>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'level' | 'rarity'>('recent');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('all');
+  const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
+  const [showDeckPanel, setShowDeckPanel] = useState(false);
 
   // 被り枚数を計算
   const cardCounts = new Map<string, number>();
@@ -112,11 +117,68 @@ function CardCollection() {
   const collectionBonus = useGamification().getCollectionBoost();
   const bonusPercentage = Math.round(collectionBonus * 100);
 
+  // デッキ関連の処理
+  const MAX_DECK_SIZE = 5;
+  const deck = state.deck || [];
+
+  const toggleCardSelection = (kanji: string) => {
+    if (!deckModeEnabled) return;
+    
+    const newSelected = new Set(selectedCards);
+    if (newSelected.has(kanji)) {
+      newSelected.delete(kanji);
+    } else {
+      if (newSelected.size < MAX_DECK_SIZE) {
+        newSelected.add(kanji);
+      }
+    }
+    setSelectedCards(newSelected);
+  };
+
+  const addCardsToDeck = () => {
+    if (selectedCards.size === 0) return;
+    
+    const cardsToAdd: KanjiCard[] = [];
+    selectedCards.forEach(kanji => {
+      const card = state.cardCollection.find(c => c.kanji === kanji);
+      if (card && !deck.find(d => d.kanji === kanji)) {
+        cardsToAdd.push(card);
+      }
+    });
+    
+    if (cardsToAdd.length > 0) {
+      useGamification().addCardsToDeck(cardsToAdd);
+      setSelectedCards(new Set());
+      setShowDeckPanel(true);
+    }
+  };
+
+  const removeFromDeck = (kanji: string) => {
+    useGamification().removeCardFromDeck(kanji);
+  };
+
+  const upgradeCard = (kanji: string, cost: number) => {
+    if (state.coins >= cost) {
+      upgradeCardInDeck(kanji, cost);
+    }
+  };
+
+  const getDeckCard = (kanji: string) => {
+    return deck.find(d => d.kanji === kanji);
+  };
+
+  const getUpgradeCost = (level: number) => {
+    return Math.floor(100 * Math.pow(1.5, level));
+  };
+
   return (
     <div className="card-collection-container">
       <header className="collection-header">
         <Link to="/" className="back-button">← ホームへ戻る</Link>
         <h1>📚 カードコレクション</h1>
+        {deckModeEnabled && (
+          <div className="deck-mode-badge">🃏 デッキモード (試験的)</div>
+        )}
         <div className="collection-stats">
           <div className="stat-badge">
             <span className="stat-label">収集率</span>
@@ -127,6 +189,76 @@ function CardCollection() {
       </header>
 
       <div className="collection-content">
+        {/* デッキパネル */}
+        {deckModeEnabled && (
+          <div className={`deck-panel ${showDeckPanel ? 'expanded' : ''}`}>
+            <div className="deck-header" onClick={() => setShowDeckPanel(!showDeckPanel)}>
+              <h3>🃏 現在のデッキ ({deck.length}/{MAX_DECK_SIZE})</h3>
+              <button className="deck-toggle">{showDeckPanel ? '▼' : '▲'}</button>
+            </div>
+            {showDeckPanel && (
+              <div className="deck-content">
+                {deck.length === 0 ? (
+                  <p className="deck-empty">デッキが空です。カードを選択してデッキに追加してください。</p>
+                ) : (
+                  <div className="deck-cards">
+                    {deck.map(card => {
+                      const upgradeCost = getUpgradeCost(card.deckLevel || 0);
+                      const canUpgrade = state.coins >= upgradeCost;
+                      
+                      return (
+                        <div key={card.kanji} className={`deck-card rarity-${card.rarity}`}>
+                          <div className="deck-card-image">
+                            <img 
+                              src={card.imageUrl} 
+                              alt={card.kanji}
+                              onError={(e) => {
+                                e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="%23667eea"/><text x="50%" y="50%" font-size="100" fill="white" text-anchor="middle" dy=".35em">${card.kanji}</text></svg>`;
+                              }}
+                            />
+                          </div>
+                          <div className="deck-card-info">
+                            <div className="deck-card-kanji">{card.kanji}</div>
+                            <div className="deck-card-level">Lv.{card.deckLevel || 0}</div>
+                            <div className="deck-card-stats">
+                              <div>XP: +{Math.floor((card.deckLevel || 0) * 5)}%</div>
+                              <div>Coin: +{Math.floor((card.deckLevel || 0) * 3)}%</div>
+                            </div>
+                          </div>
+                          <div className="deck-card-actions">
+                            <button
+                              className="upgrade-btn"
+                              onClick={() => upgradeCard(card.kanji, upgradeCost)}
+                              disabled={!canUpgrade}
+                            >
+                              強化 ({upgradeCost}💰)
+                            </button>
+                            <button
+                              className="remove-btn"
+                              onClick={() => removeFromDeck(card.kanji)}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {selectedCards.size > 0 && (
+                  <button
+                    className="add-to-deck-btn"
+                    onClick={addCardsToDeck}
+                    disabled={deck.length + selectedCards.size > MAX_DECK_SIZE}
+                  >
+                    選択中のカードをデッキに追加 ({selectedCards.size}枚)
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 表示モード切り替え */}
         <div className="mode-toggle">
           <button
@@ -223,12 +355,21 @@ function CardCollection() {
             {sortedCards.map((card, index) => {
               const isOwned = ownedKanjiSet.has(card.kanji);
               const count = cardCounts.get(card.kanji) || 0;
+              const isSelected = selectedCards.has(card.kanji);
+              const inDeck = deck.some(d => d.kanji === card.kanji);
               
               return (
                 <div 
                   key={`${card.kanji}-${index}`} 
-                  className={`collection-card ${isOwned ? `rarity-${card.rarity}` : 'not-owned'}`}
+                  className={`collection-card ${isOwned ? `rarity-${card.rarity}` : 'not-owned'} ${isSelected ? 'selected' : ''} ${inDeck ? 'in-deck' : ''}`}
+                  onClick={() => isOwned && toggleCardSelection(card.kanji)}
+                  style={{ cursor: deckModeEnabled && isOwned ? 'pointer' : 'default' }}
                 >
+                  {deckModeEnabled && isOwned && (
+                    <div className="card-select-indicator">
+                      {isSelected ? '✓' : inDeck ? '🃏' : ''}
+                    </div>
+                  )}
                   <div className="card-image-wrapper">
                     {isOwned ? (
                       <>

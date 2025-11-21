@@ -12,6 +12,7 @@ export type KanjiCard = {
   rarity: CardRarity;
   obtainedAt?: number; // タイムスタンプ
   count?: number; // 所持枚数（被り回数を記録）
+  deckLevel?: number; // デッキでの強化レベル（試験的機能）
 };
 
 // カードパック設定型

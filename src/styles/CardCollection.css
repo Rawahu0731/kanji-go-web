@@ -501,6 +501,224 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+/* デッキモード関連 */
+.deck-mode-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+
+.deck-panel {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.deck-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.deck-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #1a1a1a;
+}
+
+.deck-toggle {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  color: #667eea;
+}
+
+.deck-content {
+  margin-top: 1.5rem;
+}
+
+.deck-empty {
+  text-align: center;
+  color: #666;
+  padding: 2rem;
+  font-style: italic;
+}
+
+.deck-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.deck-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.deck-card.rarity-common {
+  border-color: #9e9e9e;
+}
+
+.deck-card.rarity-rare {
+  border-color: #2196f3;
+}
+
+.deck-card.rarity-epic {
+  border-color: #9c27b0;
+}
+
+.deck-card.rarity-legendary {
+  border-color: #ff9800;
+}
+
+.deck-card-image {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.deck-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.deck-card-info {
+  text-align: center;
+}
+
+.deck-card-kanji {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.deck-card-level {
+  font-size: 0.9rem;
+  color: #667eea;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.deck-card-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.deck-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.upgrade-btn {
+  flex: 1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upgrade-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+.upgrade-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.remove-btn {
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.remove-btn:hover {
+  background: #d32f2f;
+}
+
+.add-to-deck-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-to-deck-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+}
+
+.add-to-deck-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.collection-card.selected {
+  border: 3px solid #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+}
+
+.collection-card.in-deck {
+  border: 3px solid #ff9800;
+  box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.3);
+}
+
+.card-select-indicator {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: white;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
 /* レスポンシブ */
 @media (max-width: 768px) {
   .card-collection-container {
@@ -529,5 +747,9 @@
     position: static;
     display: inline-block;
     margin-bottom: 1rem;
+  }
+
+  .deck-cards {
+    grid-template-columns: 1fr;
   }
 }

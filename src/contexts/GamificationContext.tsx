@@ -21,6 +21,7 @@ export interface GamificationState {
   unlockedBadges: string[];
   purchasedItems: string[];
   cardCollection: KanjiCard[]; // カードコレクション
+  deck?: KanjiCard[]; // デッキ（試験的機能）
   characters: OwnedCharacter[]; // 所持キャラクター
   equippedCharacter: OwnedCharacter | null; // 装備中のキャラクター
   stats: {
@@ -62,6 +63,10 @@ type GamificationContextType = {
   getCharacterBoost: (type: 'xp' | 'coin') => number;
   addCharacterXp: (amount: number) => void;
   getCollectionBoost: () => number;
+  addCardsToDeck: (cards: KanjiCard[]) => void;
+  removeCardFromDeck: (kanji: string) => void;
+  upgradeCardInDeck: (kanji: string, cost: number) => void;
+  getDeckBoost: () => { xp: number; coin: number };
   syncWithFirebase: (userId: string) => Promise<void>;
   loadFromFirebase: (userId: string) => Promise<void>;
 };
@@ -79,6 +84,7 @@ const INITIAL_STATE: GamificationState = {
   unlockedBadges: [],
   purchasedItems: [],
   cardCollection: [],
+  deck: [],
   characters: [],
   equippedCharacter: null,
   stats: {
@@ -950,6 +956,69 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // デッキにカードを追加（試験的機能）
+  const addCardsToDeck = (cards: KanjiCard[]) => {
+    setState(prev => {
+      const deck = prev.deck || [];
+      const newDeck = [...deck];
+      
+      cards.forEach(card => {
+        // すでにデッキに入っているか確認
+        if (!newDeck.find(c => c.kanji === card.kanji)) {
+          newDeck.push({ ...card, deckLevel: 0 });
+        }
+      });
+      
+      return { ...prev, deck: newDeck };
+    });
+  };
+
+  // デッキからカードを削除（試験的機能）
+  const removeCardFromDeck = (kanji: string) => {
+    setState(prev => {
+      const deck = prev.deck || [];
+      return { ...prev, deck: deck.filter(c => c.kanji !== kanji) };
+    });
+  };
+
+  // デッキのカードを強化（試験的機能）
+  const upgradeCardInDeck = (kanji: string, cost: number) => {
+    setState(prev => {
+      if (prev.coins < cost) return prev;
+      
+      const deck = prev.deck || [];
+      const cardIndex = deck.findIndex(c => c.kanji === kanji);
+      if (cardIndex === -1) return prev;
+      
+      const newDeck = [...deck];
+      newDeck[cardIndex] = {
+        ...newDeck[cardIndex],
+        deckLevel: (newDeck[cardIndex].deckLevel || 0) + 1
+      };
+      
+      return {
+        ...prev,
+        deck: newDeck,
+        coins: prev.coins - cost
+      };
+    });
+  };
+
+  // デッキからのブースト効果を取得（試験的機能）
+  const getDeckBoost = (): { xp: number; coin: number } => {
+    const deck = state.deck || [];
+    let xpBoost = 0;
+    let coinBoost = 0;
+    
+    deck.forEach(card => {
+      const level = card.deckLevel || 0;
+      xpBoost += level * 0.05; // 1レベルあたり5%
+      coinBoost += level * 0.03; // 1レベルあたり3%
+    });
+    
+    return { xp: xpBoost, coin: coinBoost };
+  };
+
   return (
     <GamificationContext.Provider value={{
       state,
@@ -975,6 +1044,10 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       getCharacterBoost,
       addCharacterXp,
       getCollectionBoost,
+      addCardsToDeck,
+      removeCardFromDeck,
+      upgradeCardInDeck,
+      getDeckBoost,
       syncWithFirebase,
       loadFromFirebase
     }}>
