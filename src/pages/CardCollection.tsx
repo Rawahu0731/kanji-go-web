@@ -95,12 +95,8 @@ function CardCollection() {
   const uniqueOwned = new Set(state.cardCollection.map(c => c.kanji)).size;
   const totalKanji = ALL_KANJI.length;
   
-  // 被りを含めた合計所持数を計算
-  let totalCardCount = 0;
-  state.cardCollection.forEach(card => {
-    const cCount = card.count ?? 1;
-    totalCardCount += cCount;
-  });
+  // 所持カード数（ユニーク種類数）をボーナス計算に使用
+  const totalCardCount = state.cardCollection.length;
   
   const stats = {
     owned: uniqueOwned,
@@ -114,7 +110,7 @@ function CardCollection() {
 
   // コレクションボーナスを計算
   const collectionBonus = gamification.getCollectionBoost();
-  const bonusPercentage = (collectionBonus * 100).toFixed(2);
+  const bonusPercentage = Math.round(collectionBonus * 100);
 
   // デッキ関連の処理
   const MAX_DECK_SIZE = 5;
@@ -358,7 +354,7 @@ function CardCollection() {
               </div>
               <div className="bonus-detail-item">
                 <span>ボーナス計算式:</span>
-                <span>{totalCardCount}枚 × 0.01% = {bonusPercentage}%</span>
+                <span>{totalCardCount}枚 × 1% = {bonusPercentage}%</span>
               </div>
             </div>
           </div>
