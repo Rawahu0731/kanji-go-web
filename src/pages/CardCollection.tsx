@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useGamification } from '../contexts/GamificationContext';
 import type { CardRarity, KanjiCard } from '../data/cardCollection';
@@ -20,72 +20,91 @@ function CardCollection() {
   const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
   const [showDeckPanel, setShowDeckPanel] = useState(false);
 
-  // 被り枚数を計算
-  const cardCounts = new Map<string, number>();
-  state.cardCollection.forEach(card => {
-    const count = cardCounts.get(card.kanji) || 0;
-    cardCounts.set(card.kanji, count + 1);
-  });
+  // heavy computations memoized to avoid recalculation on every render
+  const { cardCounts, ownedKanjiSet, firstObtainedMap, ownedCardMap } = useMemo(() => {
+    const counts = new Map<string, number>();
+    const ownedSet = new Set<string>();
+    const firstMap = new Map<string, number>();
+    const ownedMap = new Map<string, any>();
 
-  // 取得済み漢字のSetと最初の取得日時のMap
-  const ownedKanjiSet = new Set(state.cardCollection.map(c => c.kanji));
-  const firstObtainedMap = new Map<string, number>();
-  state.cardCollection.forEach(card => {
-    const currentFirst = firstObtainedMap.get(card.kanji);
-    if (!currentFirst || (card.obtainedAt && card.obtainedAt < currentFirst)) {
-      firstObtainedMap.set(card.kanji, card.obtainedAt || 0);
+    for (const card of state.cardCollection) {
+      const cnt = counts.get(card.kanji) || 0;
+      counts.set(card.kanji, cnt + 1);
+      ownedSet.add(card.kanji);
+
+      const cur = firstMap.get(card.kanji);
+      if (!cur || (card.obtainedAt && card.obtainedAt < cur)) {
+        firstMap.set(card.kanji, card.obtainedAt || 0);
+      }
+
+      // keep reference to the first owned card for quicker lookup
+      if (!ownedMap.has(card.kanji)) {
+        ownedMap.set(card.kanji, card);
+      }
     }
-  });
+
+    return { cardCounts: counts, ownedKanjiSet: ownedSet, firstObtainedMap: firstMap, ownedCardMap: ownedMap };
+  }, [state.cardCollection]);
 
   // 表示するカードリスト
-  const displayCards = displayMode === 'owned'
-    ? state.cardCollection.filter((card, index, self) => 
-        // 重複を除いた最初のカードのみ
-        self.findIndex(c => c.kanji === card.kanji) === index
-      )
-    : ALL_KANJI.map(kanjiData => {
-        // 取得済みの場合は実際のカードデータを使用
-        const ownedCard = state.cardCollection.find(c => c.kanji === kanjiData.kanji);
-        if (ownedCard) {
-          return ownedCard;
+  // prepare display list (memoized)
+  const displayCards = useMemo(() => {
+    if (displayMode === 'owned') {
+      // unique owned cards (preserve first occurrence order)
+      const seen = new Set<string>();
+      const unique: any[] = [];
+      for (const card of state.cardCollection) {
+        if (!seen.has(card.kanji)) {
+          seen.add(card.kanji);
+          unique.push(card);
         }
-        // 未取得の場合はダミーカードを作成
-        return {
-          id: `dummy-${kanjiData.kanji}`,
-          kanji: kanjiData.kanji,
-          reading: kanjiData.reading,
-          meaning: kanjiData.meaning,
-          level: kanjiData.level,
-          imageUrl: `/kanji/level-${kanjiData.level}/images/${kanjiData.kanji}.png`,
-          rarity: 'common' as CardRarity,
-          obtainedAt: 0
-        };
-      });
+      }
+      return unique;
+    }
+
+    return ALL_KANJI.map(kanjiData => {
+      const ownedCard = ownedCardMap.get(kanjiData.kanji);
+      if (ownedCard) return ownedCard;
+      return {
+        id: `dummy-${kanjiData.kanji}`,
+        kanji: kanjiData.kanji,
+        reading: kanjiData.reading,
+        meaning: kanjiData.meaning,
+        level: kanjiData.level,
+        imageUrl: `/kanji/level-${kanjiData.level}/images/${kanjiData.kanji}.png`,
+        rarity: 'common' as CardRarity,
+        obtainedAt: 0
+      };
+    });
+  }, [displayMode, state.cardCollection, ownedCardMap]);
 
   // レアリティでフィルター（全表示モードでは未取得カードも含む）
-  const filteredCards = selectedRarity === 'all' 
-    ? displayCards 
-    : displayCards.filter(card => {
-        if (displayMode === 'all' && !ownedKanjiSet.has(card.kanji)) {
-          return true; // 未取得カードは常に表示
-        }
-        return card.rarity === selectedRarity;
-      });
+  const filteredCards = useMemo(() => {
+    if (selectedRarity === 'all') return displayCards;
+    return displayCards.filter(card => {
+      if (displayMode === 'all' && !ownedKanjiSet.has(card.kanji)) {
+        return true;
+      }
+      return card.rarity === selectedRarity;
+    });
+  }, [selectedRarity, displayMode, displayCards, ownedKanjiSet]);
 
   // ソート
-  const sortedCards = [...filteredCards].sort((a, b) => {
+  const sortedCards = useMemo(() => {
+    return [...filteredCards].sort((a, b) => {
     switch (sortBy) {
       case 'recent':
         return (b.obtainedAt || 0) - (a.obtainedAt || 0);
       case 'level':
         return a.level - b.level;
       case 'rarity':
-        const rarityOrder: Record<CardRarity, number> = { legendary: 4, epic: 3, rare: 2, common: 1 };
-        return rarityOrder[b.rarity] - rarityOrder[a.rarity];
+  const rarityOrder: Record<CardRarity, number> = { legendary: 4, epic: 3, rare: 2, common: 1 };
+  return rarityOrder[b.rarity as CardRarity] - rarityOrder[a.rarity as CardRarity];
       default:
         return 0;
     }
-  });
+    });
+  }, [filteredCards, sortBy]);
 
   // レアリティの日本語名
   const getRarityName = (rarity: string): string => {
@@ -99,23 +118,22 @@ function CardCollection() {
   };
 
   // 統計情報
-  const uniqueOwned = new Set(state.cardCollection.map(c => c.kanji)).size;
-  const totalKanji = ALL_KANJI.length;
-  
-  // レアリティ別の枚数を計算
-  const rarityCount = {
-    common: state.cardCollection.filter(c => c.rarity === 'common').length,
-    rare: state.cardCollection.filter(c => c.rarity === 'rare').length,
-    epic: state.cardCollection.filter(c => c.rarity === 'epic').length,
-    legendary: state.cardCollection.filter(c => c.rarity === 'legendary').length,
-  };
-  
-  const stats = {
-    owned: uniqueOwned,
-    total: totalKanji,
-    percentage: Math.round((uniqueOwned / totalKanji) * 100),
-    ...rarityCount,
-  };
+  const stats = useMemo(() => {
+    const uniqueOwned = ownedKanjiSet.size;
+    const totalKanji = ALL_KANJI.length;
+    const rarityCount = {
+      common: state.cardCollection.filter(c => c.rarity === 'common').length,
+      rare: state.cardCollection.filter(c => c.rarity === 'rare').length,
+      epic: state.cardCollection.filter(c => c.rarity === 'epic').length,
+      legendary: state.cardCollection.filter(c => c.rarity === 'legendary').length,
+    };
+    return {
+      owned: uniqueOwned,
+      total: totalKanji,
+      percentage: Math.round((uniqueOwned / totalKanji) * 100),
+      ...rarityCount,
+    };
+  }, [ownedKanjiSet, state.cardCollection]);
 
   // コレクションボーナスを計算
   const collectionBonus = gamification.getCollectionBoost();
@@ -245,11 +263,14 @@ function CardCollection() {
                       const currentCoin = attrs.coinBoost + (cardLevel * 3);
                       
                       return (
-                        <div key={card.kanji} className={`deck-card rarity-${card.rarity}`}>
+                        <div key={card.id || card.kanji} className={`deck-card rarity-${card.rarity}`}>
                           <div className="deck-card-image">
-                            <img 
-                              src={card.imageUrl} 
+                            <img
+                              src={card.imageUrl}
                               alt={card.kanji}
+                              loading="lazy"
+                              width={120}
+                              height={120}
                               onError={(e) => {
                                 e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="%23667eea"/><text x="50%" y="50%" font-size="100" fill="white" text-anchor="middle" dy=".35em">${card.kanji}</text></svg>`;
                               }}
@@ -358,20 +379,20 @@ function CardCollection() {
             <div className="bonus-value">+{bonusPercentage}% XP/コイン</div>
             <div className="bonus-details">
               <div className="bonus-detail-item">
-                <span>⬜ コモン: {rarityCount.common}枚</span>
-                <span>+{rarityCount.common}%</span>
+                <span>⬜ コモン: {stats.common}枚</span>
+                <span>+{stats.common}%</span>
               </div>
               <div className="bonus-detail-item">
-                <span>🔵 レア: {rarityCount.rare}枚</span>
-                <span>+{Math.round(rarityCount.rare * 2.5)}%</span>
+                <span>🔵 レア: {stats.rare}枚</span>
+                <span>+{Math.round(stats.rare * 2.5)}%</span>
               </div>
               <div className="bonus-detail-item">
-                <span>🟣 エピック: {rarityCount.epic}枚</span>
-                <span>+{rarityCount.epic * 5}%</span>
+                <span>🟣 エピック: {stats.epic}枚</span>
+                <span>+{stats.epic * 5}%</span>
               </div>
               <div className="bonus-detail-item">
-                <span>🌟 レジェンダリー: {rarityCount.legendary}枚</span>
-                <span>+{rarityCount.legendary * 10}%</span>
+                <span>🌟 レジェンダリー: {stats.legendary}枚</span>
+                <span>+{stats.legendary * 10}%</span>
               </div>
             </div>
           </div>
@@ -410,7 +431,7 @@ function CardCollection() {
         {/* カードグリッド */}
         {sortedCards.length > 0 ? (
           <div className="cards-grid">
-            {sortedCards.map((card, index) => {
+      {sortedCards.map((card) => {
               const isOwned = ownedKanjiSet.has(card.kanji);
               const count = cardCounts.get(card.kanji) || 0;
               const isSelected = selectedCards.has(card.kanji);
@@ -422,12 +443,12 @@ function CardCollection() {
               
               // 属性情報を取得
               const attrs = isOwned && card.attributes ? card.attributes : getKanjiAttributes(card.kanji);
-              const elementInfo = ELEMENT_INFO[attrs.element];
-              const skillInfo = SKILL_INFO[attrs.skill];
+              const elementInfo = ELEMENT_INFO[attrs.element as keyof typeof ELEMENT_INFO] as any;
+              const skillInfo = SKILL_INFO[attrs.skill as keyof typeof SKILL_INFO] as any;
               
               return (
                 <div 
-                  key={`${card.kanji}-${index}`} 
+                  key={card.id || card.kanji} 
                   className={`collection-card ${isOwned ? `rarity-${card.rarity}` : 'not-owned'} ${isSelected ? 'selected' : ''} ${inDeck ? 'in-deck' : ''}`}
                   onClick={() => isOwned && toggleCardSelection(card.kanji)}
                   style={{ cursor: deckModeEnabled && isOwned ? 'pointer' : 'default' }}
@@ -440,9 +461,12 @@ function CardCollection() {
                   <div className="card-image-wrapper">
                     {isOwned ? (
                       <>
-                        <img 
-                          src={card.imageUrl} 
+                        <img
+                          src={card.imageUrl}
                           alt={card.kanji}
+                          loading="lazy"
+                          width={96}
+                          height={96}
                           onError={(e) => {
                             e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="%23667eea"/><text x="50%" y="50%" font-size="100" fill="white" text-anchor="middle" dy=".35em">${card.kanji}</text></svg>`;
                           }}

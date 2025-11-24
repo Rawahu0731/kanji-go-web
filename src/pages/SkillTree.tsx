@@ -9,7 +9,12 @@ const SkillTree = () => {
   const streakProtectionCount = state.streakProtectionCount;
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 800 });
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef({ x: 0, y: 0 });
+  const lastTouchDistanceRef = useRef<number | null>(null);
 
   useEffect(() => {
     const updateCanvasSize = () => {
@@ -24,6 +29,139 @@ const SkillTree = () => {
     window.addEventListener('resize', updateCanvasSize);
     return () => window.removeEventListener('resize', updateCanvasSize);
   }, []);
+
+  // ズームのユーティリティ
+  const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+
+  const setTransformSafe = (next: { x?: number; y?: number; scale?: number }) => {
+    setTransform(prev => ({
+      x: next.x ?? prev.x,
+      y: next.y ?? prev.y,
+      scale: clamp(next.scale ?? prev.scale, 0.5, 3),
+    }));
+  };
+
+  // マウスホイールでズーム（Ctrl/Metaを押さなくても動作させる）
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!wrapperRef.current || !canvasRef.current) return;
+    // preventDefault はネイティブリスナでも行うが、React イベントでも抑制
+    e.preventDefault();
+    const rect = wrapperRef.current.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+
+    const delta = -e.deltaY;
+    const zoomFactor = delta > 0 ? 1.08 : 0.925;
+    const oldScale = transform.scale;
+    const newScale = clamp(oldScale * zoomFactor, 0.5, 3);
+
+    // マウス位置を基準にパンを調整してズーム中心を合わせる
+    const newX = offsetX - (offsetX - transform.x) * (newScale / oldScale);
+    const newY = offsetY - (offsetY - transform.y) * (newScale / oldScale);
+
+    setTransform({ x: newX, y: newY, scale: newScale });
+  };
+
+  // ネイティブ wheel リスナを追加して passive: false を指定し、ブラウザのスクロールを抑止
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+
+    const wheelListener = (event: WheelEvent) => {
+      // マウスが要素上にある時だけ処理する (バブリングで他の要素に影響しない)
+      event.preventDefault();
+      // Adapt to React handler logic
+      const rect = wrapperRef.current!.getBoundingClientRect();
+      const offsetX = event.clientX - rect.left;
+      const offsetY = event.clientY - rect.top;
+      const delta = -event.deltaY;
+      const zoomFactor = delta > 0 ? 1.08 : 0.925;
+      const oldScale = transform.scale;
+      const newScale = clamp(oldScale * zoomFactor, 0.5, 3);
+      const newX = offsetX - (offsetX - transform.x) * (newScale / oldScale);
+      const newY = offsetY - (offsetY - transform.y) * (newScale / oldScale);
+      setTransform({ x: newX, y: newY, scale: newScale });
+    };
+
+    el.addEventListener('wheel', wheelListener, { passive: false });
+    return () => el.removeEventListener('wheel', wheelListener as EventListener);
+  }, [canvasRef, wrapperRef, transform]);
+
+  // マウス/ポインタでのパン
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!wrapperRef.current) return;
+    (e.target as Element).setPointerCapture(e.pointerId);
+    isPanningRef.current = true;
+    panStartRef.current = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isPanningRef.current) return;
+    e.preventDefault();
+    const x = e.clientX - panStartRef.current.x;
+    const y = e.clientY - panStartRef.current.y;
+    setTransformSafe({ x, y });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    try {
+      (e.target as Element).releasePointerCapture(e.pointerId);
+    } catch (err) {
+      // ignore
+    }
+    isPanningRef.current = false;
+  };
+
+  // タッチピンチ対応
+  const getTouchDistance = (t1: any, t2: any) => {
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    return Math.hypot(dx, dy);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      lastTouchDistanceRef.current = getTouchDistance(e.touches[0], e.touches[1]);
+    }
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      isPanningRef.current = true;
+      panStartRef.current = { x: t.clientX - transform.x, y: t.clientY - transform.y };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!wrapperRef.current) return;
+    if (e.touches.length === 2) {
+      const d = getTouchDistance(e.touches[0], e.touches[1]);
+      const last = lastTouchDistanceRef.current;
+      if (last) {
+        const rect = wrapperRef.current.getBoundingClientRect();
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+        const scaleChange = d / last;
+        const oldScale = transform.scale;
+        const newScale = clamp(oldScale * scaleChange, 0.5, 3);
+
+        const newX = midX - (midX - transform.x) * (newScale / oldScale);
+        const newY = midY - (midY - transform.y) * (newScale / oldScale);
+        setTransform({ x: newX, y: newY, scale: newScale });
+      }
+      lastTouchDistanceRef.current = d;
+    } else if (e.touches.length === 1 && isPanningRef.current) {
+      const t = e.touches[0];
+      const x = t.clientX - panStartRef.current.x;
+      const y = t.clientY - panStartRef.current.y;
+      setTransformSafe({ x, y });
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length < 2) lastTouchDistanceRef.current = null;
+    if (e.touches.length === 0) isPanningRef.current = false;
+  };
+
+  const resetView = () => setTransform({ x: 0, y: 0, scale: 1 });
 
   const getSkillIcon = (skill: Skill): string => {
     const type = skill.effect.type;
@@ -128,8 +266,9 @@ const SkillTree = () => {
     const isSelected = selectedSkill?.id === skill.id;
     const isActive = currentLevel > 0;
     
-    const pos = getNodePosition(skill);
-    const nodeSize = skill.tier === 0 ? 80 : 70;
+  const pos = getNodePosition(skill);
+  const baseNodeSize = skill.tier === 0 ? 80 : 70;
+  const nodeSize = baseNodeSize;
     
     let className = 'skill-node';
     if (isSelected) className += ' selected';
@@ -151,8 +290,18 @@ const SkillTree = () => {
         }}
         onClick={() => handleSkillClick(skill)}
       >
-        <div className="skill-node-inner">
-          <span className="skill-icon">{getSkillIcon(skill)}</span>
+        <div
+          className="skill-node-inner"
+          style={{
+            // wrapper の scale を相殺して、アイコンを明示的に拡大率に合わせて調整
+            transform: `scale(${1 / transform.scale})`,
+            transformOrigin: '50% 50%'
+          }}
+        >
+          <span
+            className="skill-icon"
+            style={{ fontSize: `${1.8 * transform.scale}rem` }}
+          >{getSkillIcon(skill)}</span>
           {currentLevel > 0 && skill.tier > 0 && (
             <div className="skill-level-badge">
               Lv.{currentLevel}
@@ -293,17 +442,44 @@ const SkillTree = () => {
           </div>
 
           <div className="skill-tree-layout">
-            <div className="skill-tree-canvas" ref={canvasRef}>
-              <svg 
-                className="connection-lines"
-                width={canvasSize.width}
-                height={canvasSize.height}
+            <div
+              className="skill-tree-canvas"
+              ref={canvasRef}
+              onWheel={handleWheel}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <div
+                className="pan-zoom-wrapper"
+                ref={wrapperRef}
+                style={{
+                  transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
+                  transformOrigin: '0 0',
+                  width: canvasSize.width,
+                  height: canvasSize.height,
+                }}
               >
-                {renderConnections()}
-              </svg>
-              {SKILLS.map(skill => renderSkillNode(skill))}
+                <svg
+                  className="connection-lines"
+                  width={canvasSize.width}
+                  height={canvasSize.height}
+                >
+                  {renderConnections()}
+                </svg>
+                {SKILLS.map(skill => renderSkillNode(skill))}
+              </div>
+
+              <div className="zoom-controls">
+                <button className="zoom-btn" onClick={() => setTransformSafe({ scale: transform.scale * 1.2 })}>＋</button>
+                <button className="zoom-btn" onClick={() => setTransformSafe({ scale: transform.scale * 0.8 })}>－</button>
+                <button className="zoom-btn" onClick={resetView}>⤾</button>
+              </div>
             </div>
-            
+
             {renderDetailsPanel()}
           </div>
         </>
