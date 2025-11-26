@@ -27,17 +27,17 @@ type Mode = 'list' | 'quiz';
 type QuizFormat = 'input' | 'choice'; // 入力 or 四択
 
 // 問題開始時刻を記録するための型
-type QuestionStartTime = number;
+
 
 // CSV行をパースする関数（ダブルクォートで囲まれたカンマに対応）
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
   let current = '';
   let inQuotes = false;
-  
+
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
-    
+
     if (char === '"') {
       inQuotes = !inQuotes;
     } else if (char === ',' && !inQuotes) {
@@ -47,41 +47,37 @@ function parseCSVLine(line: string): string[] {
       current += char;
     }
   }
-  
+
   result.push(current);
   return result;
 }
 
 // 読み方から送り仮名を抽出し、表示用にフォーマット
 function formatReadingWithOkurigana(reading: string) {
-  // 'で囲まれた部分を赤色にする
   const parts = [];
   let lastIndex = 0;
   const regex = /'([^']+)'/g;
   let match;
   let key = 0;
-  
+
   while ((match = regex.exec(reading)) !== null) {
-    // マッチ前の部分
     if (match.index > lastIndex) {
       parts.push(
         <span key={key++}>{reading.substring(lastIndex, match.index)}</span>
       );
     }
-    // 送り仮名部分（赤色）
     parts.push(
       <span key={key++} style={{ color: '#ff6b6b' }}>{match[1]}</span>
     );
     lastIndex = regex.lastIndex;
   }
-  
-  // 残りの部分
+
   if (lastIndex < reading.length) {
     parts.push(
       <span key={key++}>{reading.substring(lastIndex)}</span>
     );
   }
-  
+
   return <>{parts}</>;
 }
 
@@ -718,12 +714,6 @@ function App() {
             pointer-events: none;
           `;
           popup.textContent = '💰 ラッキー！コイン 2倍';
-          document.body.appendChild(popup);
-          setTimeout(() => popup.remove(), 1500);
-        }, 300);
-      }
-          `;
-          popup.textContent = '✨ ダブル報酬！';
           document.body.appendChild(popup);
           setTimeout(() => popup.remove(), 1500);
         }, 300);
