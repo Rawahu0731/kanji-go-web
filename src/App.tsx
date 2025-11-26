@@ -1736,6 +1736,8 @@ function App() {
         <a href="/patch-notes.html" target="_blank" rel="noopener noreferrer">パッチノート</a>
         <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
         <Link to="/known-issues">不具合情報</Link>
+        <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
+        <a href="/terms.html" target="_blank" rel="noopener noreferrer" style={{ padding: '6px 10px', background:'#f5f7ff', borderRadius:6, textDecoration:'none' }}>利用規約</a>
       </footer>
 
       {/* デバッグパネル */}
