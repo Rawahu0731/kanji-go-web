@@ -277,15 +277,5 @@ export const SHOP_ITEMS: ShopItem[] = [
     effect: 'character_gacha_100',
     rarity: 'legendary'
   },
-  {
-    id: 'character_gacha_1000',
-    name: '1000連ガチャ',
-    description: 'ランダムで1000体のキャラクターを獲得。レジェンダリー以上1体以上確定！',
-    // 10連を基準に、増えた分だけ比例して価格を設定（3500 * (1000 / 10) = 350000）
-    price: 350000,
-    category: 'gacha',
-    icon: '🎲🎲🎲🎲🎲🎲',
-    effect: 'character_gacha_1000',
-    rarity: 'legendary'
-  }
+  
 ];
