@@ -64,6 +64,21 @@ export const BADGES: Record<string, Badge> = {
     icon: '⚡',
     category: 'achievement'
   },
+  // 高閾値の連勝バッジ
+  perfect_streak_50: {
+    id: 'perfect_streak_50',
+    name: '連勝の覇者',
+    description: '50問連続正解した',
+    icon: '🔥',
+    category: 'achievement'
+  },
+  perfect_streak_100: {
+    id: 'perfect_streak_100',
+    name: '不屈の連勝',
+    description: '100問連続正解した',
+    icon: '💥',
+    category: 'achievement'
+  },
   level_5: {
     id: 'level_5',
     name: '成長の証',
@@ -85,11 +100,97 @@ export const BADGES: Record<string, Badge> = {
     icon: '💫',
     category: 'milestone'
   },
+  // 高閾値のレベルバッジ
+  level_50: {
+    id: 'level_50',
+    name: '上級者',
+    description: 'レベル50に到達した',
+    icon: '🚀',
+    category: 'milestone'
+  },
+  level_100: {
+    id: 'level_100',
+    name: '伝説の旅人',
+    description: 'レベル100に到達した',
+    icon: '🏅',
+    category: 'milestone'
+  },
+  level_500: {
+    id: 'level_500',
+    name: '神速の学者',
+    description: 'レベル500に到達した',
+    icon: '🌠',
+    category: 'milestone'
+  },
+  level_1000: {
+    id: 'level_1000',
+    name: '永遠の探求者',
+    description: 'レベル1000に到達した',
+    icon: '🛡️',
+    category: 'milestone'
+  },
+  level_10000: {
+    id: 'level_10000',
+    name: '時空を超えし者',
+    description: 'レベル10000に到達した',
+    icon: '🌌',
+    category: 'milestone'
+  },
+  quiz_master_500: {
+    id: 'quiz_master_500',
+    name: '熟達の学者',
+    description: 'クイズを500問正解した',
+    icon: '📘',
+    category: 'achievement'
+  },
+  quiz_master_1000: {
+    id: 'quiz_master_1000',
+    name: '知の巨匠',
+    description: 'クイズを1000問正解した',
+    icon: '📜',
+    category: 'achievement'
+  },
   collector: {
     id: 'collector',
     name: 'コレクター',
     description: '10個のバッジを集めた',
     icon: '🏆',
+    category: 'milestone'
+  },
+  super_collector: {
+    id: 'super_collector',
+    name: 'スーパーコレクター',
+    description: '20個のバッジを集めた',
+    icon: '🏅',
+    category: 'milestone'
+  },
+  // コインマイルストーン（大きな数に対応）
+  coin_million: {
+    id: 'coin_million',
+    name: '百万長者',
+    description: '所持コインが1,000,000に到達した',
+    icon: '💰',
+    category: 'milestone'
+  },
+  coin_100m: {
+    id: 'coin_100m',
+    name: '億の支配者',
+    description: '所持コインが100,000,000に到達した',
+    icon: '💎',
+    category: 'milestone'
+  },
+  coin_10b: {
+    id: 'coin_10b',
+    name: '十億の富豪',
+    description: '所持コインが10,000,000,000に到達した',
+    icon: '🏦',
+    category: 'milestone'
+  },
+  coin_trillion: {
+    id: 'coin_trillion',
+    name: '桁外れの財',
+    description: '所持コインが1,000,000,000,000に到達した',
+    icon: '🪙',
     category: 'milestone'
   }
 };

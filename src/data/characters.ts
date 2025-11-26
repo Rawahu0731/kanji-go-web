@@ -1,5 +1,5 @@
 // キャラクター定義
-export type CharacterRarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
+export type CharacterRarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic' | 'ultra';
 
 export type CharacterEffect = {
   type: 'xp_boost' | 'coin_boost' | 'both_boost' | 'streak_shield' | 'lucky';
@@ -13,6 +13,7 @@ export type Character = {
   rarity: CharacterRarity;
   description: string;
   effect: CharacterEffect;
+  unlockDate?: string; // YYYY-MM-DD形式の解放日（オプション）
 };
 
 export type OwnedCharacter = Character & {
@@ -23,6 +24,7 @@ export type OwnedCharacter = Character & {
 
 // レアリティの優先度（ソート用）
 export const RARITY_ORDER: Record<CharacterRarity, number> = {
+  ultra: 6,
   mythic: 5,
   legendary: 4,
   epic: 3,
@@ -36,7 +38,8 @@ export const RARITY_LEVEL_BONUS: Record<CharacterRarity, number> = {
   rare: 0.03,
   epic: 0.04,
   legendary: 0.06,
-  mythic: 0.10
+  mythic: 0.10,
+  ultra: 0.15
 };
 
 // キャラクターリスト
@@ -185,6 +188,35 @@ export const CHARACTERS: Record<string, Character> = {
     rarity: 'mythic',
     description: 'コインを400%増加（5倍）',
     effect: { type: 'coin_boost', value: 5.0 }
+  },
+
+  // ウルトラ（最高レアリティ）- 12/1解放
+  worldCreator: {
+    id: 'worldCreator',
+    name: '世界創造神',
+    icon: '🌍✨',
+    rarity: 'ultra',
+    description: 'XPとコインを800%増加（9倍）',
+    effect: { type: 'both_boost', value: 9.0 },
+    unlockDate: '2025-12-01'
+  },
+  eternalKing: {
+    id: 'eternalKing',
+    name: '永遠の王',
+    icon: '👑💎',
+    rarity: 'ultra',
+    description: 'XPを1000%増加（11倍）',
+    effect: { type: 'xp_boost', value: 11.0 },
+    unlockDate: '2025-12-01'
+  },
+  infiniteWealth: {
+    id: 'infiniteWealth',
+    name: '無限の富',
+    icon: '💰🌟',
+    rarity: 'ultra',
+    description: 'コインを1000%増加（11倍）',
+    effect: { type: 'coin_boost', value: 11.0 },
+    unlockDate: '2025-12-01'
   }
 };
 
@@ -194,17 +226,45 @@ export const GACHA_RATES = {
   rare: 30,        // 30%
   epic: 9,         // 9%
   legendary: 0.9,  // 0.9%
-  mythic: 0.1      // 0.1%
+  mythic: 0.09,    // 0.09%
+  ultra: 0.01      // 0.01%
 };
 
 // レアリティごとのキャラクターリストを取得
-export const getCharactersByRarity = (rarity: CharacterRarity): Character[] => {
-  return Object.values(CHARACTERS).filter(char => char.rarity === rarity);
+export const getCharactersByRarity = (rarity: CharacterRarity, characterPool: Record<string, Character> = CHARACTERS): Character[] => {
+  return Object.values(characterPool).filter(char => char.rarity === rarity && isCharacterUnlocked(char));
+};
+
+// キャラクターが解放されているかチェック
+export const isCharacterUnlocked = (character: Character): boolean => {
+  if (!character.unlockDate) return true;
+  const unlockDate = new Date(character.unlockDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today >= unlockDate;
+};
+
+// 解放済みのキャラクタープールを取得
+export const getAvailableCharacters = (): Record<string, Character> => {
+  const available: Record<string, Character> = {};
+  for (const [id, char] of Object.entries(CHARACTERS)) {
+    if (isCharacterUnlocked(char)) {
+      available[id] = char;
+    }
+  }
+  return available;
 };
 
 // ガチャを引く
-export const pullGacha = (count: number = 1, guaranteedRarity?: CharacterRarity): Character[] => {
+export const pullGacha = (count: number = 1, guaranteedRarity?: CharacterRarity, characterPool?: Record<string, Character>): Character[] => {
+  // 解放済みのキャラクターのみを使用
+  const availablePool = characterPool || getAvailableCharacters();
   const results: Character[] = [];
+  
+  // 利用可能なキャラクターがない場合は空配列を返す
+  if (Object.keys(availablePool).length === 0) {
+    return [];
+  }
   
   for (let i = 0; i < count; i++) {
     // レアリティを決定
@@ -221,9 +281,18 @@ export const pullGacha = (count: number = 1, guaranteedRarity?: CharacterRarity)
     }
     
     // そのレアリティのキャラクターからランダムに選択
-    const charactersOfRarity = getCharactersByRarity(selectedRarity);
-    const randomChar = charactersOfRarity[Math.floor(Math.random() * charactersOfRarity.length)];
-    results.push(randomChar);
+    const charactersOfRarity = getCharactersByRarity(selectedRarity, availablePool);
+    
+    // 選択したレアリティにキャラクターがいない場合は、他のレアリティから選択
+    if (charactersOfRarity.length === 0) {
+      const allAvailable = Object.values(availablePool).filter(char => isCharacterUnlocked(char));
+      if (allAvailable.length === 0) continue;
+      const randomChar = allAvailable[Math.floor(Math.random() * allAvailable.length)];
+      results.push(randomChar);
+    } else {
+      const randomChar = charactersOfRarity[Math.floor(Math.random() * charactersOfRarity.length)];
+      results.push(randomChar);
+    }
   }
   
   // 確定レアリティが指定されている場合、そのレアリティ以上が1体も出ていなければ最後の1体を置き換える
@@ -234,12 +303,14 @@ export const pullGacha = (count: number = 1, guaranteedRarity?: CharacterRarity)
     
     if (!hasGuaranteed) {
       // 確定レアリティ以上のキャラクターをランダムに選択
-      const guaranteedChars = Object.values(CHARACTERS).filter(char => 
-        RARITY_ORDER[char.rarity] >= RARITY_ORDER[guaranteedRarity]
+      const guaranteedChars = Object.values(availablePool).filter(char => 
+        RARITY_ORDER[char.rarity] >= RARITY_ORDER[guaranteedRarity] && isCharacterUnlocked(char)
       );
-      const guaranteedChar = guaranteedChars[Math.floor(Math.random() * guaranteedChars.length)];
-      // 最後の1体を確定キャラクターに置き換える
-      results[results.length - 1] = guaranteedChar;
+      if (guaranteedChars.length > 0) {
+        const guaranteedChar = guaranteedChars[Math.floor(Math.random() * guaranteedChars.length)];
+        // 最後の1体を確定キャラクターに置き換える
+        results[results.length - 1] = guaranteedChar;
+      }
     }
   }
   
@@ -264,6 +335,9 @@ export const getXpForCharacterLevel = (level: number): number => {
 // キャラクターの最大レベル
 export const MAX_CHARACTER_LEVEL = 100;
 
+// キャラクターの最大+値（count - 1の最大値）
+export const MAX_CHARACTER_COUNT = 200001;
+
 // レアリティの日本語名
 export const getRarityName = (rarity: CharacterRarity): string => {
   switch (rarity) {
@@ -272,6 +346,7 @@ export const getRarityName = (rarity: CharacterRarity): string => {
     case 'epic': return 'エピック';
     case 'legendary': return 'レジェンダリー';
     case 'mythic': return 'ミシック';
+    case 'ultra': return 'ウルトラ';
     default: return '';
   }
 };

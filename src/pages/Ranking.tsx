@@ -80,6 +80,7 @@ export default function Ranking() {
               <p className="username">{state.username}</p>
               <p className="level">レベル {state.level}</p>
               <p className="xp">累計XP: {state.totalXp.toLocaleString()}</p>
+              <p className="medals">メダル: {state.medals.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -102,6 +103,7 @@ export default function Ranking() {
                   <th>レベル</th>
                   <th>累計XP</th>
                   <th>コイン</th>
+                  <th>メダル</th>
                 </tr>
               </thead>
               <tbody>
@@ -130,6 +132,7 @@ export default function Ranking() {
                     <td className="level-cell">{entry.level}</td>
                     <td className="xp-cell">{entry.totalXp.toLocaleString()}</td>
                     <td className="coin-cell">{entry.coins.toLocaleString()}</td>
+                    <td className="medal-cell">{entry.medals.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

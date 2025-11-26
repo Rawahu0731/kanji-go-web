@@ -78,7 +78,8 @@
 }
 
 .user-stats .level,
-.user-stats .xp {
+.user-stats .xp,
+.user-stats .medals {
   margin: 3px 0;
   opacity: 0.9;
 }
@@ -172,7 +173,8 @@
 
 .level-cell,
 .xp-cell,
-.coin-cell {
+.coin-cell,
+.medal-cell {
   text-align: right;
 }
 

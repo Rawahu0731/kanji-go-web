@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { getKnownIssues, getPatchNotes } from './lib/microcms'
 import type { Article } from './lib/microcms'
 import { useGamification } from './contexts/GamificationContext'
@@ -110,17 +110,17 @@ function showRewardPopup(xp: number, coins: number, medals?: number, showMedals:
   const popup = document.createElement('div');
   popup.style.cssText = `
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    top: 16px;
+    right: 16px;
+    transform: none;
     background: rgba(102, 126, 234, 0.95);
     color: white;
     padding: 1rem 2rem;
     border-radius: 12px;
     font-weight: 600;
-    z-index: 9999;
+    z-index: 1200;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    animation: rewardPop 0.6s ease-out;
+    animation: rewardPopTR 0.45s cubic-bezier(.2,.8,.2,1);
     pointer-events: none;
   `;
   popup.innerHTML = (medals && showMedals)
@@ -135,10 +135,11 @@ function showRewardPopup(xp: number, coins: number, medals?: number, showMedals:
 }
 
 // アニメーション定義
-if (typeof document !== 'undefined' && !document.getElementById('reward-animations')) {
+  if (typeof document !== 'undefined' && !document.getElementById('reward-animations')) {
   const style = document.createElement('style');
   style.id = 'reward-animations';
   style.textContent = `
+    /* 中央表示アニメ(既存互換) */
     @keyframes rewardPop {
       0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
       50% { transform: translate(-50%, -50%) scale(1.1); }
@@ -146,6 +147,15 @@ if (typeof document !== 'undefined' && !document.getElementById('reward-animatio
     }
     @keyframes rewardFade {
       to { opacity: 0; transform: translate(-50%, -60%) scale(0.8); }
+    }
+    /* 右上表示用アニメーション */
+    @keyframes rewardPopTR {
+      0% { transform: translateY(-8px) scale(0.96); opacity: 0; }
+      60% { transform: translateY(0) scale(1.02); opacity: 1; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    @keyframes rewardFadeTR {
+      to { opacity: 0; transform: translateY(-12px) scale(0.98); }
     }
   `;
   document.head.appendChild(style);
@@ -219,6 +229,15 @@ function App() {
     getTotalXpForNextLevel, 
     getLevelProgress 
   } = useGamification();
+  const location = useLocation();
+  const showChallengeButton = (() => {
+    try {
+      const p = new URLSearchParams(location.search).get('challenge');
+      return p === 'true' || p === '1';
+    } catch (e) {
+      return false;
+    }
+  })();
   const [choices, setChoices] = useState<string[]>([]); // 四択の選択肢
   // 単語帳モード: 一覧で読みを隠すかどうか
   const [studyMode, setStudyMode] = useState(false);
@@ -235,6 +254,8 @@ function App() {
   
   // 四択: 正解のインデックスを保持（0-3）
   const [correctChoiceIndex, setCorrectChoiceIndex] = useState<number>(-1);
+
+  // メインページのタブ: 'study'（既存） or 'challenge'
 
   // 調査中の不具合を取得
   useEffect(() => {
@@ -254,6 +275,8 @@ function App() {
     
     fetchInvestigatingIssues();
   }, []);
+
+  // (チャレンジロジックは専用ページに移動しました)
 
   // 未読のお知らせをチェック
   useEffect(() => {
@@ -621,23 +644,26 @@ function App() {
           const popup = document.createElement('div');
           popup.style.cssText = `
             position: fixed;
-            top: 65%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 16px;
+            right: 16px;
+            transform: none;
             background: linear-gradient(135deg, #48dbfb 0%, #0abde3 100%);
             color: white;
-            padding: 1rem 2rem;
-            border-radius: 12px;
+            padding: 0.8rem 1.25rem;
+            border-radius: 10px;
             font-weight: 700;
-            font-size: 1.2rem;
-            z-index: 9999;
-            box-shadow: 0 10px 30px rgba(72, 219, 251, 0.5);
-            animation: rewardPop 0.6s ease-out;
+            font-size: 1rem;
+            z-index: 1200;
+            box-shadow: 0 8px 20px rgba(72, 219, 251, 0.25);
+            animation: rewardPopTR 0.45s cubic-bezier(.2,.8,.2,1);
             pointer-events: none;
           `;
           popup.textContent = `⏱️ タイムボーナス！+${timeBonusXp} XP`;
           document.body.appendChild(popup);
-          setTimeout(() => popup.remove(), 1500);
+          setTimeout(() => {
+            popup.style.animation = 'rewardFadeTR 0.3s ease-out forwards';
+            setTimeout(() => popup.remove(), 300);
+          }, 1200);
         }, 300);
       }
       
@@ -647,23 +673,26 @@ function App() {
           const popup = document.createElement('div');
           popup.style.cssText = `
             position: fixed;
-            top: 60%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 16px;
+            right: 16px;
+            transform: none;
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
-            padding: 1rem 2rem;
-            border-radius: 12px;
+            padding: 0.8rem 1.25rem;
+            border-radius: 10px;
             font-weight: 700;
-            font-size: 1.2rem;
-            z-index: 9999;
-            box-shadow: 0 10px 30px rgba(245, 87, 108, 0.5);
-            animation: rewardPop 0.6s ease-out;
+            font-size: 1rem;
+            z-index: 1200;
+            box-shadow: 0 8px 20px rgba(245, 87, 108, 0.25);
+            animation: rewardPopTR 0.45s cubic-bezier(.2,.8,.2,1);
             pointer-events: none;
           `;
           popup.textContent = '✨ ダブル報酬！';
           document.body.appendChild(popup);
-          setTimeout(() => popup.remove(), 1500);
+          setTimeout(() => {
+            popup.style.animation = 'rewardFadeTR 0.3s ease-out forwards';
+            setTimeout(() => popup.remove(), 300);
+          }, 1200);
         }, 300);
       }
       
@@ -673,23 +702,26 @@ function App() {
           const popup = document.createElement('div');
           popup.style.cssText = `
             position: fixed;
-            top: 60%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 16px;
+            right: 16px;
+            transform: none;
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
             color: white;
-            padding: 1rem 2rem;
-            border-radius: 12px;
+            padding: 0.8rem 1.25rem;
+            border-radius: 10px;
             font-weight: 700;
-            font-size: 1.2rem;
-            z-index: 9999;
-            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.5);
-            animation: rewardPop 0.6s ease-out;
+            font-size: 1rem;
+            z-index: 1200;
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.25);
+            animation: rewardPopTR 0.45s cubic-bezier(.2,.8,.2,1);
             pointer-events: none;
           `;
           popup.textContent = '⚡ クリティカル！XP 2倍';
           document.body.appendChild(popup);
-          setTimeout(() => popup.remove(), 1500);
+          setTimeout(() => {
+            popup.style.animation = 'rewardFadeTR 0.3s ease-out forwards';
+            setTimeout(() => popup.remove(), 300);
+          }, 1200);
         }, 300);
       }
       
@@ -699,23 +731,26 @@ function App() {
           const popup = document.createElement('div');
           popup.style.cssText = `
             position: fixed;
-            top: 60%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 16px;
+            right: 16px;
+            transform: none;
             background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
             color: white;
-            padding: 1rem 2rem;
-            border-radius: 12px;
+            padding: 0.8rem 1.25rem;
+            border-radius: 10px;
             font-weight: 700;
-            font-size: 1.2rem;
-            z-index: 9999;
-            box-shadow: 0 10px 30px rgba(254, 202, 87, 0.5);
-            animation: rewardPop 0.6s ease-out;
+            font-size: 1rem;
+            z-index: 1200;
+            box-shadow: 0 8px 20px rgba(254, 202, 87, 0.25);
+            animation: rewardPopTR 0.45s cubic-bezier(.2,.8,.2,1);
             pointer-events: none;
           `;
           popup.textContent = '💰 ラッキー！コイン 2倍';
           document.body.appendChild(popup);
-          setTimeout(() => popup.remove(), 1500);
+          setTimeout(() => {
+            popup.style.animation = 'rewardFadeTR 0.3s ease-out forwards';
+            setTimeout(() => popup.remove(), 300);
+          }, 1200);
         }, 300);
       }
     } else {
@@ -729,23 +764,26 @@ function App() {
         const popup = document.createElement('div');
         popup.style.cssText = `
           position: fixed;
-          top: 60%;
-          left: 50%;
-          transform: translate(-50%, -50%);
+          top: 16px;
+          right: 16px;
+          transform: none;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
-          padding: 1rem 2rem;
-          border-radius: 12px;
+          padding: 0.8rem 1.25rem;
+          border-radius: 10px;
           font-weight: 700;
-          font-size: 1.2rem;
-          z-index: 9999;
-          box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
-          animation: rewardPop 0.6s ease-out;
+          font-size: 1rem;
+          z-index: 1200;
+          box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25);
+          animation: rewardPopTR 0.45s cubic-bezier(.2,.8,.2,1);
           pointer-events: none;
         `;
         popup.textContent = '🛡️ ストリーク保護発動！';
         document.body.appendChild(popup);
-        setTimeout(() => popup.remove(), 1500);
+        setTimeout(() => {
+          popup.style.animation = 'rewardFadeTR 0.3s ease-out forwards';
+          setTimeout(() => popup.remove(), 300);
+        }, 1200);
         
         // 統計更新（ストリークは維持）
         updateStats({
@@ -910,6 +948,9 @@ function App() {
           <Link to="/characters" className="nav-link">⭐ キャラクター</Link>
           <Link to="/shop" className="nav-link">ショップ</Link>
           <Link to="/skill-tree" className="nav-link">🌳 スキルツリー</Link>
+          {showChallengeButton && (
+            <Link to="/challenge" className="nav-link">チャレンジ</Link>
+          )}
           <Link to="/collection" className="nav-link">📚 コレクション</Link>
           <Link to="/story" className="nav-link">ストーリー</Link>
           <Link to="/ranking" className="nav-link">🏆 ランキング</Link>
@@ -940,7 +981,7 @@ function App() {
             </button>
           </div>
         </div>
-      )}
+        )}
 
       {/* 不具合情報バナー */}
       {investigatingIssues.length > 0 && showIssueBanner && (
@@ -1465,23 +1506,26 @@ function App() {
                                 const popup = document.createElement('div');
                                 popup.style.cssText = `
                                   position: fixed;
-                                  top: 65%;
-                                  left: 50%;
-                                  transform: translate(-50%, -50%);
+                                  top: 16px;
+                                  right: 16px;
+                                  transform: none;
                                   background: linear-gradient(135deg, #48dbfb 0%, #0abde3 100%);
                                   color: white;
-                                  padding: 1rem 2rem;
-                                  border-radius: 12px;
+                                  padding: 0.8rem 1.25rem;
+                                  border-radius: 10px;
                                   font-weight: 700;
-                                  font-size: 1.2rem;
-                                  z-index: 9999;
-                                  box-shadow: 0 10px 30px rgba(72, 219, 251, 0.5);
-                                  animation: rewardPop 0.6s ease-out;
+                                  font-size: 1rem;
+                                  z-index: 1200;
+                                  box-shadow: 0 8px 20px rgba(72, 219, 251, 0.25);
+                                  animation: rewardPopTR 0.45s cubic-bezier(.2,.8,.2,1);
                                   pointer-events: none;
                                 `;
                                 popup.textContent = `⏱️ タイムボーナス！+${timeBonusXp} XP`;
                                 document.body.appendChild(popup);
-                                setTimeout(() => popup.remove(), 1500);
+                                setTimeout(() => {
+                                  popup.style.animation = 'rewardFadeTR 0.3s ease-out forwards';
+                                  setTimeout(() => popup.remove(), 300);
+                                }, 1200);
                               }, 300);
                             }
                             
@@ -1491,23 +1535,26 @@ function App() {
                                 const popup = document.createElement('div');
                                 popup.style.cssText = `
                                   position: fixed;
-                                  top: 60%;
-                                  left: 50%;
-                                  transform: translate(-50%, -50%);
+                                  top: 16px;
+                                  right: 16px;
+                                  transform: none;
                                   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
                                   color: white;
-                                  padding: 1rem 2rem;
-                                  border-radius: 12px;
+                                  padding: 0.8rem 1.25rem;
+                                  border-radius: 10px;
                                   font-weight: 700;
-                                  font-size: 1.2rem;
-                                  z-index: 9999;
-                                  box-shadow: 0 10px 30px rgba(245, 87, 108, 0.5);
-                                  animation: rewardPop 0.6s ease-out;
+                                  font-size: 1rem;
+                                  z-index: 1200;
+                                  box-shadow: 0 8px 20px rgba(245, 87, 108, 0.25);
+                                  animation: rewardPopTR 0.45s cubic-bezier(.2,.8,.2,1);
                                   pointer-events: none;
                                 `;
                                 popup.textContent = '✨ ダブル報酬！';
                                 document.body.appendChild(popup);
-                                setTimeout(() => popup.remove(), 1500);
+                                setTimeout(() => {
+                                  popup.style.animation = 'rewardFadeTR 0.3s ease-out forwards';
+                                  setTimeout(() => popup.remove(), 300);
+                                }, 1200);
                               }, 300);
                             }
                             
@@ -1517,23 +1564,26 @@ function App() {
                                 const popup = document.createElement('div');
                                 popup.style.cssText = `
                                   position: fixed;
-                                  top: 60%;
-                                  left: 50%;
-                                  transform: translate(-50%, -50%);
+                                  top: 16px;
+                                  right: 16px;
+                                  transform: none;
                                   background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
                                   color: white;
-                                  padding: 1rem 2rem;
-                                  border-radius: 12px;
+                                  padding: 0.8rem 1.25rem;
+                                  border-radius: 10px;
                                   font-weight: 700;
-                                  font-size: 1.2rem;
-                                  z-index: 9999;
-                                  box-shadow: 0 10px 30px rgba(255, 107, 107, 0.5);
-                                  animation: rewardPop 0.6s ease-out;
+                                  font-size: 1rem;
+                                  z-index: 1200;
+                                  box-shadow: 0 8px 20px rgba(255, 107, 107, 0.25);
+                                  animation: rewardPopTR 0.45s cubic-bezier(.2,.8,.2,1);
                                   pointer-events: none;
                                 `;
                                 popup.textContent = '⚡ クリティカル！XP 2倍';
                                 document.body.appendChild(popup);
-                                setTimeout(() => popup.remove(), 1500);
+                                setTimeout(() => {
+                                  popup.style.animation = 'rewardFadeTR 0.3s ease-out forwards';
+                                  setTimeout(() => popup.remove(), 300);
+                                }, 1200);
                               }, 300);
                             }
                             
@@ -1543,23 +1593,26 @@ function App() {
                                 const popup = document.createElement('div');
                                 popup.style.cssText = `
                                   position: fixed;
-                                  top: 60%;
-                                  left: 50%;
-                                  transform: translate(-50%, -50%);
+                                  top: 16px;
+                                  right: 16px;
+                                  transform: none;
                                   background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
                                   color: white;
-                                  padding: 1rem 2rem;
-                                  border-radius: 12px;
+                                  padding: 0.8rem 1.25rem;
+                                  border-radius: 10px;
                                   font-weight: 700;
-                                  font-size: 1.2rem;
-                                  z-index: 9999;
-                                  box-shadow: 0 10px 30px rgba(254, 202, 87, 0.5);
-                                  animation: rewardPop 0.6s ease-out;
+                                  font-size: 1rem;
+                                  z-index: 1200;
+                                  box-shadow: 0 8px 20px rgba(254, 202, 87, 0.25);
+                                  animation: rewardPopTR 0.45s cubic-bezier(.2,.8,.2,1);
                                   pointer-events: none;
                                 `;
                                 popup.textContent = '💰 ラッキー！コイン 2倍';
                                 document.body.appendChild(popup);
-                                setTimeout(() => popup.remove(), 1500);
+                                setTimeout(() => {
+                                  popup.style.animation = 'rewardFadeTR 0.3s ease-out forwards';
+                                  setTimeout(() => popup.remove(), 300);
+                                }, 1200);
                               }, 300);
                             }
                           } else {
@@ -1573,23 +1626,26 @@ function App() {
                               const popup = document.createElement('div');
                               popup.style.cssText = `
                                 position: fixed;
-                                top: 60%;
-                                left: 50%;
-                                transform: translate(-50%, -50%);
+                                top: 16px;
+                                right: 16px;
+                                transform: none;
                                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                                 color: white;
-                                padding: 1rem 2rem;
-                                border-radius: 12px;
+                                padding: 0.8rem 1.25rem;
+                                border-radius: 10px;
                                 font-weight: 700;
-                                font-size: 1.2rem;
-                                z-index: 9999;
-                                box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
-                                animation: rewardPop 0.6s ease-out;
+                                font-size: 1rem;
+                                z-index: 1200;
+                                box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25);
+                                animation: rewardPopTR 0.45s cubic-bezier(.2,.8,.2,1);
                                 pointer-events: none;
                               `;
                               popup.textContent = '🛡️ ストリーク保護発動！';
                               document.body.appendChild(popup);
-                              setTimeout(() => popup.remove(), 1500);
+                              setTimeout(() => {
+                                popup.style.animation = 'rewardFadeTR 0.3s ease-out forwards';
+                                setTimeout(() => popup.remove(), 300);
+                              }, 1200);
                               
                               // 統計更新（ストリークは維持）
                               updateStats({
@@ -1670,6 +1726,7 @@ function App() {
         </div>
       )}
 
+      
       {/* フッター: 免責事項・パッチノートへのリンク */}
       <footer className="app-footer" style={{ marginTop: '2.5rem' }}>
         <Link to="/announcements">お知らせ</Link>

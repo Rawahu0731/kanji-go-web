@@ -105,6 +105,7 @@ export interface RankingEntry {
   level: number;
   totalXp: number;
   coins: number;
+  medals: number;
   iconUrl?: string;
   updatedAt: number;
 }
@@ -127,6 +128,7 @@ export const saveUserData = async (userId: string, data: GamificationState) => {
     level: data.level,
     totalXp: data.totalXp,
     coins: data.coins,
+    medals: data.medals,
     iconUrl: data.customIconUrl || data.activeIcon,
     updatedAt: Date.now()
   }, { merge: true });

@@ -5,7 +5,7 @@ import { SHOP_ITEMS } from '../data/shopItems';
 import type { ShopItem } from '../data/shopItems';
 import type { KanjiCard } from '../data/cardCollection';
 import type { Character } from '../data/characters';
-import { getRarityName as getCharacterRarityName } from '../data/characters';
+import { getRarityName as getCharacterRarityName, MAX_CHARACTER_COUNT, CHARACTERS } from '../data/characters';
 import '../styles/Shop.css';
 
 function Shop() {
@@ -25,7 +25,12 @@ function Shop() {
     ? SHOP_ITEMS 
     : SHOP_ITEMS.filter(item => item.category === selectedCategory);
 
-
+  // 全キャラクターが上限に達しているかチェック
+  const areAllCharactersMaxed = () => {
+    const totalCharacters = Object.keys(CHARACTERS).length;
+    const maxedCharacters = state.characters.filter(c => c.count >= MAX_CHARACTER_COUNT).length;
+    return maxedCharacters >= totalCharacters;
+  };
 
   // レアリティの日本語名を取得
   const getRarityName = (rarity: string): string => {
@@ -118,6 +123,13 @@ function Shop() {
 
     // キャラクターガチャの処理
     if (item.category === 'gacha') {
+      // 全キャラクターが上限に達しているかチェック
+      if (areAllCharactersMaxed()) {
+        setPurchaseMessage('全てのキャラクターが上限に達しています');
+        setTimeout(() => setPurchaseMessage(''), 2000);
+        return;
+      }
+      
       const success = purchaseItem(item.id, item.price, false);
       
       if (success && item.effect) {
@@ -277,6 +289,8 @@ function Shop() {
             const isCustomIcon = item.id === 'icon_custom';
             const isCollection = item.category === 'collection';
             const isAlreadyOwned = isCollection && isPurchased;
+            const isGacha = item.category === 'gacha';
+            const isGachaDisabled = isGacha && areAllCharactersMaxed();
             const rarityClass = item.rarity ? `rarity-${item.rarity}` : '';
             
             return (
@@ -292,14 +306,29 @@ function Shop() {
                     {getRarityName(item.rarity)}
                   </div>
                 )}
+                {isGachaDisabled && (
+                  <div style={{
+                    background: 'rgba(255, 68, 68, 0.2)',
+                    border: '1px solid rgba(255, 68, 68, 0.5)',
+                    borderRadius: '8px',
+                    padding: '0.5rem',
+                    marginTop: '0.5rem',
+                    fontSize: '0.85rem',
+                    color: '#ff4444',
+                    textAlign: 'center'
+                  }}>
+                    全キャラクター上限達成
+                  </div>
+                )}
                 <div className="item-footer">
                   <div className="item-price">{isFree ? '無料' : `💰 ${item.price}`}</div>
                   <button
                     onClick={() => handlePurchase(item)}
-                    disabled={!isFree && !isPurchased && state.coins < item.price || isAlreadyOwned}
+                    disabled={!isFree && !isPurchased && state.coins < item.price || isAlreadyOwned || isGachaDisabled}
                     className={`purchase-button ${isPurchased ? 'purchased-btn' : ''} ${isActive ? 'active-btn' : ''} ${isAlreadyOwned ? 'owned-btn' : ''}`}
                   >
-                    {isAlreadyOwned ? 'コレクション済' : 
+                    {isGachaDisabled ? '上限達成' :
+                      isAlreadyOwned ? 'コレクション済' : 
                       isCustomIcon && isPurchased ? '設定' : 
                         isCollection ? '獲得' : 
                           isActive ? '使用中' : 
@@ -551,12 +580,14 @@ function Shop() {
                     <div style={{ fontWeight: '700', marginBottom: '0.25rem' }}>{char.name}</div>
                     <div style={{ 
                       fontSize: '0.8rem',
-                      color: char.rarity === 'mythic' ? '#ff4444' :
+                      color: char.rarity === 'ultra' ? '#00ffff' :
+                             char.rarity === 'mythic' ? '#ff4444' :
                              char.rarity === 'legendary' ? '#ffd700' :
                              char.rarity === 'epic' ? '#a335ee' :
                              char.rarity === 'rare' ? '#0070dd' : '#9d9d9d',
                       marginBottom: '0.5rem',
-                      fontWeight: '600'
+                      fontWeight: '600',
+                      textShadow: char.rarity === 'ultra' ? '0 0 10px #00ffff' : 'none'
                     }}>
                       {getCharacterRarityName(char.rarity)}
                     </div>

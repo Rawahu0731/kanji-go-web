@@ -6,11 +6,12 @@ import type { KanjiCard, CardRarity } from '../data/cardCollection';
 import { CARD_PACK_CONFIG } from '../data/cardCollection';
 import { getRandomKanji } from '../data/allKanji';
 import type { Character, OwnedCharacter } from '../data/characters';
-import { pullGacha, getCharacterEffectValue, getXpForCharacterLevel, MAX_CHARACTER_LEVEL } from '../data/characters';
+import { CHARACTERS, pullGacha, getCharacterEffectValue, getXpForCharacterLevel, MAX_CHARACTER_LEVEL, MAX_CHARACTER_COUNT } from '../data/characters';
 import { getKanjiAttributes } from '../data/kanjiAttributes';
 import { SKILLS, type SkillLevel } from '../data/skillTree';
 import { saveUserData, loadUserData, isFirebaseEnabled } from '../lib/firebase';
 import { useAuth } from './AuthContext';
+import { computeNewBadges } from '../utils/badgeUtils';
 
 const STORAGE_KEY = 'kanji_gamification';
 
@@ -66,6 +67,10 @@ export interface GamificationState {
   customIconUrl: string; // カスタムアイコンのURL
   username: string; // ユーザーネーム
   lastInterestTime?: number; // 最後に利子を計算した時刻（ミリ秒）
+  // チャレンジ関連: 永続的に付与されるボーナス (例: { "no_skill_purchase_10min": { xp: 0.05 } })
+  challengeBonuses?: Record<string, { xp?: number; coin?: number }>;
+  // 最後にスキルを購入(アップグレード)した時刻（ミリ秒）
+  lastSkillPurchaseTime?: number;
 }
 
 
@@ -104,8 +109,13 @@ type GamificationContextType = {
   getSkillLevel: (skillId: string) => number;
   getSkillBoost: (type: 'xp_boost' | 'coin_boost' | 'medal_boost' | 'double_reward' | 'critical_hit' | 'lucky_coin' | 'xp_multiplier' | 'time_bonus') => number;
   useStreakProtection: () => boolean;
+  // チャレンジを完了扱いにして恒久ボーナスを付与する
+  completeChallenge: (challengeId: string, bonus: { xp?: number; coin?: number }) => void;
+  // チャレンジ由来の現在のブーストを取得（合計）
+  getChallengeBoost: (type: 'xp' | 'coin') => number;
   syncWithFirebase: (userId: string) => Promise<void>;
   loadFromFirebase: (userId: string) => Promise<void>;
+
 };
 
 const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
@@ -139,6 +149,9 @@ const INITIAL_STATE: GamificationState = {
   customIconUrl: '',
   username: 'プレイヤー',
   lastInterestTime: Date.now()
+  ,
+  challengeBonuses: {},
+  lastSkillPurchaseTime: undefined
 };
 
 // データマイグレーション関数
@@ -280,6 +293,13 @@ function migrateData(data: any): GamificationState {
   }
   if (data.streakProtectionCount === undefined) {
     data.streakProtectionCount = 0;
+  }
+  // チャレンジ関連の初期化
+  if (!data.challengeBonuses) {
+    data.challengeBonuses = {};
+  }
+  if (data.lastSkillPurchaseTime === undefined) {
+    data.lastSkillPurchaseTime = undefined;
   }
   
   // バージョン番号を最新に更新
@@ -569,6 +589,9 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       // コレクションボーナスを適用（掛け算）
       const collectionBonus = calculateCollectionBonus(prev.cardCollection);
       multiplier *= (1 + collectionBonus);
+      // チャレンジ由来の恒久XPボーナスを適用
+      const challengeXpBoost = prev.challengeBonuses ? Object.values(prev.challengeBonuses).reduce((acc, b) => acc + (b.xp || 0), 0) : 0;
+      multiplier *= (1 + challengeXpBoost);
       
       const boostedAmount = Math.floor(amount * multiplier);
       // xpとtotalXpは常に一致
@@ -603,6 +626,37 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         newBadges.push('level_20');
         showBadgeNotification(BADGES.level_20);
       }
+      if (newLevel >= 50 && !newBadges.includes('level_50')) {
+        newBadges.push('level_50');
+        showBadgeNotification(BADGES.level_50);
+      }
+      if (newLevel >= 100 && !newBadges.includes('level_100')) {
+        newBadges.push('level_100');
+        showBadgeNotification(BADGES.level_100);
+      }
+      if (newLevel >= 500 && !newBadges.includes('level_500')) {
+        newBadges.push('level_500');
+        showBadgeNotification(BADGES.level_500);
+      }
+      if (newLevel >= 1000 && !newBadges.includes('level_1000')) {
+        newBadges.push('level_1000');
+        showBadgeNotification(BADGES.level_1000);
+      }
+      if (newLevel >= 10000 && !newBadges.includes('level_10000')) {
+        newBadges.push('level_10000');
+        showBadgeNotification(BADGES.level_10000);
+      }
+
+      // コレクターバッジの自動付与（他の経路でバッジが増えた場合にも対応）
+      if (newBadges.length >= 10 && !newBadges.includes('collector')) {
+        newBadges.push('collector');
+        setTimeout(() => showBadgeNotification(BADGES.collector), 1000);
+      }
+      // スーパーコレクター（20個）
+      if (newBadges.length >= 20 && !newBadges.includes('super_collector')) {
+        newBadges.push('super_collector');
+        setTimeout(() => showBadgeNotification(BADGES.super_collector), 1200);
+      }
 
       if (newLevel > prev.level) {
         showLevelUpNotification(newLevel);
@@ -626,17 +680,31 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       // コレクションボーナスを適用（掛け算）
       const collectionBonus = calculateCollectionBonus(prev.cardCollection);
       multiplier *= (1 + collectionBonus);
+      // チャレンジ由来の恒久コインボーナスを適用
+      const challengeCoinBoost = prev.challengeBonuses ? Object.values(prev.challengeBonuses).reduce((acc, b) => acc + (b.coin || 0), 0) : 0;
+      multiplier *= (1 + challengeCoinBoost);
       
       const boostedAmount = Math.floor(amount * multiplier);
       const newCoins = prev.coins + boostedAmount;
-      
+
       // コインが負から正になった場合、または正から負になった場合にタイマーをリセット
       const crossedZero = (prev.coins < 0 && newCoins >= 0) || (prev.coins >= 0 && newCoins < 0);
-      
-      return { 
-        ...prev, 
+
+      const candidate = { ...prev, coins: newCoins };
+      const badgesToAdd = computeNewBadges(prev, candidate);
+      const newBadges = [...prev.unlockedBadges];
+      for (const b of badgesToAdd) {
+        if (!newBadges.includes(b)) {
+          newBadges.push(b);
+          if (BADGES[b]) showBadgeNotification(BADGES[b]);
+        }
+      }
+
+      return {
+        ...prev,
         coins: newCoins,
-        lastInterestTime: crossedZero ? Date.now() : prev.lastInterestTime
+        lastInterestTime: crossedZero ? Date.now() : prev.lastInterestTime,
+        unlockedBadges: newBadges
       };
     });
   };
@@ -664,11 +732,19 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   };
 
   const setCoins = (amount: number) => {
-    setState(prev => ({ 
-      ...prev, 
-      coins: amount,
-      lastInterestTime: Date.now() // コインを設定したら利子計算のタイマーをリセット
-    }));
+    setState(prev => {
+      const candidate = { ...prev, coins: amount };
+      const badgesToAdd = computeNewBadges(prev, candidate);
+      const newBadges = [...prev.unlockedBadges];
+      for (const b of badgesToAdd) {
+        if (!newBadges.includes(b)) {
+          newBadges.push(b);
+          if (BADGES[b]) showBadgeNotification(BADGES[b]);
+        }
+      }
+
+      return { ...prev, coins: amount, lastInterestTime: Date.now(), unlockedBadges: newBadges };
+    });
   };
 
   const addMedals = (amount: number) => {
@@ -690,13 +766,27 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       if (badge) {
         showBadgeNotification(badge);
       }
+      // 明示的に付与されたバッジを追加
+      let newBadges = [...prev.unlockedBadges, badgeId];
 
-      const newBadges = [...prev.unlockedBadges, badgeId];
+      // computeNewBadges を使って他に付与できるバッジを評価（例: コイン閾値や統計の変化が無くともコレクター判定など）
+      const candidate = { ...prev, unlockedBadges: newBadges };
+      const badgesToAdd = computeNewBadges(prev, candidate);
+      for (const b of badgesToAdd) {
+        if (!newBadges.includes(b)) {
+          newBadges.push(b);
+          if (BADGES[b]) showBadgeNotification(BADGES[b]);
+        }
+      }
 
-      // コレクターバッジの自動付与
+      // 最終的なコレクターチェック（念のため）
       if (newBadges.length >= 10 && !newBadges.includes('collector')) {
         newBadges.push('collector');
         setTimeout(() => showBadgeNotification(BADGES.collector), 1000);
+      }
+      if (newBadges.length >= 20 && !newBadges.includes('super_collector')) {
+        newBadges.push('super_collector');
+        setTimeout(() => showBadgeNotification(BADGES.super_collector), 1200);
       }
 
       return { ...prev, unlockedBadges: newBadges };
@@ -720,32 +810,15 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const updateStats = (updates: Partial<GamificationState['stats']>) => {
     setState(prev => {
       const newStats = { ...prev.stats, ...updates };
-      const newBadges = [...prev.unlockedBadges];
 
-      // 実績バッジの自動チェック
-      if (newStats.totalQuizzes >= 1 && !newBadges.includes('first_quiz')) {
-        newBadges.push('first_quiz');
-        showBadgeNotification(BADGES.first_quiz);
-      }
-      if (newStats.correctAnswers >= 10 && !newBadges.includes('quiz_master_10')) {
-        newBadges.push('quiz_master_10');
-        showBadgeNotification(BADGES.quiz_master_10);
-      }
-      if (newStats.correctAnswers >= 50 && !newBadges.includes('quiz_master_50')) {
-        newBadges.push('quiz_master_50');
-        showBadgeNotification(BADGES.quiz_master_50);
-      }
-      if (newStats.correctAnswers >= 100 && !newBadges.includes('quiz_master_100')) {
-        newBadges.push('quiz_master_100');
-        showBadgeNotification(BADGES.quiz_master_100);
-      }
-      if (newStats.currentStreak >= 5 && !newBadges.includes('perfect_streak_5')) {
-        newBadges.push('perfect_streak_5');
-        showBadgeNotification(BADGES.perfect_streak_5);
-      }
-      if (newStats.currentStreak >= 10 && !newBadges.includes('perfect_streak_10')) {
-        newBadges.push('perfect_streak_10');
-        showBadgeNotification(BADGES.perfect_streak_10);
+      const candidate = { ...prev, stats: newStats };
+      const badgesToAdd = computeNewBadges(prev, candidate);
+      const newBadges = [...prev.unlockedBadges];
+      for (const b of badgesToAdd) {
+        if (!newBadges.includes(b)) {
+          newBadges.push(b);
+          if (BADGES[b]) showBadgeNotification(BADGES[b]);
+        }
       }
 
       return { ...prev, stats: newStats, unlockedBadges: newBadges };
@@ -897,7 +970,35 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
 
   // キャラクターガチャを引く
   const pullCharacterGacha = (count: number, guaranteedRarity?: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic'): Character[] => {
-    const results = pullGacha(count, guaranteedRarity);
+    // 上限に達していないキャラクターのIDセットを作成
+    const availableCharacterIds = new Set<string>();
+    const maxedOutCharacterIds = new Set<string>();
+    
+    // 既存のキャラクターをチェック
+    state.characters.forEach(char => {
+      if (char.count >= MAX_CHARACTER_COUNT) {
+        maxedOutCharacterIds.add(char.id);
+      }
+    });
+    
+    // 全キャラクターから上限に達したものを除外
+    Object.keys(CHARACTERS).forEach(id => {
+      if (!maxedOutCharacterIds.has(id)) {
+        availableCharacterIds.add(id);
+      }
+    });
+    
+    // 利用可能なキャラクターがない場合は空配列を返す
+    if (availableCharacterIds.size === 0) {
+      return [];
+    }
+    
+    // 利用可能なキャラクターのみでガチャを引く
+    const availableCharacters = Object.fromEntries(
+      Object.entries(CHARACTERS).filter(([id]) => availableCharacterIds.has(id))
+    ) as Record<string, Character>;
+    
+    const results = pullGacha(count, guaranteedRarity, availableCharacters);
     
     setState(prev => {
       const newCharacters = [...prev.characters];
@@ -907,12 +1008,15 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         const existingIndex = newCharacters.findIndex(c => c.id === char.id);
         
       if (existingIndex !== -1) {
-        // 既に持っているキャラクターの場合はレベルとカウントを上げる
-        newCharacters[existingIndex] = {
-          ...newCharacters[existingIndex],
-          level: newCharacters[existingIndex].level + 1,
-          count: newCharacters[existingIndex].count + 1
-        };
+        // 既に持っているキャラクターの場合はレベルとカウントを上げる（上限チェック）
+        const currentCount = newCharacters[existingIndex].count;
+        if (currentCount < MAX_CHARACTER_COUNT) {
+          newCharacters[existingIndex] = {
+            ...newCharacters[existingIndex],
+            level: newCharacters[existingIndex].level + 1,
+            count: Math.min(currentCount + 1, MAX_CHARACTER_COUNT)
+          };
+        }
       } else {
         // 新しいキャラクターの場合は追加
         newCharacters.push({
@@ -1140,6 +1244,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         medals: prev.medals - cost,
         skillLevels: newSkillLevels,
         streakProtectionCount: newStreakProtectionCount
+        , lastSkillPurchaseTime: Date.now()
       };
     });
 
@@ -1178,6 +1283,34 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
+  // チャレンジを完了扱いにして恒久ボーナスを付与する
+  const completeChallenge = (challengeId: string, bonus: { xp?: number; coin?: number }) => {
+    setState(prev => {
+      const existing = prev.challengeBonuses || {};
+      if (existing[challengeId]) return prev; // 既に付与済み
+
+      const newBonuses = { ...(prev.challengeBonuses || {}), [challengeId]: bonus };
+
+      // 簡易通知
+      try {
+        const n = document.createElement('div');
+        n.style.cssText = 'position:fixed;top:20px;right:20px;padding:12px 16px;background:#2b6cb0;color:white;border-radius:10px;z-index:12000;box-shadow:0 8px 20px rgba(0,0,0,0.2);';
+        n.textContent = '🎖️ チャレンジ達成！恒久ボーナスを獲得しました';
+        document.body.appendChild(n);
+        setTimeout(() => { n.style.opacity = '0'; n.style.transition = 'opacity 0.4s'; setTimeout(() => n.remove(), 450); }, 2000);
+      } catch (e) {
+        // ignore
+      }
+
+      return { ...prev, challengeBonuses: newBonuses };
+    });
+  };
+
+  const getChallengeBoost = (type: 'xp' | 'coin') => {
+    const c = state.challengeBonuses || {};
+    return Object.values(c).reduce((acc, b) => acc + (type === 'xp' ? (b.xp || 0) : (b.coin || 0)), 0);
+  };
+
   return (
     <GamificationContext.Provider value={{
       state,
@@ -1214,6 +1347,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       getSkillLevel,
       getSkillBoost,
       useStreakProtection,
+      completeChallenge,
+      getChallengeBoost,
       syncWithFirebase,
       loadFromFirebase
     }}>
@@ -1233,47 +1368,40 @@ export function useGamification() {
 // 通知表示用のヘルパー関数
 function showCharacterLevelUpNotification(character: OwnedCharacter, newLevel: number) {
   const notification = document.createElement('div');
-  notification.style.cssText = `
-    position: fixed;
-    top: 20%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 1.5rem 2.5rem;
-    border-radius: 16px;
-    font-weight: 700;
-    font-size: 1.3rem;
-    z-index: 10000;
-    box-shadow: 0 20px 60px rgba(102, 126, 234, 0.6);
-    animation: characterLevelUp 1.2s ease-out;
-    pointer-events: none;
-    text-align: center;
-  `;
   notification.innerHTML = `
-    <div style="font-size: 3rem; margin-bottom: 0.5rem;">${character.icon}</div>
-    <div>${character.name}</div>
-    <div style="font-size: 1.5rem; margin-top: 0.5rem;">Lv.${newLevel}!</div>
+    <div style="
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 1rem;
+      z-index: 1200;
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.25);
+      animation: slideInRight 0.45s ease-out;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      min-width: 220px;
+    ">
+      <div style="font-size: 1.75rem;">${character.icon}</div>
+      <div>
+        <div style="font-weight:700;">${character.name}</div>
+        <div style="font-size:0.9rem; opacity:0.95;">Lv.${newLevel}</div>
+      </div>
+    </div>
   `;
   document.body.appendChild(notification);
 
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes characterLevelUp {
-      0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-      50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-      70% { transform: translate(-50%, -50%) scale(0.95); }
-      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-    }
-  `;
-  document.head.appendChild(style);
-
   setTimeout(() => {
-    notification.style.animation = 'fadeOut 0.3s ease-out';
-    setTimeout(() => {
-      document.body.removeChild(notification);
-      document.head.removeChild(style);
-    }, 300);
+    const el = notification.firstElementChild as HTMLElement | null;
+    if (el) {
+      el.style.animation = 'slideOutRight 0.4s ease-out';
+    }
+    setTimeout(() => notification.remove(), 400);
   }, 2000);
 }
 
@@ -1284,29 +1412,32 @@ function showLevelUpNotification(level: number) {
   notification.innerHTML = `
     <div style="
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      top: 16px;
+      right: 16px;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      padding: 2rem 3rem;
-      border-radius: 16px;
-      font-size: 1.5rem;
+      padding: 0.9rem 1.2rem;
+      border-radius: 10px;
+      font-size: 1rem;
       font-weight: 700;
-      z-index: 10000;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-      animation: slideIn 0.5s ease-out;
+      z-index: 1200;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      animation: slideInRight 0.45s ease-out;
+      min-width: 180px;
+      text-align: left;
     ">
-      🎉 レベルアップ！<br/>
-      <span style="font-size: 2rem;">レベル ${level}</span>
+      🎉 レベルアップ！ <span style="display:block; font-size:1.05rem; margin-top:4px;">レベル ${level}</span>
     </div>
   `;
-  
+
   document.body.appendChild(notification);
-  
+
   setTimeout(() => {
-    notification.style.animation = 'slideOut 0.5s ease-out';
-    setTimeout(() => notification.remove(), 500);
+    const el = notification.firstElementChild as HTMLElement | null;
+    if (el) {
+      el.style.animation = 'slideOutRight 0.4s ease-out';
+    }
+    setTimeout(() => notification.remove(), 400);
   }, 2000);
 }
 

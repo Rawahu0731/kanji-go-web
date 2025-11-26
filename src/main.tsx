@@ -12,6 +12,7 @@ import CardCollection from './pages/CardCollection.tsx'
 import Characters from './pages/Characters.tsx'
 import Ranking from './pages/Ranking.tsx'
 import SkillTree from './pages/SkillTree.tsx'
+import Challenge from './pages/Challenge.tsx'
 import { GamificationProvider } from './contexts/GamificationContext.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
 import { ThemeProvider } from './components/ThemeProvider.tsx'
@@ -33,6 +34,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="/characters" element={<Characters />} />
               <Route path="/ranking" element={<Ranking />} />
               <Route path="/skill-tree" element={<SkillTree />} />
+              <Route path="/challenge" element={<Challenge />} />
             </Routes>
           </BrowserRouter>
         </ThemeProvider>
