@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import terms from '../../利用規約.md?raw';
 import '../styles/Ranking.css';
