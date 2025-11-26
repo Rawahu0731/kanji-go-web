@@ -115,14 +115,36 @@ export const saveUserData = async (userId: string, data: GamificationState) => {
   if (!db) throw new Error('Firestore not initialized');
   
   const userRef = doc(db, 'users', userId);
+  // Firestore rejects `undefined` field values. sanitize object first.
+  const sanitizeForFirestore = (obj: any): any => {
+    if (obj === null || obj === undefined) return undefined;
+    if (Array.isArray(obj)) {
+      const arr = obj
+        .map(v => sanitizeForFirestore(v))
+        .filter(v => v !== undefined);
+      return arr;
+    }
+    if (typeof obj === 'object') {
+      const out: any = {};
+      for (const [k, v] of Object.entries(obj)) {
+        const sv = sanitizeForFirestore(v);
+        if (sv !== undefined) out[k] = sv;
+      }
+      return out;
+    }
+    // primitive (string, number, boolean)
+    return obj;
+  };
+
+  const sanitized = sanitizeForFirestore(data) || {};
   await setDoc(userRef, {
-    ...data,
+    ...sanitized,
     updatedAt: Date.now()
   }, { merge: true });
   
   // ランキング用データも更新
   const rankingRef = doc(db, 'rankings', userId);
-  await setDoc(rankingRef, {
+  const rankingObj = {
     userId,
     username: data.username,
     level: data.level,
@@ -131,7 +153,9 @@ export const saveUserData = async (userId: string, data: GamificationState) => {
     medals: data.medals,
     iconUrl: data.customIconUrl || data.activeIcon,
     updatedAt: Date.now()
-  }, { merge: true });
+  };
+  const sanitizedRanking = sanitizeForFirestore(rankingObj) || {};
+  await setDoc(rankingRef, sanitizedRanking, { merge: true });
 };
 
 // ユーザーデータの読み込み
