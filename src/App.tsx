@@ -26,6 +26,9 @@ type Level = 4 | 5 | 6 | 7 | 8 | 'extra';
 type Mode = 'list' | 'quiz';
 type QuizFormat = 'input' | 'choice'; // 入力 or 四択
 
+// 問題開始時刻を記録するための型
+type QuestionStartTime = number;
+
 // CSV行をパースする関数（ダブルクォートで囲まれたカンマに対応）
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
@@ -90,7 +93,18 @@ function extractReadingCore(reading: string): string {
 // メダル獲得の判定
 function tryGetMedal(quizFormat: QuizFormat, medalBoost: number): number {
   const baseChance = quizFormat === 'input' ? 10 : 2.5; // 入力形式: 10%, 四択: 2.5%
-  const totalChance = baseChance + (baseChance * medalBoost); // スキルブーストを適用
+  const boostPercentage = medalBoost * 100; // 倍率からパーセンテージに変換（0.05 -> 5）
+  const totalChance = baseChance + boostPercentage; // スキルブーストを適用（例: 10% + 5% = 15%）
+  
+  // 100%を超えた場合の処理
+  if (totalChance >= 100) {
+    const guaranteedMedals = Math.floor(totalChance / 100); // 確定枚数
+    const extraChance = totalChance % 100; // 超過分の確率（0-99%）
+    const random = Math.random() * 100;
+    return guaranteedMedals + (random < extraChance ? 1 : 0);
+  }
+  
+  // 100%未満の場合は通常の判定
   const random = Math.random() * 100;
   return random < totalChance ? 1 : 0;
 }
@@ -150,6 +164,9 @@ function App() {
   // デバッグモード裏コマンド用
   const [debugTapCount, setDebugTapCount] = useState(0);
   const [debugTapTimer, setDebugTapTimer] = useState<number | null>(null);
+  
+  // 問題開始時刻を記録（タイムボーナス用）
+  const [questionStartTime, setQuestionStartTime] = useState<number | null>(null);
   
   // ジャンル絞り込み用のステート
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
@@ -441,6 +458,13 @@ function App() {
     }
   }, [mode, quizFormat, quizItems, currentIndex]);
 
+  // 問題が変わったときに開始時刻を記録
+  useEffect(() => {
+    if (mode === 'quiz' && !showResult) {
+      setQuestionStartTime(Date.now());
+    }
+  }, [mode, currentIndex, showResult]);
+
   // 問題が変わったとき、または結果をクリアしたときに入力欄にフォーカス
   useEffect(() => {
     if (mode === 'quiz' && quizFormat === 'input' && !showResult && inputRef.current) {
@@ -529,16 +553,44 @@ function App() {
       const coinBoost = getSkillBoost('coin_boost');
       const medalBoost = getSkillBoost('medal_boost');
       const doubleRewardChance = getSkillBoost('double_reward');
+      const criticalHitChance = getSkillBoost('critical_hit');
+      const luckyCoinChance = getSkillBoost('lucky_coin');
+      const xpMultiplierBoost = getSkillBoost('xp_multiplier');
+      const timeBonusBoost = getSkillBoost('time_bonus');
       
-      // ダブル報酬の判定
+      // ダブル報酬の判定（XPとコイン両方2倍）
       const isDouble = Math.random() < doubleRewardChance;
-      const multiplier = isDouble ? 2 : 1;
+      
+      // クリティカルヒット判定（XPのみ2倍）
+      const isCritical = !isDouble && Math.random() < criticalHitChance;
+      
+      // ラッキーコイン判定（コインのみ2倍）
+      const isLucky = !isDouble && Math.random() < luckyCoinChance;
+      
+      // 解答時間に基づくタイムボーナスを計算
+      let timeBonusMultiplier = 0;
+      if (questionStartTime && timeBonusBoost > 0) {
+        const answerTime = (Date.now() - questionStartTime) / 1000; // 秒単位
+        // 5秒以内: フルボーナス、10秒以内: 半分のボーナス、それ以上: ボーナスなし
+        if (answerTime <= 5) {
+          timeBonusMultiplier = timeBonusBoost;
+        } else if (answerTime <= 10) {
+          timeBonusMultiplier = timeBonusBoost * 0.5;
+        }
+      }
+      
+      // 最終的な倍率を計算
+      const xpMultiplier = isDouble ? 2 : (isCritical ? 2 : 1);
+      const coinMultiplier = isDouble ? 2 : (isLucky ? 2 : 1);
       
       // XPとコインを付与（入力形式は難しいので報酬が多い）
       const baseXp = 150;
       const baseCoin = 100;
-      const xpGain = Math.floor(baseXp * (1 + xpBoost) * multiplier);
-      const coinGain = Math.floor(baseCoin * (1 + coinBoost) * multiplier);
+      // XP計算: (基本XP * (1 + XPブースト) * (1 + XPマルチプライヤー) * 倍率) + タイムボーナス
+      const xpBeforeTimeBonus = Math.floor(baseXp * (1 + xpBoost) * (1 + xpMultiplierBoost) * xpMultiplier);
+      const timeBonusXp = Math.floor(baseXp * timeBonusMultiplier);
+      const xpGain = xpBeforeTimeBonus + timeBonusXp;
+      const coinGain = Math.floor(baseCoin * (1 + coinBoost) * coinMultiplier);
       
       addXp(xpGain);
       addCoins(coinGain);
@@ -567,6 +619,32 @@ function App() {
       // XP/コイン/メダル獲得の視覺的フィードバック
       showRewardPopup(xpGain, coinGain, medalGain > 0 ? medalGain : undefined, isMedalSystemEnabled);
       
+      // タイムボーナスの通知
+      if (timeBonusXp > 0) {
+        setTimeout(() => {
+          const popup = document.createElement('div');
+          popup.style.cssText = `
+            position: fixed;
+            top: 65%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #48dbfb 0%, #0abde3 100%);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            z-index: 9999;
+            box-shadow: 0 10px 30px rgba(72, 219, 251, 0.5);
+            animation: rewardPop 0.6s ease-out;
+            pointer-events: none;
+          `;
+          popup.textContent = `⏱️ タイムボーナス！+${timeBonusXp} XP`;
+          document.body.appendChild(popup);
+          setTimeout(() => popup.remove(), 1500);
+        }, 300);
+      }
+      
       // ダブル報酬の通知
       if (isDouble) {
         setTimeout(() => {
@@ -586,6 +664,64 @@ function App() {
             box-shadow: 0 10px 30px rgba(245, 87, 108, 0.5);
             animation: rewardPop 0.6s ease-out;
             pointer-events: none;
+          `;
+          popup.textContent = '✨ ダブル報酬！';
+          document.body.appendChild(popup);
+          setTimeout(() => popup.remove(), 1500);
+        }, 300);
+      }
+      
+      // クリティカルヒットの通知
+      if (isCritical) {
+        setTimeout(() => {
+          const popup = document.createElement('div');
+          popup.style.cssText = `
+            position: fixed;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            z-index: 9999;
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.5);
+            animation: rewardPop 0.6s ease-out;
+            pointer-events: none;
+          `;
+          popup.textContent = '⚡ クリティカル！XP 2倍';
+          document.body.appendChild(popup);
+          setTimeout(() => popup.remove(), 1500);
+        }, 300);
+      }
+      
+      // ラッキーコインの通知
+      if (isLucky) {
+        setTimeout(() => {
+          const popup = document.createElement('div');
+          popup.style.cssText = `
+            position: fixed;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            z-index: 9999;
+            box-shadow: 0 10px 30px rgba(254, 202, 87, 0.5);
+            animation: rewardPop 0.6s ease-out;
+            pointer-events: none;
+          `;
+          popup.textContent = '💰 ラッキー！コイン 2倍';
+          document.body.appendChild(popup);
+          setTimeout(() => popup.remove(), 1500);
+        }, 300);
+      }
           `;
           popup.textContent = '✨ ダブル報酬！';
           document.body.appendChild(popup);
@@ -1268,16 +1404,44 @@ function App() {
                             const coinBoost = getSkillBoost('coin_boost');
                             const medalBoost = getSkillBoost('medal_boost');
                             const doubleRewardChance = getSkillBoost('double_reward');
+                            const criticalHitChance = getSkillBoost('critical_hit');
+                            const luckyCoinChance = getSkillBoost('lucky_coin');
+                            const xpMultiplierBoost = getSkillBoost('xp_multiplier');
+                            const timeBonusBoost = getSkillBoost('time_bonus');
                             
-                            // ダブル報酬の判定
+                            // ダブル報酬の判定（XPとコイン両方2倍）
                             const isDouble = Math.random() < doubleRewardChance;
-                            const multiplier = isDouble ? 2 : 1;
+                            
+                            // クリティカルヒット判定（XPのみ2倍）
+                            const isCritical = !isDouble && Math.random() < criticalHitChance;
+                            
+                            // ラッキーコイン判定（コインのみ2倍）
+                            const isLucky = !isDouble && Math.random() < luckyCoinChance;
+                            
+                            // 解答時間に基づくタイムボーナスを計算
+                            let timeBonusMultiplier = 0;
+                            if (questionStartTime && timeBonusBoost > 0) {
+                              const answerTime = (Date.now() - questionStartTime) / 1000; // 秒単位
+                              // 5秒以内: フルボーナス、10秒以内: 半分のボーナス、それ以上: ボーナスなし
+                              if (answerTime <= 5) {
+                                timeBonusMultiplier = timeBonusBoost;
+                              } else if (answerTime <= 10) {
+                                timeBonusMultiplier = timeBonusBoost * 0.5;
+                              }
+                            }
+                            
+                            // 最終的な倍率を計算
+                            const xpMultiplier = isDouble ? 2 : (isCritical ? 2 : 1);
+                            const coinMultiplier = isDouble ? 2 : (isLucky ? 2 : 1);
                             
                             // XPとコインを付与（四択形式は簡単なので報酬が少ない）
                             const baseXp = 50;
                             const baseCoin = 30;
-                            const xpGain = Math.floor(baseXp * (1 + xpBoost) * multiplier);
-                            const coinGain = Math.floor(baseCoin * (1 + coinBoost) * multiplier);
+                            // XP計算: (基本XP * (1 + XPブースト) * (1 + XPマルチプライヤー) * 倍率) + タイムボーナス
+                            const xpBeforeTimeBonus = Math.floor(baseXp * (1 + xpBoost) * (1 + xpMultiplierBoost) * xpMultiplier);
+                            const timeBonusXp = Math.floor(baseXp * timeBonusMultiplier);
+                            const xpGain = xpBeforeTimeBonus + timeBonusXp;
+                            const coinGain = Math.floor(baseCoin * (1 + coinBoost) * coinMultiplier);
                             
                             addXp(xpGain);
                             addCoins(coinGain);
@@ -1305,6 +1469,32 @@ function App() {
                             
                             showRewardPopup(xpGain, coinGain, medalGain > 0 ? medalGain : undefined, isMedalSystemEnabled);
                             
+                            // タイムボーナスの通知
+                            if (timeBonusXp > 0) {
+                              setTimeout(() => {
+                                const popup = document.createElement('div');
+                                popup.style.cssText = `
+                                  position: fixed;
+                                  top: 65%;
+                                  left: 50%;
+                                  transform: translate(-50%, -50%);
+                                  background: linear-gradient(135deg, #48dbfb 0%, #0abde3 100%);
+                                  color: white;
+                                  padding: 1rem 2rem;
+                                  border-radius: 12px;
+                                  font-weight: 700;
+                                  font-size: 1.2rem;
+                                  z-index: 9999;
+                                  box-shadow: 0 10px 30px rgba(72, 219, 251, 0.5);
+                                  animation: rewardPop 0.6s ease-out;
+                                  pointer-events: none;
+                                `;
+                                popup.textContent = `⏱️ タイムボーナス！+${timeBonusXp} XP`;
+                                document.body.appendChild(popup);
+                                setTimeout(() => popup.remove(), 1500);
+                              }, 300);
+                            }
+                            
                             // ダブル報酬の通知
                             if (isDouble) {
                               setTimeout(() => {
@@ -1326,6 +1516,58 @@ function App() {
                                   pointer-events: none;
                                 `;
                                 popup.textContent = '✨ ダブル報酬！';
+                                document.body.appendChild(popup);
+                                setTimeout(() => popup.remove(), 1500);
+                              }, 300);
+                            }
+                            
+                            // クリティカルヒットの通知
+                            if (isCritical) {
+                              setTimeout(() => {
+                                const popup = document.createElement('div');
+                                popup.style.cssText = `
+                                  position: fixed;
+                                  top: 60%;
+                                  left: 50%;
+                                  transform: translate(-50%, -50%);
+                                  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+                                  color: white;
+                                  padding: 1rem 2rem;
+                                  border-radius: 12px;
+                                  font-weight: 700;
+                                  font-size: 1.2rem;
+                                  z-index: 9999;
+                                  box-shadow: 0 10px 30px rgba(255, 107, 107, 0.5);
+                                  animation: rewardPop 0.6s ease-out;
+                                  pointer-events: none;
+                                `;
+                                popup.textContent = '⚡ クリティカル！XP 2倍';
+                                document.body.appendChild(popup);
+                                setTimeout(() => popup.remove(), 1500);
+                              }, 300);
+                            }
+                            
+                            // ラッキーコインの通知
+                            if (isLucky) {
+                              setTimeout(() => {
+                                const popup = document.createElement('div');
+                                popup.style.cssText = `
+                                  position: fixed;
+                                  top: 60%;
+                                  left: 50%;
+                                  transform: translate(-50%, -50%);
+                                  background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
+                                  color: white;
+                                  padding: 1rem 2rem;
+                                  border-radius: 12px;
+                                  font-weight: 700;
+                                  font-size: 1.2rem;
+                                  z-index: 9999;
+                                  box-shadow: 0 10px 30px rgba(254, 202, 87, 0.5);
+                                  animation: rewardPop 0.6s ease-out;
+                                  pointer-events: none;
+                                `;
+                                popup.textContent = '💰 ラッキー！コイン 2倍';
                                 document.body.appendChild(popup);
                                 setTimeout(() => popup.remove(), 1500);
                               }, 300);
