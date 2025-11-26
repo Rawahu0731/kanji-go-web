@@ -850,10 +850,12 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     };
 
     // 保証枠を先に生成
+    // 仕様変更: パックによる差異は「枚数」と「レアリティ」のみとする（出現漢字のプールは全漢字）
     if (config.guaranteed) {
       for (const [rarity, count] of Object.entries(config.guaranteed)) {
         for (let i = 0; i < count; i++) {
-          const kanjiList = getRandomKanji(1, config.levelRange);
+          // levelRange を使わず、全漢字プールから抽出する（どのパックでも全漢字が出る）
+          const kanjiList = getRandomKanji(1);
           if (kanjiList.length > 0) {
             const kanjiData = kanjiList[0];
             cards.push({
@@ -872,7 +874,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
 
     // 残りのカードを生成
     const remainingCount = config.cardCount - cards.length;
-    const randomKanjis = getRandomKanji(remainingCount, config.levelRange);
+    // 仕様変更: levelRange を無視して全漢字プールから選ぶ
+    const randomKanjis = getRandomKanji(remainingCount);
     
     for (let i = 0; i < randomKanjis.length; i++) {
       const rarity = selectRarity();

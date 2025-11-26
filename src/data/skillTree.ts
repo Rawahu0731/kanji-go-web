@@ -39,7 +39,7 @@ export const SKILLS: Skill[] = [
     maxLevel: 5,
     effect: {
       type: 'xp_boost',
-      value: 10
+      value: 1000
     },
     prerequisite: ['core'],
     tier: 1,
@@ -53,7 +53,7 @@ export const SKILLS: Skill[] = [
     maxLevel: 5,
     effect: {
       type: 'coin_boost',
-      value: 10
+      value: 1000
     },
     prerequisite: ['core'],
     tier: 1,
@@ -125,7 +125,7 @@ export const SKILLS: Skill[] = [
     maxLevel: 5,
     effect: {
       type: 'xp_boost',
-      value: 15
+      value: 1500
     },
     prerequisite: ['xp_boost_1'],
     tier: 2,
@@ -153,7 +153,7 @@ export const SKILLS: Skill[] = [
     maxLevel: 5,
     effect: {
       type: 'coin_boost',
-      value: 15
+      value: 1500
     },
     prerequisite: ['coin_boost_1'],
     tier: 2,
@@ -253,7 +253,7 @@ export const SKILLS: Skill[] = [
     maxLevel: 5,
     effect: {
       type: 'xp_boost',
-      value: 20
+      value: 2000
     },
     prerequisite: ['xp_boost_2'],
     tier: 3,
@@ -295,7 +295,7 @@ export const SKILLS: Skill[] = [
     maxLevel: 5,
     effect: {
       type: 'coin_boost',
-      value: 20
+      value: 2000
     },
     prerequisite: ['coin_boost_2'],
     tier: 3,
@@ -381,7 +381,7 @@ export const SKILLS: Skill[] = [
     maxLevel: 5,
     effect: {
       type: 'xp_boost',
-      value: 30
+      value: 3000
     },
     prerequisite: ['xp_boost_3'],
     tier: 4,
@@ -395,7 +395,7 @@ export const SKILLS: Skill[] = [
     maxLevel: 5,
     effect: {
       type: 'coin_boost',
-      value: 30
+      value: 3000
     },
     prerequisite: ['coin_boost_3'],
     tier: 4,
