@@ -86,6 +86,10 @@ function extractReadingCore(reading: string): string {
   return reading.replace(/'[^']*'/g, '');
 }
 
+// 読み方からクォート（送り仮名のマーク）を取り除き、送り仮名を保持したままの文字列を返す
+function readingWithoutQuotes(reading: string): string {
+  return reading.replace(/'/g, '');
+}
 // メダル獲得の判定
 function tryGetMedal(quizFormat: QuizFormat, medalBoost: number): number {
   const baseChance = quizFormat === 'input' ? 10 : 2.5; // 入力形式: 10%, 四択: 2.5%
@@ -554,10 +558,12 @@ function App() {
       // 正解が「、」で区切られている場合、いずれかに一致すればOK
       const correctOptions = correctReading.split('、').map(r => r.trim());
       
-      // 各正解オプションについて、送り仮名を除いた部分で照合
+      // 各正解オプションについて、送り仮名を除いた本体（core）または
+      // 送り仮名を含む形（クォートを取り除いた文字列）のいずれかと一致すれば正解
       correct = correctOptions.some(option => {
         const coreReading = extractReadingCore(option);
-        return userInput === coreReading;
+        const fullReading = readingWithoutQuotes(option);
+        return userInput === coreReading || userInput === fullReading;
       });
     }
     
