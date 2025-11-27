@@ -838,7 +838,23 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   };
 
   const setUsername = (username: string) => {
-    setState(prev => ({ ...prev, username: username.trim() || 'プレイヤー' }));
+    const cleaned = username.trim() || 'プレイヤー';
+
+    // ローカルのゲーム状態のみ更新（プレイヤー名）。アカウントの displayName は変更しない。
+    const updatedState = { ...state, username: cleaned };
+    setState(updatedState);
+
+    // ログイン中かつFirebase有効なら、Firestoreのユーザーデータとランキングを直接更新する（非同期・fire-and-forget）
+    if (auth && auth.user && isFirebaseEnabled) {
+      const uid = auth.user.uid;
+      (async () => {
+        try {
+          await saveUserData(uid, updatedState);
+        } catch (e) {
+          console.error('Failed to save username to Firestore:', e);
+        }
+      })();
+    }
   };
 
   const getXpForNextLevel = () => {

@@ -92,6 +92,17 @@ export const signUpWithEmail = async (email: string, password: string, username:
   return userCredential;
 };
 
+// ログイン中ユーザーの表示名を更新するヘルパー
+export const updateDisplayName = async (user: User, displayName: string) => {
+  if (!auth) throw new Error('Firebase not initialized');
+  try {
+    await updateProfile(user, { displayName });
+  } catch (err) {
+    console.error('Failed to update auth displayName:', err);
+    throw err;
+  }
+};
+
 // メールアドレス/パスワードでのサインイン
 export const signInWithEmail = async (email: string, password: string) => {
   if (!auth) throw new Error('Firebase not initialized');

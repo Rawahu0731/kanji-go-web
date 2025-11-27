@@ -6,7 +6,7 @@ import './AuthButton.css';
 
 export default function AuthButton() {
   const { user, signIn, signOut, isFirebaseEnabled } = useAuth();
-  const { syncWithFirebase } = useGamification();
+  const { syncWithFirebase, state: gamificationState } = useGamification();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
@@ -52,11 +52,11 @@ export default function AuthButton() {
             {user.photoURL && (
               <img 
                 src={user.photoURL} 
-                alt={user.displayName || 'User'} 
+                alt={gamificationState.username || user.displayName || 'User'} 
                 className="user-avatar"
               />
             )}
-            <span className="user-name">{user.displayName || user.email}</span>
+            <span className="user-name">{(gamificationState.username && gamificationState.username !== 'プレイヤー') ? gamificationState.username : (user.displayName || user.email)}</span>
           </div>
           <button 
             onClick={handleSignOut}
