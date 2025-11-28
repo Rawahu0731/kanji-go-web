@@ -9,7 +9,7 @@ import type { Character, OwnedCharacter } from '../data/characters';
 import { CHARACTERS, pullGacha, getCharacterEffectValue, getXpForCharacterLevel, MAX_CHARACTER_LEVEL, MAX_CHARACTER_COUNT } from '../data/characters';
 import { getKanjiAttributes } from '../data/kanjiAttributes';
 import { SKILLS, type SkillLevel } from '../data/skillTree';
-import { saveUserData, loadUserData, isFirebaseEnabled } from '../lib/firebase';
+import { saveUserData, loadUserData, isFirebaseEnabled, getStorageDownloadUrl } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 import { computeNewBadges } from '../utils/badgeUtils';
 
@@ -566,6 +566,16 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       const data = await loadUserData(userId);
       if (data) {
         const migrated = migrateData(data);
+        // If customIconUrl references Cloud Storage (gs://...), resolve to a downloadable URL
+        try {
+          if (migrated.customIconUrl && typeof migrated.customIconUrl === 'string' && migrated.customIconUrl.startsWith('gs://')) {
+            const resolved = await getStorageDownloadUrl(migrated.customIconUrl);
+            migrated.customIconUrl = resolved;
+          }
+        } catch (e) {
+          console.warn('Failed to resolve customIconUrl to download URL:', e);
+        }
+
         setState(migrated);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
         console.log('Data loaded from Firebase');

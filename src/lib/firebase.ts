@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut as firebaseSignOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { getStorage, ref as storageRef, getDownloadURL } from 'firebase/storage';
 import type { Firestore } from 'firebase/firestore';
 import type { Auth } from 'firebase/auth';
 import type { GamificationState } from '../contexts/GamificationContext';
@@ -223,3 +224,24 @@ export const getUserRank = async (userId: string): Promise<number> => {
 };
 
 export { auth, db, isFirebaseEnabled };
+
+// Storage helper: convert gs:// URIs to browser-downloadable URLs
+export const getStorageDownloadUrl = async (gsUri: string): Promise<string> => {
+  if (!gsUri || typeof gsUri !== 'string') return gsUri;
+  try {
+    // If already an http/https URL, return as-is
+    if (gsUri.startsWith('http://') || gsUri.startsWith('https://')) return gsUri;
+
+    if (!gsUri.startsWith('gs://')) return gsUri;
+    if (!app) throw new Error('Firebase app not initialized');
+
+    const storage = getStorage(app);
+    // Using storageRef with a gs:// URL is supported by the SDK
+    const ref = storageRef(storage, gsUri);
+    const url = await getDownloadURL(ref);
+    return url;
+  } catch (err) {
+    console.warn('Failed to resolve storage URL for', gsUri, err);
+    return gsUri; // fallback to original value
+  }
+};
