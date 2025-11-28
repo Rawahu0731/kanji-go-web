@@ -10,9 +10,10 @@ export function DebugPanel() {
   const [password, setPassword] = useState('');
   const [xpInput, setXpInput] = useState('');
   const [coinsInput, setCoinsInput] = useState('');
+  const [medalsInput, setMedalsInput] = useState('');
   const [error, setError] = useState('');
   
-  const { state, setXp, setCoins } = useGamification();
+  const { state, setXp, setCoins, setMedals, addMedals } = useGamification();
 
   // 裏コマンド用のグローバルイベントリスナーを設定
   useEffect(() => {
@@ -58,6 +59,32 @@ export function DebugPanel() {
     setCoins(value);
     setError('');
     setCoinsInput('');
+  };
+
+  const handleSetMedals = () => {
+    const value = parseInt(medalsInput);
+    if (isNaN(value) || value < 0) {
+      setError('正しい数値を入力してください（0以上）');
+      return;
+    }
+    setMedals(value);
+    setError('');
+    setMedalsInput('');
+  };
+
+  const handleAddMedals = (delta?: number) => {
+    let amount = 0;
+    if (typeof delta === 'number') amount = delta;
+    else amount = parseInt(medalsInput) || 0;
+
+    if (isNaN(amount)) {
+      setError('正しい数値を入力してください');
+      return;
+    }
+
+    addMedals(amount);
+    setError('');
+    setMedalsInput('');
   };
 
   const handleClose = () => {
@@ -121,6 +148,10 @@ export function DebugPanel() {
                 <span className="debug-label">現在のコイン:</span>
                 <span className="debug-value">{state.coins}</span>
               </div>
+              <div className="debug-stat">
+                <span className="debug-label">現在のメダル:</span>
+                <span className="debug-value">{state.medals}</span>
+              </div>
             </div>
 
             <div className="debug-controls-section">
@@ -154,6 +185,25 @@ export function DebugPanel() {
               </div>
             </div>
 
+            <div className="debug-controls-section">
+              <h3>メダル設定</h3>
+              <div className="debug-input-group">
+                <input
+                  type="number"
+                  value={medalsInput}
+                  onChange={(e) => setMedalsInput(e.target.value)}
+                  placeholder="メダルを入力（0以上）"
+                  min="0"
+                />
+                <button onClick={handleSetMedals} className="debug-set-btn">
+                  設定
+                </button>
+                <button onClick={() => handleAddMedals()} className="debug-set-btn">
+                  追加
+                </button>
+              </div>
+            </div>
+
             {error && <div className="debug-error">{error}</div>}
 
             <div className="debug-quick-actions">
@@ -170,6 +220,18 @@ export function DebugPanel() {
                 </button>
                 <button onClick={() => setCoins(10000)}>
                   コイン → 10000
+                </button>
+                <button onClick={() => setMedals(0)}>
+                  メダル → 0
+                </button>
+                <button onClick={() => setMedals(1)}>
+                  メダル → 1
+                </button>
+                <button onClick={() => handleAddMedals(1)}>
+                  +1 メダル
+                </button>
+                <button onClick={() => handleAddMedals(10)}>
+                  +10 メダル
                 </button>
               </div>
             </div>
