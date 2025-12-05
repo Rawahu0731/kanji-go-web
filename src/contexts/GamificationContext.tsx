@@ -67,6 +67,8 @@ export interface GamificationState {
   customIconUrl: string; // カスタムアイコンのURL
   username: string; // ユーザーネーム
   lastInterestTime?: number; // 最後に利子を計算した時刻（ミリ秒）
+  // デバッグ: 最後に計算した報酬や倍率などの情報（UIで確認するため）
+  debugLastReward?: Record<string, any>;
   // チャレンジ関連: 永続的に付与されるボーナス (例: { "no_skill_purchase_10min": { xp: 0.05 } })
   challengeBonuses?: Record<string, { xp?: number; coin?: number }>;
   // 最後にスキルを購入(アップグレード)した時刻（ミリ秒）
@@ -113,6 +115,8 @@ type GamificationContextType = {
   completeChallenge: (challengeId: string, bonus: { xp?: number; coin?: number }) => void;
   // チャレンジ由来の現在のブーストを取得（合計）
   getChallengeBoost: (type: 'xp' | 'coin') => number;
+  // デバッグ情報をセット/クリアする
+  setDebugInfo: (info: Record<string, any> | null) => void;
   syncWithFirebase: (userId: string) => Promise<void>;
   loadFromFirebase: (userId: string) => Promise<void>;
 
@@ -483,15 +487,22 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
-  // 状態変更時にlocalStorageとFirebaseに保存
+  // 状態変更時にlocalStorageへ保存し、Firebaseへはデバウンスして同期
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    
-    // Firebaseにも自動保存（ログイン中の場合）
-    if (auth.user && isFirebaseEnabled && !isSyncing) {
-      syncWithFirebase(auth.user.uid);
+
+    // Firebaseへは即座に多数回送らないようにデバウンスする（最後の変更から2秒後に同期）
+    if (auth.user && isFirebaseEnabled) {
+      const t = setTimeout(() => {
+        if (!isSyncing) {
+          syncWithFirebase(auth.user!.uid);
+        }
+      }, 2000);
+
+      return () => clearTimeout(t);
     }
-  }, [state]);
+    // 依存配列にisSyncingやauthを入れてもuseEffectの呼び出しタイミングは適切です
+  }, [state, auth?.user, isFirebaseEnabled, isSyncing]);
 
   // Firebaseへの同期
   const syncWithFirebase = async (userId: string) => {
@@ -604,9 +615,10 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       multiplier *= (1 + challengeXpBoost);
       
       const boostedAmount = Math.floor(amount * multiplier);
-      // xpとtotalXpは常に一致
+      // 累計XP(totalXp)は常に加算する
+      const newTotalXp = prev.totalXp + boostedAmount;
+      // 現在のXP(xp)も加算するが、レベルアップ時に消費しない（差し引かない）
       const newXp = prev.xp + boostedAmount;
-      const newTotalXp = newXp;
       
       // 累積XPから適正レベルを計算
       let newLevel = 1;
@@ -766,6 +778,11 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, medals: amount }));
   };
 
+  // デバッグ情報を保存/クリアする（UIのDebugPanelから参照される）
+  const setDebugInfo = (info: Record<string, any> | null) => {
+    setState(prev => ({ ...prev, debugLastReward: info ?? undefined }));
+  };
+
   const unlockBadge = (badgeId: string) => {
     setState(prev => {
       if (prev.unlockedBadges.includes(badgeId)) {
@@ -851,20 +868,9 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     const cleaned = username.trim() || 'プレイヤー';
 
     // ローカルのゲーム状態のみ更新（プレイヤー名）。アカウントの displayName は変更しない。
+    // Firebaseへの保存は state の変更を監視するデバウンス同期に任せる（過剰な書き込みを防ぐ）
     const updatedState = { ...state, username: cleaned };
     setState(updatedState);
-
-    // ログイン中かつFirebase有効なら、Firestoreのユーザーデータとランキングを直接更新する（非同期・fire-and-forget）
-    if (auth && auth.user && isFirebaseEnabled) {
-      const uid = auth.user.uid;
-      (async () => {
-        try {
-          await saveUserData(uid, updatedState);
-        } catch (e) {
-          console.error('Failed to save username to Firestore:', e);
-        }
-      })();
-    }
   };
 
   const getXpForNextLevel = () => {
@@ -893,7 +899,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     const currentLevelXp = getTotalXpForCurrentLevel();
     const nextLevelXp = getTotalXpForNextLevel();
     const totalXpNeeded = nextLevelXp - currentLevelXp;
-    const currentProgress = state.xp - currentLevelXp;
+    // レベル進捗は累計XPを基準に計算する（レベルアップで現在XPを消費しないため）
+    const currentProgress = state.totalXp - currentLevelXp;
     return (currentProgress / totalXpNeeded) * 100;
   };
 
@@ -1375,6 +1382,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       useStreakProtection,
       completeChallenge,
       getChallengeBoost,
+      setDebugInfo,
       syncWithFirebase,
       loadFromFirebase
     }}>

@@ -228,11 +228,29 @@ function App() {
     addCharacterXp, 
     getSkillBoost,
     useStreakProtection,
+    setDebugInfo,
     state: gamificationState,
     isMedalSystemEnabled,
     getTotalXpForNextLevel, 
     getLevelProgress 
   } = useGamification();
+
+  // デバッグ用: 報酬計算で異常値/オーバーフローを検出するヘルパー
+  const detectOverflow = (obj: Record<string, any>) => {
+    const reasons: string[] = [];
+    for (const [k, v] of Object.entries(obj)) {
+      if (typeof v === 'number') {
+        if (!Number.isFinite(v) || Number.isNaN(v)) {
+          reasons.push(`${k} is not finite`);
+        } else if (Math.abs(v) > Number.MAX_SAFE_INTEGER) {
+          reasons.push(`${k} exceeds Number.MAX_SAFE_INTEGER`);
+        } else if (Math.abs(v) > 1e12) {
+          reasons.push(`${k} is very large (>1e12)`);
+        }
+      }
+    }
+    return reasons;
+  };
   const location = useLocation();
   const showChallengeButton = (() => {
     try {
@@ -616,11 +634,31 @@ function App() {
       const timeBonusXp = Math.floor(baseXp * timeBonusMultiplier);
       const xpGain = xpBeforeTimeBonus + timeBonusXp;
       const coinGain = Math.floor(baseCoin * (1 + coinBoost) * coinMultiplier);
-      
+
+      // デバッグ情報を保存
+      try {
+        const debugInfo = {
+          baseXp, baseCoin, xpBoost, coinBoost, xpMultiplierBoost, timeBonusBoost, timeBonusMultiplier,
+          isDouble, isCritical, isLucky, xpMultiplier, coinMultiplier,
+          xpBeforeTimeBonus, timeBonusXp, xpGain, coinGain, medalBoost
+        } as Record<string, any>;
+        const medalGain = tryGetMedal(quizFormat, medalBoost);
+        debugInfo.medalGain = medalGain;
+        const overflowReasons = detectOverflow(debugInfo);
+        if (overflowReasons.length > 0) {
+          debugInfo.overflow = true;
+          debugInfo.overflowReasons = overflowReasons;
+        }
+        if (typeof setDebugInfo === 'function') setDebugInfo(debugInfo);
+      } catch (e) {
+        // ignore
+      }
+
       addXp(xpGain);
       addCoins(coinGain);
       
       // メダル獲得判定
+      // medalGain は上で計算済み （上の debug ブロックで setDebugInfo のために取得しています）
       const medalGain = tryGetMedal(quizFormat, medalBoost);
       if (medalGain > 0) {
         addMedals(medalGain);
@@ -935,7 +973,7 @@ function App() {
               ></div>
             </div>
             <span className="xp-text">
-              {gamificationState.xp.toLocaleString()} / {getTotalXpForNextLevel().toLocaleString()} XP
+              {gamificationState.totalXp.toLocaleString()} / {getTotalXpForNextLevel().toLocaleString()} XP
             </span>
           </div>
           <div className="stat-item">
@@ -1479,9 +1517,28 @@ function App() {
                             const timeBonusXp = Math.floor(baseXp * timeBonusMultiplier);
                             const xpGain = xpBeforeTimeBonus + timeBonusXp;
                             const coinGain = Math.floor(baseCoin * (1 + coinBoost) * coinMultiplier);
-                            
-                            addXp(xpGain);
-                            addCoins(coinGain);
+
+                              // デバッグ情報を保存
+                              try {
+                                const debugInfo = {
+                                  baseXp, baseCoin, xpBoost, coinBoost, xpMultiplierBoost, timeBonusBoost, timeBonusMultiplier,
+                                  isDouble, isCritical, isLucky, xpMultiplier, coinMultiplier,
+                                  xpBeforeTimeBonus, timeBonusXp, xpGain, coinGain, medalBoost
+                                } as Record<string, any>;
+                                const medalGain = tryGetMedal(quizFormat, medalBoost);
+                                debugInfo.medalGain = medalGain;
+                                const overflowReasons = detectOverflow(debugInfo);
+                                if (overflowReasons.length > 0) {
+                                  debugInfo.overflow = true;
+                                  debugInfo.overflowReasons = overflowReasons;
+                                }
+                                if (typeof setDebugInfo === 'function') setDebugInfo(debugInfo);
+                              } catch (e) {
+                                // ignore
+                              }
+
+                              addXp(xpGain);
+                              addCoins(coinGain);
                             
                             // メダル獲得判定
                             const medalGain = tryGetMedal(quizFormat, medalBoost);

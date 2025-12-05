@@ -13,7 +13,7 @@ export function DebugPanel() {
   const [medalsInput, setMedalsInput] = useState('');
   const [error, setError] = useState('');
   
-  const { state, setXp, setCoins, setMedals, addMedals } = useGamification();
+  const { state, setXp, setCoins, setMedals, addMedals, setDebugInfo } = useGamification();
 
   // 裏コマンド用のグローバルイベントリスナーを設定
   useEffect(() => {
@@ -233,6 +233,22 @@ export function DebugPanel() {
                 <button onClick={() => handleAddMedals(10)}>
                   +10 メダル
                 </button>
+              </div>
+            </div>
+
+            <div className="debug-controls-section">
+              <h3>最後の報酬計算（デバッグ）</h3>
+              <div className="debug-input-group">
+                {state.debugLastReward ? (
+                  <>
+                    <pre className="debug-json" style={{ maxHeight: '220px', overflow: 'auto', background: '#0f1724', color: '#e6eef8', padding: '8px', borderRadius: '6px' }}>{JSON.stringify(state.debugLastReward, null, 2)}</pre>
+                    <div style={{ marginTop: '8px' }}>
+                      <button onClick={() => setDebugInfo(null)} className="debug-set-btn">クリア</button>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ color: '#9aa4b2' }}>デバッグ情報はありません</div>
+                )}
               </div>
             </div>
           </div>

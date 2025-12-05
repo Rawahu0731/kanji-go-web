@@ -108,7 +108,7 @@ function Profile() {
               <div className="xp-bar" style={{ width: `${getLevelProgress()}%` }}></div>
             </div>
             <div className="xp-text">
-              {state.xp.toLocaleString()} / {getTotalXpForNextLevel().toLocaleString()} XP
+              {state.totalXp.toLocaleString()} / {getTotalXpForNextLevel().toLocaleString()} XP
             </div>
           </div>
         </div>
