@@ -623,7 +623,11 @@ function App() {
       }
       
       // 最終的な倍率を計算
-      const xpMultiplier = isDouble ? 2 : (isCritical ? 2 : 1);
+      // 連続正解ボーナス（streak_amp スキル）を適用
+      const streakAmpBoost = getSkillBoost('streak_amp');
+      // streakAmpBoost は e.g. 0.05 (5%) なので、連続正解数に応じて乗算
+      const streakMultiplier = 1 + (currentStreak > 0 ? streakAmpBoost * currentStreak : 0);
+      const xpMultiplier = (isDouble ? 2 : (isCritical ? 2 : 1)) * streakMultiplier;
       const coinMultiplier = isDouble ? 2 : (isLucky ? 2 : 1);
       
       // XPとコインを付与（入力形式は難しいので報酬が多い）

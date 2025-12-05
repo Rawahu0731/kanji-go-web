@@ -6,7 +6,7 @@ export interface Skill {
   cost: number; // メダル消費量
   maxLevel: number; // 最大レベル
   effect: {
-    type: 'xp_boost' | 'coin_boost' | 'medal_boost' | 'streak_protection' | 'double_reward' | 'critical_hit' | 'lucky_coin' | 'xp_multiplier' | 'time_bonus';
+    type: 'xp_boost' | 'coin_boost' | 'medal_boost' | 'streak_protection' | 'streak_amp' | 'double_reward' | 'critical_hit' | 'lucky_coin' | 'xp_multiplier' | 'time_bonus';
     value: number; // レベルごとの効果値（パーセンテージまたは回数）
   };
   prerequisite?: string[]; // 前提スキルID（複数可）
@@ -74,14 +74,14 @@ export const SKILLS: Skill[] = [
     angle: 120
   },
   {
-    id: 'streak_protection_1',
-    name: 'ストリーク保護 I',
-    description: '不正解時にストリークを1回保護',
-    cost: 8,
+    id: 'streak_amp_1',
+    name: 'チェーン増幅 I',
+    description: '連続正解ごとにXP獲得量が増加します（1つ上の連続で発動）',
+    cost: 30,
     maxLevel: 3,
     effect: {
-      type: 'streak_protection',
-      value: 1
+      type: 'streak_amp',
+      value: 5
     },
     prerequisite: ['core'],
     tier: 1,
@@ -202,16 +202,16 @@ export const SKILLS: Skill[] = [
     angle: 90
   },
   {
-    id: 'streak_protection_2',
-    name: 'ストリーク保護 II',
-    description: 'ストリーク保護回数+1',
-    cost: 15,
+    id: 'streak_amp_2',
+    name: 'チェーン増幅 II',
+    description: '連続正解ごとにXP獲得量が増加します（強化版）',
+    cost: 50,
     maxLevel: 3,
     effect: {
-      type: 'streak_protection',
-      value: 1
+      type: 'streak_amp',
+      value: 10
     },
-    prerequisite: ['streak_protection_1'],
+    prerequisite: ['streak_amp_1'],
     tier: 2,
     angle: 180
   },
@@ -330,16 +330,16 @@ export const SKILLS: Skill[] = [
     angle: 120
   },
   {
-    id: 'streak_protection_3',
-    name: 'ストリーク保護 III',
-    description: 'ストリーク保護回数+1',
-    cost: 25,
+    id: 'streak_amp_3',
+    name: 'チェーン増幅 III',
+    description: '連続正解ごとにXP獲得量が大幅に増加します',
+    cost: 100,
     maxLevel: 3,
     effect: {
-      type: 'streak_protection',
-      value: 1
+      type: 'streak_amp',
+      value: 20
     },
-    prerequisite: ['streak_protection_2'],
+    prerequisite: ['streak_amp_2'],
     tier: 3,
     angle: 180
   },
@@ -416,16 +416,16 @@ export const SKILLS: Skill[] = [
     angle: 120
   },
   {
-    id: 'master_protection',
-    name: 'マスター保護',
-    description: 'ストリーク保護回数+2',
-    cost: 50,
+    id: 'master_streak_amp',
+    name: 'マスターチェーン',
+    description: '連続正解で得られるXPボーナスを強化します（究極）',
+    cost: 300,
     maxLevel: 3,
     effect: {
-      type: 'streak_protection',
-      value: 2
+      type: 'streak_amp',
+      value: 30
     },
-    prerequisite: ['streak_protection_3'],
+    prerequisite: ['streak_amp_3'],
     tier: 4,
     angle: 180
   },

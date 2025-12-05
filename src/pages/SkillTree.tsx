@@ -170,6 +170,7 @@ const SkillTree = () => {
     if (type === 'coin_boost' || type === 'lucky_coin') return '💰';
     if (type === 'medal_boost') return '🪙';
     if (type === 'streak_protection') return '🛡️';
+    if (type === 'streak_amp') return '🔺';
     if (type === 'double_reward' || type === 'critical_hit') return '✨';
     if (type === 'time_bonus') return '⏱️';
     return '🎯';
@@ -354,7 +355,7 @@ const SkillTree = () => {
               <div className="effect-value">
                 {selectedSkill.effect.type === 'streak_protection' 
                   ? `${currentEffect}回保護`
-                  : `+${currentEffect}%`}
+                  : selectedSkill.effect.type === 'streak_amp' ? `+${currentEffect}%（連続ごと）` : `+${currentEffect}%`}
               </div>
             </div>
           )}
@@ -365,7 +366,7 @@ const SkillTree = () => {
               <div className="next-effect">
                 {selectedSkill.effect.type === 'streak_protection' 
                   ? `${nextEffect}回保護`
-                  : `+${nextEffect}%`}
+                  : selectedSkill.effect.type === 'streak_amp' ? `+${nextEffect}%（連続ごと）` : `+${nextEffect}%`}
               </div>
             </div>
           )}

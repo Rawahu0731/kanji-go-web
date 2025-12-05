@@ -109,7 +109,7 @@ type GamificationContextType = {
   getDeckBoost: () => { xp: number; coin: number };
   upgradeSkill: (skillId: string) => boolean;
   getSkillLevel: (skillId: string) => number;
-  getSkillBoost: (type: 'xp_boost' | 'coin_boost' | 'medal_boost' | 'double_reward' | 'critical_hit' | 'lucky_coin' | 'xp_multiplier' | 'time_bonus') => number;
+  getSkillBoost: (type: 'xp_boost' | 'coin_boost' | 'medal_boost' | 'streak_amp' | 'double_reward' | 'critical_hit' | 'lucky_coin' | 'xp_multiplier' | 'time_bonus') => number;
   useStreakProtection: () => boolean;
   // チャレンジを完了扱いにして恒久ボーナスを付与する
   completeChallenge: (challengeId: string, bonus: { xp?: number; coin?: number }) => void;
@@ -1291,13 +1291,16 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   };
 
   // スキルのブースト効果を取得
-  const getSkillBoost = (type: 'xp_boost' | 'coin_boost' | 'medal_boost' | 'double_reward' | 'critical_hit' | 'lucky_coin' | 'xp_multiplier' | 'time_bonus'): number => {
+  const getSkillBoost = (type: 'xp_boost' | 'coin_boost' | 'medal_boost' | 'streak_amp' | 'double_reward' | 'critical_hit' | 'lucky_coin' | 'xp_multiplier' | 'time_bonus'): number => {
     let totalBoost = 0;
     
     state.skillLevels.forEach(sl => {
       const skill = SKILLS.find(s => s.id === sl.skillId);
-      if (skill && skill.effect.type === type) {
-        totalBoost += skill.effect.value * sl.level;
+      if (skill) {
+        // streak_amp はパーセンテージのまま扱う（例: 5 -> 5%）
+        if ((skill.effect.type === type) || (type === 'streak_amp' && skill.effect.type === 'streak_amp')) {
+          totalBoost += skill.effect.value * sl.level;
+        }
       }
     });
     
