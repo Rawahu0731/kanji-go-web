@@ -24,7 +24,10 @@ from bs4 import BeautifulSoup
 def download_image(image_url, save_path):
     """画像をダウンロードして保存する"""
     try:
-        response = requests.get(image_url, timeout=10)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+        response = requests.get(image_url, headers=headers, timeout=10)
         response.raise_for_status()
         
         with open(save_path, 'wb') as f:
@@ -97,20 +100,43 @@ def extract_reading_from_h3(h3_element):
 
 
 def scrape_kanji_data(url, output_dir):
-    """指定されたURLから漢字データをスクレイピングする"""
+    """指定されたURLまたはローカルファイルから漢字データをスクレイピングする"""
     
-    print(f"URLにアクセス中: {url}")
+    print(f"URLまたはファイルにアクセス中: {url}")
     
     # ページを取得
     try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        response.encoding = response.apparent_encoding  # 文字化け対策
+        # ローカルファイルかどうかチェック
+        if os.path.exists(url):
+            print(f"ローカルファイルから読み込み: {url}")
+            with open(url, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+        else:
+            # セッションを使用
+            session = requests.Session()
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept-Language': 'ja,en-US;q=0.7,en;q=0.3',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Cache-Control': 'max-age=0',
+            }
+            response = session.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            response.encoding = response.apparent_encoding  # 文字化け対策
+            html_content = response.text
+    
+        soup = BeautifulSoup(html_content, 'html.parser')
     except Exception as e:
         print(f"エラー: ページの取得に失敗しました - {e}")
         return False
     
-    soup = BeautifulSoup(response.text, 'html.parser')
+    soup = BeautifulSoup(html_content, 'html.parser')
     
     # 出力ディレクトリを作成
     output_path = Path(output_dir)
