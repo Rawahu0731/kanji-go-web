@@ -76,7 +76,14 @@ export interface GamificationState {
   lastSkillPurchaseTime?: number;
   // コレクション（漢字ごとの + 値。最大30でカンスト）
   collectionPlus?: { kanji: string; plus: number; obtainedAt?: number }[];
+  // チケット（キー: ticketId, 値: 所持数）
+  tickets?: Record<string, number>;
+  // マイグレーションで使用: 更新配信後の「お詫びアイテム」配布フラグ
+  apologyCompensationAvailable?: boolean;
+  // 配布済みバージョン（重複配布防止のために記録）
+  apologyCompensationClaimedVersion?: number;
 }
+
 
 
 type GamificationContextType = {
@@ -92,6 +99,9 @@ type GamificationContextType = {
   purchaseItem: (itemId: string, price: number, addToPurchased?: boolean) => boolean;
   purchaseWithMedals: (itemId: string, price: number, addToPurchased?: boolean) => boolean;
   updateStats: (updates: Partial<GamificationState['stats']>) => void;
+  addTickets: (ticketId: string, count?: number) => void;
+  useTicket: (ticketId: string, count?: number) => KanjiCard[] | null;
+  grantMaintenanceCompensation: () => void;
   setTheme: (themeId: string) => void;
   setIcon: (iconId: string) => void;
   setCustomIconUrl: (url: string) => void;
@@ -168,7 +178,8 @@ const INITIAL_STATE: GamificationState = {
   challengeBonuses: {},
   lastSkillPurchaseTime: undefined
   ,
-  collectionPlus: []
+  collectionPlus: [],
+  tickets: {}
 };
 
 // データマイグレーション関数
@@ -323,6 +334,12 @@ function migrateData(data: any): GamificationState {
   }
   
   // バージョン番号を最新に更新
+  // マイグレーション対象が古いバージョン（今回の配信以降）で、
+  // まだお詫び配布が記録されていなければ配布フラグを立てる。
+  if (version < CURRENT_VERSION && !data.apologyCompensationClaimedVersion) {
+    data.apologyCompensationAvailable = true;
+  }
+
   data.version = CURRENT_VERSION;
   
   return data;
@@ -595,6 +612,29 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
           console.warn('Failed to resolve customIconUrl to download URL:', e);
         }
 
+        // 初回ログイン時のみの配布: マイグレーションで配布フラグが立っていればここで付与して永続化する
+        if (migrated.apologyCompensationAvailable && migrated.apologyCompensationClaimedVersion !== CURRENT_VERSION) {
+          try {
+            migrated.coins = (migrated.coins || 0) + 30000;
+            migrated.medals = (migrated.medals || 0) + 50;
+            migrated.unlockedBadges = Array.from(new Set([...(migrated.unlockedBadges || []), 'apology_maintenance']));
+            migrated.tickets = migrated.tickets || {};
+            migrated.tickets['ticket_collection_plus'] = (migrated.tickets['ticket_collection_plus'] || 0) + 3;
+            migrated.apologyCompensationClaimedVersion = CURRENT_VERSION;
+            migrated.apologyCompensationAvailable = false;
+
+            // サーバに永続化（読み込み時に一度だけ実行）
+            try {
+              await saveUserData(userId, migrated);
+              console.log('Applied maintenance compensation on first login and saved to Firebase');
+            } catch (e) {
+              console.warn('Failed to save maintenance compensation to Firebase:', e);
+            }
+          } catch (e) {
+            console.error('Failed to apply maintenance compensation during loadFromFirebase:', e);
+          }
+        }
+
         setState(migrated);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
         console.log('Data loaded from Firebase');
@@ -806,6 +846,53 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
 
   const setMedals = (amount: number) => {
     setState(prev => ({ ...prev, medals: amount }));
+  };
+
+  // チケットを付与する（配布用）。ticketId は shopItems の id と合わせる。
+  const addTickets = (ticketId: string, count: number = 1) => {
+    if (count <= 0) return;
+    setState(prev => {
+      const newTickets = { ...(prev.tickets || {}) };
+      newTickets[ticketId] = (newTickets[ticketId] || 0) + count;
+      return { ...prev, tickets: newTickets };
+    });
+  };
+
+  // チケットを使用してガチャを引く。成功すると対応するガチャ処理を実行してカードを返す。
+  const useTicket = (ticketId: string, count: number = 1): KanjiCard[] | null => {
+    if (count <= 0) return null;
+    let available = 0;
+    try {
+      available = (state.tickets && state.tickets[ticketId]) || 0;
+    } catch (e) {
+      available = 0;
+    }
+    if (available < count) return null;
+
+    // チケットを消費
+    setState(prev => {
+      const newTickets = { ...(prev.tickets || {}) };
+      newTickets[ticketId] = Math.max(0, (newTickets[ticketId] || 0) - count);
+      return { ...prev, tickets: newTickets };
+    });
+
+    // 現状はコレクション+用チケットのみサポート
+    if (ticketId.startsWith('ticket_collection_plus')) {
+      const cards = pullCollectionPlusGacha(count);
+      return cards;
+    }
+
+    return null;
+  };
+
+  // メンテナンス補償を現在のユーザーに付与する（管理画面やスクリプトから呼ぶ想定）
+  const grantMaintenanceCompensation = () => {
+    // 要求: コイン30000, メダル50, ごめんなさいバッジ, コレクション+チケット×3
+    addCoins(30000);
+    addMedals(50);
+    unlockBadge('apology_maintenance');
+    addTickets('ticket_collection_plus', 3);
+    // 追加で同期する場合は syncWithFirebase を呼ぶ実装側で行ってください
   };
 
   // デバッグ情報を保存/クリアする（UIのDebugPanelから参照される）
@@ -1504,6 +1591,11 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       addCardToCollection,
       openCardPack,
       pullCharacterGacha,
+      // チケット関係: 所持数付与 / 使用
+      addTickets,
+      useTicket,
+      // 管理者向け: メンテナンス補償を付与
+      grantMaintenanceCompensation,
       pullCollectionPlusGacha,
       equipCharacter,
       getCharacterBoost,

@@ -194,3 +194,12 @@ export const BADGES: Record<string, Badge> = {
     category: 'milestone'
   }
 };
+
+// メンテナンスのお詫び用バッジ
+BADGES['apology_maintenance'] = {
+  id: 'apology_maintenance',
+  name: 'ごめんなさい',
+  description: 'メンテナンスのお詫びとして付与された限定バッジ',
+  icon: '🫶',
+  category: 'achievement'
+};

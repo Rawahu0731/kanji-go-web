@@ -13,7 +13,7 @@ export function DebugPanel() {
   const [medalsInput, setMedalsInput] = useState('');
   const [error, setError] = useState('');
   
-  const { state, setXp, setCoins, setMedals, addMedals, setDebugInfo } = useGamification();
+  const { state, setXp, setCoins, setMedals, addMedals, setDebugInfo, grantMaintenanceCompensation } = useGamification();
 
   // 裏コマンド用のグローバルイベントリスナーを設定
   useEffect(() => {
@@ -232,6 +232,9 @@ export function DebugPanel() {
                 </button>
                 <button onClick={() => handleAddMedals(10)}>
                   +10 メダル
+                </button>
+                <button onClick={() => grantMaintenanceCompensation()}>
+                  メンテ補償を付与 (デバッグ)
                 </button>
               </div>
             </div>

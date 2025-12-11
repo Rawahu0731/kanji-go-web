@@ -164,11 +164,36 @@
   gap: 10px;
 }
 
-.user-icon {
+.user-avatar {
   width: 32px;
   height: 32px;
+  min-width: 32px;
   border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
+  color: #333;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.user-avatar .user-icon {
+  width: 100%;
+  height: 100%;
+  display: block;
   object-fit: cover;
+}
+
+.avatar-emoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.avatar-fallback {
+  display: inline-block;
+  line-height: 1;
 }
 
 .level-cell,

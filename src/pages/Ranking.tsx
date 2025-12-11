@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getRankings, getUserRank, isFirebaseEnabled } from '../lib/firebase';
+import { getRankings, getUserRank, isFirebaseEnabled, getStorageDownloadUrl } from '../lib/firebase';
 import type { RankingEntry } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useGamification } from '../contexts/GamificationContext';
@@ -27,7 +27,30 @@ export default function Ranking() {
 
     try {
       setLoading(true);
-      const data = await getRankings(100);
+      let data = await getRankings(100);
+
+      // Resolve storage URLs (gs://...) and map the literal 'default' to a bundled default image.
+      const resolved = await Promise.all(
+        data.map(async (entry) => {
+          try {
+            if (entry.iconUrl && typeof entry.iconUrl === 'string') {
+              if (entry.iconUrl === 'default') {
+                entry.iconUrl = '👤';
+              } else if (entry.iconUrl === 'custom') {
+                entry.iconUrl = '👤';
+              } else if (entry.iconUrl.startsWith('gs://')) {
+                const resolvedUrl = await getStorageDownloadUrl(entry.iconUrl);
+                entry.iconUrl = resolvedUrl;
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to resolve iconUrl for', entry.userId, e);
+          }
+          return entry;
+        })
+      );
+
+      data = resolved;
       setRankings(data);
 
       if (user) {
@@ -49,6 +72,35 @@ export default function Ranking() {
     if (rank === 2) return '🥈';
     if (rank === 3) return '🥉';
     return `${rank}位`;
+  };
+
+  const isImageSource = (src?: string) => {
+    if (!src || typeof src !== 'string') return false;
+    if (/^https?:\/\//.test(src)) return true;
+    if (/^data:/.test(src)) return true;
+    if (src.startsWith('/')) return true; // local public assets
+    if (/\.(png|jpe?g|gif|svg)$/i.test(src)) return true;
+    return false;
+  };
+
+  const mapIconIdentifier = (icon?: string) => {
+    if (!icon) return icon;
+    // common identifiers used across the app
+    switch (icon) {
+      case 'default': return '👤';
+      case 'custom': return '👤';
+      case 'icon_fire': return '🔥';
+      case 'icon_star': return '⭐';
+      case 'icon_dragon': return '🐉';
+      case 'icon_crown': return '👑';
+      case 'icon_ninja': return '🥷';
+      case 'icon_wizard': return '🧙';
+      case 'icon_samurai': return '⚔️';
+      case 'icon_robot': return '🤖';
+      case 'icon_cherry_blossom': return '🌸';
+      default:
+        return icon;
+    }
   };
 
   return (
@@ -119,13 +171,22 @@ export default function Ranking() {
                     </td>
                     <td className="user-cell">
                       <div className="user-info">
-                        {entry.iconUrl && (
-                          <img 
-                            src={entry.iconUrl} 
-                            alt={entry.username} 
-                            className="user-icon"
-                          />
-                        )}
+                        <div className="user-avatar" aria-hidden>
+                          {entry.iconUrl ? (
+                            // アイコン識別子を解決（'icon_fire' 等 → 絵文字、'default' → ロゴ画像）
+                            (() => {
+                              const mapped = mapIconIdentifier(entry.iconUrl);
+                              return isImageSource(mapped) ? (
+                                <img src={mapped} alt={entry.username} className="user-icon" />
+                              ) : (
+                                <span className="avatar-emoji">{mapped}</span>
+                              );
+                            })()
+                          ) : (
+                            // フォールバック: ユーザー名の先頭1文字（日本語は1文字、英語は大文字化）
+                            <span className="avatar-fallback">{(entry.username || '').slice(0, 1).toUpperCase()}</span>
+                          )}
+                        </div>
                         <span className="username">{entry.username}</span>
                       </div>
                     </td>

@@ -169,6 +169,8 @@ function App() {
   })
   // control visibility of the IP upgrades shop panel
   const [showIpShop, setShowIpShop] = useState<boolean>(false)
+  // manual sync status message (一時表示)
+  const [syncStatus, setSyncStatus] = useState<string | null>(null)
   
   // cumulative purchase counts per-ring: used to compute upgrade cost so costs don't reset on ascension
   const [purchaseCounts, setPurchaseCounts] = useState<number[]>(() => {
@@ -627,11 +629,17 @@ function App() {
       return
     }
 
+    // show temporary UI feedback for success/failure
+    setSyncStatus(null)
     try {
       await saveRevolutionState(auth.user!.uid, toSave)
       console.log('Revolution state synced to Firebase')
+      setSyncStatus('保存に成功しました')
+      setTimeout(() => setSyncStatus(null), 3000)
     } catch (e) {
       console.warn('Failed to save revolution state to Firebase:', e)
+      setSyncStatus('保存に失敗しました')
+      setTimeout(() => setSyncStatus(null), 3000)
     }
   }
 
@@ -1834,6 +1842,9 @@ function App() {
         <button onClick={handleManualSync} style={{ marginLeft: 8, padding: '0.4em 0.8em' }}>
           Sync
         </button>
+        {syncStatus && (
+          <span style={{ marginLeft: 8, color: syncStatus.includes('成功') ? '#2e7d32' : '#c62828', fontWeight: 700 }}>{syncStatus}</span>
+        )}
         
         {/* Debug score controls removed */}
         {score >= getNextPrestigeThreshold() && (

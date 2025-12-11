@@ -5,7 +5,7 @@ export type ShopItem = {
   description: string;
   price: number;
   // 'medal' はメダル通貨で購入するガチャ等の専用カテゴリ
-  category: 'theme' | 'icon' | 'collection' | 'gacha' | 'medal';
+  category: 'theme' | 'icon' | 'collection' | 'gacha' | 'medal' | 'ticket';
   icon: string;
   effect?: string;
   rarity?: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
@@ -287,6 +287,25 @@ export const SHOP_ITEMS: ShopItem[] = [
     effect: 'collection_plus_10'
   }
   ,
+  // チケット類（配布用・使用するとガチャを引く）
+  {
+    id: 'ticket_collection_plus',
+    name: 'コレクション+チケット',
+    description: 'コレクション+ガチャを1回引けるチケット。配布やイベントで使用します。',
+    price: 0,
+    category: 'ticket',
+    icon: '🎫',
+    effect: 'collection_plus_ticket_1'
+  },
+  {
+    id: 'ticket_collection_plus_3',
+    name: 'コレクション+チケット×3',
+    description: 'コレクション+ガチャを3回引けるチケット。配布やイベントで使用します。',
+    price: 0,
+    category: 'ticket',
+    icon: '🎫🎫🎫',
+    effect: 'collection_plus_ticket_3'
+  },
   {
     id: 'character_gacha_100',
     name: '100連ガチャ',

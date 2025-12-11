@@ -9,8 +9,8 @@ import { getRarityName as getCharacterRarityName, MAX_CHARACTER_COUNT, CHARACTER
 import '../styles/Shop.css';
 
 function Shop() {
-  const { state, purchaseItem, purchaseWithMedals, pullCollectionPlusGacha, setTheme, setIcon, setCustomIconUrl, addCardToCollection, openCardPack, pullCharacterGacha } = useGamification();
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'theme' | 'icon' | 'collection' | 'gacha' | 'medal'>('all');
+  const { state, purchaseItem, purchaseWithMedals, pullCollectionPlusGacha, setTheme, setIcon, setCustomIconUrl, addCardToCollection, openCardPack, pullCharacterGacha, addTickets, useTicket } = useGamification();
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'theme' | 'icon' | 'collection' | 'gacha' | 'medal' | 'ticket'>('all');
   const [purchaseMessage, setPurchaseMessage] = useState<string>('');
   const [showCustomIconModal, setShowCustomIconModal] = useState(false);
   const [customIconError, setCustomIconError] = useState('');
@@ -68,8 +68,8 @@ function Shop() {
       return;
     }
 
-    // 価格が0の場合は無料で適用
-    if (item.price === 0) {
+    // 価格が0の場合の特別処理（テーマ/アイコンの無料適用のみ）
+    if (item.price === 0 && (item.category === 'theme' || item.category === 'icon')) {
       if (item.category === 'theme' && item.effect) {
         setTheme(item.effect);
         setPurchaseMessage(`${item.name}を適用しました！`);
@@ -163,6 +163,16 @@ function Shop() {
         setPurchaseMessage('メダルが足りません');
         setTimeout(() => setPurchaseMessage(''), 2000);
       }
+      return;
+    }
+
+    // チケット（配布用・使用）
+    if (item.category === 'ticket') {
+      // 無料チケットは配布で付与する想定だが、ショップで直接獲得できる場合は付与処理を行う
+      const count = item.id.endsWith('_3') ? 3 : 1;
+      addTickets(item.id, count);
+      setPurchaseMessage(`チケットを${count}枚獲得しました！`);
+      setTimeout(() => setPurchaseMessage(''), 2000);
       return;
     }
 
@@ -314,6 +324,11 @@ function Shop() {
           {filteredItems.map(item => {
             const isPurchased = state.purchasedItems.includes(item.id) || item.price === 0;
             const isMedal = item.category === 'medal';
+            // コレクション+ ガチャに対応するチケットがあるかチェック
+            const isCollectionPlusGacha = item.category === 'medal' && item.effect && item.effect.startsWith('collection_plus_');
+            const collectionPlusPulls = isCollectionPlusGacha ? (parseInt(String(item.effect).replace('collection_plus_', '')) || 1) : 0;
+            const ticketCount = (state.tickets?.ticket_collection_plus || 0) + (state.tickets?.ticket_collection_plus_3 || 0);
+            const hasCollectionPlusTicket = isCollectionPlusGacha && ticketCount > 0;
             const isActive = (item.category === 'theme' && state.activeTheme === item.effect) ||
                             (item.category === 'icon' && state.activeIcon === item.effect);
             const isFree = item.price === 0;
@@ -352,20 +367,84 @@ function Shop() {
                   </div>
                 )}
                 <div className="item-footer">
-                  <div className="item-price">{isFree ? '無料' : isMedal ? `🏅 ${item.price}` : `💰 ${item.price}`}</div>
-                  <button
-                    onClick={() => handlePurchase(item)}
-                    disabled={(!isFree && !isPurchased && !isMedal && state.coins < item.price) || (!isFree && isMedal && state.medals < item.price) || isAlreadyOwned || isGachaDisabled}
-                    className={`purchase-button ${isPurchased ? 'purchased-btn' : ''} ${isActive ? 'active-btn' : ''} ${isAlreadyOwned ? 'owned-btn' : ''}`}
-                  >
-                    {isGachaDisabled ? '上限達成' :
-                      isAlreadyOwned ? 'コレクション済' : 
-                      isCustomIcon && isPurchased ? '設定' : 
-                        isCollection ? '獲得' : 
-                          isActive ? '使用中' : 
-                            (isPurchased || isFree ? '適用' : '購入')
-                    }
-                  </button>
+                  <div className="item-price">
+                    {isFree ? '無料' : hasCollectionPlusTicket ? `🎫 チケット ×${ticketCount}` : isMedal ? `🏅 ${item.price}` : `💰 ${item.price}`}
+                  </div>
+                  {item.category === 'ticket' ? (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => {
+                          const cards = useTicket(item.id);
+                          if (cards && cards.length > 0) {
+                            setOpenedCards(cards);
+                            setIsCollectionPlusModal(true);
+                            setShowCardPackModal(true);
+                            setPurchaseMessage('チケットを使用しました');
+                            setTimeout(() => setPurchaseMessage(''), 2000);
+                          } else {
+                            setPurchaseMessage('チケットが足りません');
+                            setTimeout(() => setPurchaseMessage(''), 2000);
+                          }
+                        }}
+                        disabled={!(state.tickets && state.tickets[item.id] > 0)}
+                        className={`purchase-button`}
+                      >
+                        使用
+                      </button>
+                      <button onClick={() => handlePurchase(item)} className="purchase-button">獲得</button>
+                    </div>
+                    ) : hasCollectionPlusTicket ? (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => {
+                          // 使えるチケットIDを優先的に選ぶ（単発チケット優先）
+                          const singleId = 'ticket_collection_plus';
+                          const multiId = 'ticket_collection_plus_3';
+                          const usableId = (state.tickets && state.tickets[singleId] > 0) ? singleId : ((state.tickets && state.tickets[multiId] > 0) ? multiId : null);
+                          if (!usableId) {
+                            setPurchaseMessage('チケットが足りません');
+                            setTimeout(() => setPurchaseMessage(''), 2000);
+                            return;
+                          }
+                          const cards = useTicket(usableId, collectionPlusPulls);
+                          if (cards && cards.length > 0) {
+                            setOpenedCards(cards);
+                            setIsCollectionPlusModal(true);
+                            setShowCardPackModal(true);
+                            setPurchaseMessage('チケットで引きました');
+                            setTimeout(() => setPurchaseMessage(''), 2000);
+                          } else {
+                            setPurchaseMessage('チケットが足りません');
+                            setTimeout(() => setPurchaseMessage(''), 2000);
+                          }
+                        }}
+                        className={`purchase-button`}
+                      >
+                        チケットで引く
+                      </button>
+                      <button
+                        onClick={() => handlePurchase(item)}
+                        disabled={state.medals < item.price}
+                        className={`purchase-button`}
+                      >
+                        メダルで購入
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handlePurchase(item)}
+                      disabled={(!isFree && !isPurchased && !isMedal && state.coins < item.price) || (!isFree && isMedal && state.medals < item.price) || isAlreadyOwned || isGachaDisabled}
+                      className={`purchase-button ${isPurchased ? 'purchased-btn' : ''} ${isActive ? 'active-btn' : ''} ${isAlreadyOwned ? 'owned-btn' : ''}`}
+                    >
+                      {isGachaDisabled ? '上限達成' :
+                        isAlreadyOwned ? 'コレクション済' : 
+                        isCustomIcon && isPurchased ? '設定' : 
+                          isCollection ? '獲得' : 
+                            isActive ? '使用中' : 
+                              (isPurchased || isFree ? '適用' : '購入')
+                      }
+                    </button>
+                  )}
                 </div>
               </div>
             );

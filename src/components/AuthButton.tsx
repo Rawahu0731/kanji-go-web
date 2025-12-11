@@ -10,6 +10,7 @@ export default function AuthButton() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [showEmailAuth, setShowEmailAuth] = useState(false);
 
   const handleSignIn = async () => {
@@ -70,10 +71,15 @@ export default function AuthButton() {
               if (!user) return;
               try {
                 setIsSyncing(true);
+                setSyncMessage(null);
                 await syncWithFirebase(user.uid);
+                setSyncMessage('同期に成功しました');
+                setTimeout(() => setSyncMessage(null), 3000);
               } catch (err) {
                 console.error('Sync error:', err);
                 setError('同期に失敗しました');
+                setSyncMessage('同期に失敗しました');
+                setTimeout(() => setSyncMessage(null), 3000);
               } finally {
                 setIsSyncing(false);
               }
@@ -84,6 +90,11 @@ export default function AuthButton() {
           >
             {isSyncing ? '同期中...' : '同期'}
           </button>
+          {syncMessage && (
+            <div style={{ marginLeft: 8, color: syncMessage.includes('成功') ? '#2e7d32' : '#c62828', fontWeight: 700 }}>
+              {syncMessage}
+            </div>
+          )}
         </div>
       ) : (
         <>
