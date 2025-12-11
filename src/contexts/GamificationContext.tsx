@@ -334,9 +334,11 @@ function migrateData(data: any): GamificationState {
   }
   
   // バージョン番号を最新に更新
-  // マイグレーション対象が古いバージョン（今回の配信以降）で、
-  // まだお詫び配布が記録されていなければ配布フラグを立てる。
-  if (version < CURRENT_VERSION && !data.apologyCompensationClaimedVersion) {
+  // 注意: 一部ユーザーでマイグレーション時にお詫び配布フラグが立っていない
+  //（既にデータがCURRENT_VERSIONになっている等）ケースが確認されたため、
+  //まだ受け取っていないユーザーには配布フラグを付与する。
+  //apologyCompensationClaimedVersion が未設定（未配布）の場合にのみフラグを付与する。
+  if (!data.apologyCompensationClaimedVersion && !data.apologyCompensationAvailable) {
     data.apologyCompensationAvailable = true;
   }
 
