@@ -457,6 +457,23 @@ export const SKILLS: Skill[] = [
     tier: 4,
     angle: 300
   }
+  ,
+  // 最終アンロック: 全てのスキルを1以上開放すると表示され、回転をアンロックする
+  {
+    id: 'unlock_rotation',
+    name: '回転アンロック',
+    description: '全てのスキルを開放するとアンロックされ、回転（Revolution）へのアクセスを有効化します。',
+    cost: 999,
+    maxLevel: 1,
+    effect: {
+      type: 'time_bonus',
+      value: 0
+    },
+    // 前提はコード側で判定（全スキルが1以上のときに開放）
+    prerequisite: [],
+    tier: 5,
+    angle: 0
+  }
 ];
 
 // スキルレベル情報

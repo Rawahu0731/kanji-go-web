@@ -1,0 +1,28 @@
+.maintenance-root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: linear-gradient(180deg, #f7f7fb, #eef2ff);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Meiryo', sans-serif;
+}
+.maintenance-card {
+  max-width: 720px;
+  padding: 32px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  text-align: center;
+}
+.maintenance-card h1 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+}
+.maintenance-card p {
+  margin: 8px 0;
+  color: #334155;
+}
+.maintenance-card a {
+  color: #334155;
+  text-decoration: underline;
+}

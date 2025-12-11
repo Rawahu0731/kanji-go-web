@@ -9,14 +9,15 @@ import { getRarityName as getCharacterRarityName, MAX_CHARACTER_COUNT, CHARACTER
 import '../styles/Shop.css';
 
 function Shop() {
-  const { state, purchaseItem, setTheme, setIcon, setCustomIconUrl, addCardToCollection, openCardPack, pullCharacterGacha } = useGamification();
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'theme' | 'icon' | 'collection' | 'gacha'>('all');
+  const { state, purchaseItem, purchaseWithMedals, pullCollectionPlusGacha, setTheme, setIcon, setCustomIconUrl, addCardToCollection, openCardPack, pullCharacterGacha } = useGamification();
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'theme' | 'icon' | 'collection' | 'gacha' | 'medal'>('all');
   const [purchaseMessage, setPurchaseMessage] = useState<string>('');
   const [showCustomIconModal, setShowCustomIconModal] = useState(false);
   const [customIconError, setCustomIconError] = useState('');
   const [previewImage, setPreviewImage] = useState<string>('');
   const [showCardPackModal, setShowCardPackModal] = useState(false);
   const [openedCards, setOpenedCards] = useState<KanjiCard[]>([]);
+  const [isCollectionPlusModal, setIsCollectionPlusModal] = useState(false);
   const [previousOwnedKanji, setPreviousOwnedKanji] = useState<Set<string>>(new Set());
   const [showGachaModal, setShowGachaModal] = useState(false);
   const [pulledCharacters, setPulledCharacters] = useState<Character[]>([]);
@@ -94,6 +95,7 @@ function Shop() {
           const cards = openCardPack(item.effect);
           cards.forEach(card => addCardToCollection(card));
           setOpenedCards(cards);
+          setIsCollectionPlusModal(false);
           setShowCardPackModal(true);
           setPurchaseMessage(`${item.name}を開封中...`);
         } else if (!success) {
@@ -140,6 +142,25 @@ function Shop() {
         setPurchaseMessage(`${item.name}を引いています...`);
       } else if (!success) {
         setPurchaseMessage('コインが足りません');
+        setTimeout(() => setPurchaseMessage(''), 2000);
+      }
+      return;
+    }
+
+    // メダル専用ガチャ（コレクション+）
+    if (item.category === 'medal') {
+      const success = purchaseWithMedals(item.id, item.price, false);
+
+      if (success && item.effect) {
+        const count = parseInt(item.effect.replace('collection_plus_', '')) || 1;
+        const cards = pullCollectionPlusGacha(count);
+        // collection+ の値はコンテキスト側で反映される
+        setOpenedCards(cards);
+        setIsCollectionPlusModal(true);
+        setShowCardPackModal(true);
+        setPurchaseMessage(`${item.name}を引いています...`);
+      } else if (!success) {
+        setPurchaseMessage('メダルが足りません');
         setTimeout(() => setPurchaseMessage(''), 2000);
       }
       return;
@@ -234,7 +255,10 @@ function Shop() {
       <header className="shop-header">
         <Link to="/" className="back-button">← ホームへ戻る</Link>
         <h1>ショップ</h1>
-        <div className="coins-display">💰 {state.coins} コイン</div>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div className="coins-display">💰 {state.coins} コイン</div>
+          <div className="coins-display" style={{ fontSize: '0.95rem' }}>🏅 {state.medals} メダル</div>
+        </div>
       </header>
 
       <div className="shop-content">
@@ -265,6 +289,12 @@ function Shop() {
             コレクション
           </button>
           <button 
+            onClick={() => setSelectedCategory('medal')}
+            className={selectedCategory === 'medal' ? 'active' : ''}
+          >
+            コレクション+
+          </button>
+          <button 
             onClick={() => setSelectedCategory('gacha')}
             className={selectedCategory === 'gacha' ? 'active' : ''}
           >
@@ -283,6 +313,7 @@ function Shop() {
         <div className="items-grid">
           {filteredItems.map(item => {
             const isPurchased = state.purchasedItems.includes(item.id) || item.price === 0;
+            const isMedal = item.category === 'medal';
             const isActive = (item.category === 'theme' && state.activeTheme === item.effect) ||
                             (item.category === 'icon' && state.activeIcon === item.effect);
             const isFree = item.price === 0;
@@ -321,10 +352,10 @@ function Shop() {
                   </div>
                 )}
                 <div className="item-footer">
-                  <div className="item-price">{isFree ? '無料' : `💰 ${item.price}`}</div>
+                  <div className="item-price">{isFree ? '無料' : isMedal ? `🏅 ${item.price}` : `💰 ${item.price}`}</div>
                   <button
                     onClick={() => handlePurchase(item)}
-                    disabled={!isFree && !isPurchased && state.coins < item.price || isAlreadyOwned || isGachaDisabled}
+                    disabled={(!isFree && !isPurchased && !isMedal && state.coins < item.price) || (!isFree && isMedal && state.medals < item.price) || isAlreadyOwned || isGachaDisabled}
                     className={`purchase-button ${isPurchased ? 'purchased-btn' : ''} ${isActive ? 'active-btn' : ''} ${isAlreadyOwned ? 'owned-btn' : ''}`}
                   >
                     {isGachaDisabled ? '上限達成' :
@@ -469,11 +500,12 @@ function Shop() {
                   // このカードが新規取得かどうかを判定
                   // 開封前のコレクションに含まれていなければ新規
                   const isNewCard = !previousOwnedKanji.has(card.kanji);
-                  
+                  const cardClass = isCollectionPlusModal ? 'card-item collection-plus' : `card-item rarity-${card.rarity}`;
+
                   return (
                     <div 
                       key={card.id} 
-                      className={`card-item rarity-${card.rarity}`}
+                      className={cardClass}
                       style={{ animationDelay: `${index * 0.1}s` }}
                     >
                       <div className="card-image-container">
@@ -485,10 +517,12 @@ function Shop() {
                           }}
                         />
                         <div className="card-kanji">{card.kanji}</div>
-                        <div className={`card-rarity-badge rarity-${card.rarity}`}>
-                          {getRarityName(card.rarity)}
-                        </div>
-                        {isNewCard && (
+                        {!isCollectionPlusModal && (
+                          <div className={`card-rarity-badge rarity-${card.rarity}`}>
+                            {getRarityName(card.rarity)}
+                          </div>
+                        )}
+                        {isNewCard && !isCollectionPlusModal && (
                           <div className="card-new-badge-gacha">NEW!</div>
                         )}
                       </div>
@@ -541,6 +575,27 @@ function Shop() {
                   }}
                 >
                   📚 コレクションを見る
+                </Link>
+                <Link
+                  to="/collection-plus"
+                  style={{
+                    flex: '1',
+                    padding: '1rem',
+                    background: 'linear-gradient(135deg, #ffd27f 0%, #ffc857 100%)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontWeight: '700',
+                    fontSize: '1.1rem',
+                    cursor: 'pointer',
+                    textDecoration: 'none',
+                    textAlign: 'center',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  🏅 コレクション+を見る
                 </Link>
               </div>
             </div>

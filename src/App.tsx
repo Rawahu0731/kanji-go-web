@@ -173,7 +173,7 @@ function App() {
   
   // デバッグモード裏コマンド用
   const [debugTapCount, setDebugTapCount] = useState(0);
-  const [debugTapTimer, setDebugTapTimer] = useState<number | null>(null);
+  const [debugTapTimer, setDebugTapTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   
   // 問題開始時刻を記録（タイムボーナス用）
   const [questionStartTime, setQuestionStartTime] = useState<number | null>(null);
@@ -227,6 +227,8 @@ function App() {
     updateStats, 
     addCharacterXp, 
     getSkillBoost,
+    getSkillLevel,
+    getCollectionPlusEffect,
     useStreakProtection,
     setDebugInfo,
     state: gamificationState,
@@ -594,7 +596,9 @@ function App() {
       // スキルブーストを取得
       const xpBoost = getSkillBoost('xp_boost');
       const coinBoost = getSkillBoost('coin_boost');
-      const medalBoost = getSkillBoost('medal_boost');
+      const skillMedalBoost = getSkillBoost('medal_boost');
+      const collectionPlusEffect = getCollectionPlusEffect();
+      const medalBoost = skillMedalBoost + (collectionPlusEffect ? collectionPlusEffect.medalBoost : 0);
       const doubleRewardChance = getSkillBoost('double_reward');
       const criticalHitChance = getSkillBoost('critical_hit');
       const luckyCoinChance = getSkillBoost('lucky_coin');
@@ -990,6 +994,7 @@ function App() {
               <span className="stat-value">{gamificationState.medals}</span>
             </div>
           )}
+          {/* Collection+ 表示は Collection+ ページに移動しました */}
         </div>
         <div className="nav-links">
           <Link to="/profile" className="nav-link">プロフィール</Link>
@@ -999,7 +1004,11 @@ function App() {
           {showChallengeButton && (
             <Link to="/challenge" className="nav-link">チャレンジ</Link>
           )}
+          {typeof getSkillLevel === 'function' && getSkillLevel('unlock_rotation') > 0 && (
+            <Link to="/revolution" className="nav-link">回転</Link>
+          )}
           <Link to="/collection" className="nav-link">📚 コレクション</Link>
+          <Link to="/collection-plus" className="nav-link">🏅 コレクション+</Link>
           <Link to="/story" className="nav-link">ストーリー</Link>
           <Link to="/ranking" className="nav-link">🏆 ランキング</Link>
         </div>
@@ -1481,7 +1490,9 @@ function App() {
                             // スキルブーストを取得
                             const xpBoost = getSkillBoost('xp_boost');
                             const coinBoost = getSkillBoost('coin_boost');
-                            const medalBoost = getSkillBoost('medal_boost');
+                            const skillMedalBoost = getSkillBoost('medal_boost');
+                            const collectionPlusEffect = getCollectionPlusEffect();
+                            const medalBoost = skillMedalBoost + (collectionPlusEffect ? collectionPlusEffect.medalBoost : 0);
                             const doubleRewardChance = getSkillBoost('double_reward');
                             const criticalHitChance = getSkillBoost('critical_hit');
                             const luckyCoinChance = getSkillBoost('lucky_coin');

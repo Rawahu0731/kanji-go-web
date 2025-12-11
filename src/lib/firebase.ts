@@ -223,6 +223,43 @@ export const getUserRank = async (userId: string): Promise<number> => {
   return userRank;
 };
 
+// Revolution（回転）用の状態を保存/読み込みするヘルパー
+export const saveRevolutionState = async (userId: string, state: any) => {
+  if (!db) throw new Error('Firestore not initialized');
+  const revRef = doc(db, 'revolution', userId);
+
+  const sanitizeForFirestore = (obj: any): any => {
+    if (obj === null || obj === undefined) return undefined;
+    if (Array.isArray(obj)) {
+      const arr = obj
+        .map(v => sanitizeForFirestore(v))
+        .filter(v => v !== undefined);
+      return arr;
+    }
+    if (typeof obj === 'object') {
+      const out: any = {};
+      for (const [k, v] of Object.entries(obj)) {
+        const sv = sanitizeForFirestore(v);
+        if (sv !== undefined) out[k] = sv;
+      }
+      return out;
+    }
+    return obj;
+  };
+
+  const sanitized = sanitizeForFirestore(state) || {};
+  await setDoc(revRef, { ...sanitized, updatedAt: Date.now() }, { merge: true });
+};
+
+export const loadRevolutionState = async (userId: string): Promise<any | null> => {
+  if (!db) throw new Error('Firestore not initialized');
+  const revRef = doc(db, 'revolution', userId);
+  const snap = await getDoc(revRef);
+  if (!snap.exists()) return null;
+  const { updatedAt, ...data } = snap.data() as any;
+  return data || null;
+};
+
 export { auth, db, isFirebaseEnabled };
 
 // Storage helper: convert gs:// URIs to browser-downloadable URLs

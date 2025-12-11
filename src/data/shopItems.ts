@@ -4,7 +4,8 @@ export type ShopItem = {
   name: string;
   description: string;
   price: number;
-  category: 'theme' | 'icon' | 'collection' | 'gacha';
+  // 'medal' はメダル通貨で購入するガチャ等の専用カテゴリ
+  category: 'theme' | 'icon' | 'collection' | 'gacha' | 'medal';
   icon: string;
   effect?: string;
   rarity?: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
@@ -264,6 +265,26 @@ export const SHOP_ITEMS: ShopItem[] = [
     icon: '🎲🎲🎲',
     effect: 'character_gacha_10',
     rarity: 'epic'
+  }
+  ,
+  // メダル専用のコレクション+ガチャ（コレクション+は「+値」を貯める系）
+  {
+    id: 'collection_plus_gacha_single',
+    name: 'コレクション+ 単発',
+    description: 'メダルで引くコレクション+ガチャ。出た漢字の+値が増えます（最大+30）。',
+    price: 500,
+    category: 'medal',
+    icon: '🏅',
+    effect: 'collection_plus_1'
+  },
+  {
+    id: 'collection_plus_gacha_10',
+    name: 'コレクション+ 10連',
+    description: 'メダルで引く10連コレクション+ガチャ。10回分のお得価格（4500メダル）。',
+    price: 4500,
+    category: 'medal',
+    icon: '🏅🏅',
+    effect: 'collection_plus_10'
   }
   ,
   {

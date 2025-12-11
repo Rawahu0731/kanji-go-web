@@ -177,6 +177,13 @@ const SkillTree = () => {
   };
 
   const isSkillUnlocked = (skill: Skill): boolean => {
+    // 特例: 回転アンロックノードは全ての（実際の）スキルが少なくとも1レベルで開放されているときに開放
+    if (skill.id === 'unlock_rotation') {
+      return SKILLS
+        .filter(s => s.id !== 'unlock_rotation' && s.tier > 0) // コアを除き、実際のノード群を対象
+        .every(s => getSkillLevel(s.id) > 0);
+    }
+
     if (!skill.prerequisite || skill.prerequisite.length === 0) return true;
     return skill.prerequisite.every(prereqId => {
       const prereq = SKILLS.find(s => s.id === prereqId);

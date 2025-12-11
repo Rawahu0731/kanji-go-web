@@ -4,7 +4,8 @@ import { BADGES } from '../data/badges';
 import type { Badge } from '../data/badges';
 import type { KanjiCard, CardRarity } from '../data/cardCollection';
 import { CARD_PACK_CONFIG } from '../data/cardCollection';
-import { getRandomKanji } from '../data/allKanji';
+import { getRandomKanji, ALL_KANJI } from '../data/allKanji';
+import shuffleArray from '../lib/shuffle';
 import type { Character, OwnedCharacter } from '../data/characters';
 import { CHARACTERS, pullGacha, getCharacterEffectValue, getXpForCharacterLevel, MAX_CHARACTER_LEVEL, MAX_CHARACTER_COUNT } from '../data/characters';
 import { getKanjiAttributes } from '../data/kanjiAttributes';
@@ -73,6 +74,8 @@ export interface GamificationState {
   challengeBonuses?: Record<string, { xp?: number; coin?: number }>;
   // 最後にスキルを購入(アップグレード)した時刻（ミリ秒）
   lastSkillPurchaseTime?: number;
+  // コレクション（漢字ごとの + 値。最大30でカンスト）
+  collectionPlus?: { kanji: string; plus: number; obtainedAt?: number }[];
 }
 
 
@@ -87,6 +90,7 @@ type GamificationContextType = {
   setMedals: (amount: number) => void;
   unlockBadge: (badgeId: string) => void;
   purchaseItem: (itemId: string, price: number, addToPurchased?: boolean) => boolean;
+  purchaseWithMedals: (itemId: string, price: number, addToPurchased?: boolean) => boolean;
   updateStats: (updates: Partial<GamificationState['stats']>) => void;
   setTheme: (themeId: string) => void;
   setIcon: (iconId: string) => void;
@@ -98,11 +102,16 @@ type GamificationContextType = {
   getLevelProgress: () => number;
   addCardToCollection: (card: KanjiCard) => void;
   openCardPack: (packType: string) => KanjiCard[];
+  // メダルで引くコレクション+ガチャ（返り値は表示用のカードオブジェクト）
+  pullCollectionPlusGacha: (count: number) => KanjiCard[];
+  // コレクション+ に+値を追加（内部でカンスト処理）
+  addToCollectionPlus: (kanji: string, amount?: number) => void;
   pullCharacterGacha: (count: number, guaranteedRarity?: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic') => Character[];
   equipCharacter: (character: OwnedCharacter | null) => void;
   getCharacterBoost: (type: 'xp' | 'coin') => number;
   addCharacterXp: (amount: number) => void;
   getCollectionBoost: () => number;
+  getCollectionPlusEffect: () => { totalPlus: number; xpCoinBonusFraction: number; medalBoost: number };
   addCardsToDeck: (cards: KanjiCard[]) => void;
   removeCardFromDeck: (kanji: string) => void;
   upgradeCardInDeck: (kanji: string, cost: number) => void;
@@ -120,6 +129,8 @@ type GamificationContextType = {
   syncWithFirebase: (userId: string) => Promise<void>;
   loadFromFirebase: (userId: string) => Promise<void>;
 
+  // コレクション（漢字ごとの値。最大30でカンスト）
+  collectionPlus?: { kanji: string; plus: number; obtainedAt?: number }[];
 };
 
 const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
@@ -156,6 +167,8 @@ const INITIAL_STATE: GamificationState = {
   ,
   challengeBonuses: {},
   lastSkillPurchaseTime: undefined
+  ,
+  collectionPlus: []
 };
 
 // データマイグレーション関数
@@ -291,6 +304,9 @@ function migrateData(data: any): GamificationState {
   // メダルとスキルツリーの初期化
   if (data.medals === undefined) {
     data.medals = 0;
+  }
+  if (!data.collectionPlus) {
+    data.collectionPlus = [];
   }
   if (!data.skillLevels) {
     data.skillLevels = [];
@@ -487,22 +503,14 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
-  // 状態変更時にlocalStorageへ保存し、Firebaseへはデバウンスして同期
+  // 状態変更時は localStorage にのみ保存する（同期はユーザー操作で行う）
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-
-    // Firebaseへは即座に多数回送らないようにデバウンスする（最後の変更から2秒後に同期）
-    if (auth.user && isFirebaseEnabled) {
-      const t = setTimeout(() => {
-        if (!isSyncing) {
-          syncWithFirebase(auth.user!.uid);
-        }
-      }, 2000);
-
-      return () => clearTimeout(t);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.warn('Failed to persist gamification state to localStorage:', e);
     }
-    // 依存配列にisSyncingやauthを入れてもuseEffectの呼び出しタイミングは適切です
-  }, [state, auth?.user, isFirebaseEnabled, isSyncing]);
+  }, [state]);
 
   // Firebaseへの同期
   const syncWithFirebase = async (userId: string) => {
@@ -771,7 +779,29 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
 
   const addMedals = (amount: number) => {
     if (!isMedalSystemEnabled()) return; // メダルシステムが無効な場合は何もしない
-    setState(prev => ({ ...prev, medals: prev.medals + amount }));
+    // Apply optional multiplier from Revolution's Infinity Upgrade node (node14)
+    let finalAmount = amount
+    try {
+      const raw = localStorage.getItem('revolution_state_v1')
+      if (raw) {
+        const rev = JSON.parse(raw)
+        const ipUp = rev?.ipUpgrades || {}
+        const hasNode14 = (ipUp.node14 || 0) >= 1
+        if (hasNode14) {
+          const n = Number(rev.infinityPoints || 0)
+          if (isFinite(n) && n >= 0) {
+            const mul = Math.floor(Math.sqrt(n))
+            if (mul >= 1) {
+              finalAmount = Math.floor(amount * mul)
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // ignore parse errors and fall back to base amount
+    }
+    if (finalAmount <= 0) return
+    setState(prev => ({ ...prev, medals: prev.medals + finalAmount }));
   };
 
   const setMedals = (amount: number) => {
@@ -831,6 +861,20 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       purchasedItems: addToPurchased ? [...prev.purchasedItems, itemId] : prev.purchasedItems
     }));
     
+    return true;
+  };
+
+  // メダルで購入（メダル通貨用）
+  const purchaseWithMedals = (itemId: string, price: number, addToPurchased: boolean = true): boolean => {
+    if (!medalSystemEnabled) return false;
+    if (state.medals < price) return false;
+
+    setState(prev => ({
+      ...prev,
+      medals: prev.medals - price,
+      purchasedItems: addToPurchased ? [...prev.purchasedItems, itemId] : prev.purchasedItems
+    }));
+
     return true;
   };
 
@@ -932,6 +976,25 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       }
 
       return { ...prev, cardCollection: newCollection };
+    });
+  };
+
+  // コレクション+ に+値を追加（カンストは30）
+  const addToCollectionPlus = (kanji: string, amount: number = 1) => {
+    setState(prev => {
+      const list = prev.collectionPlus ? [...prev.collectionPlus] : [];
+      const idx = list.findIndex(e => e.kanji === kanji);
+      const now = Date.now();
+
+      if (idx === -1) {
+        list.push({ kanji, plus: Math.min(30, Math.max(1, amount)), obtainedAt: now });
+      } else {
+        const entry = { ...list[idx] };
+        entry.plus = Math.min(30, (entry.plus || 0) + amount);
+        list[idx] = entry;
+      }
+
+      return { ...prev, collectionPlus: list };
     });
   };
 
@@ -1067,6 +1130,51 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     return results;
   };
 
+    // メダルで引くコレクション+ガチャ
+    const pullCollectionPlusGacha = (count: number): KanjiCard[] => {
+      // 除外リスト: 既に+30の漢字は出現しない
+      const excluded = new Set<string>((state.collectionPlus || []).filter(e => (e.plus || 0) >= 30).map(e => e.kanji));
+
+      // プール作成（常用漢字プールから除外）
+      const pool = ALL_KANJI.filter(k => !excluded.has(k.kanji));
+      if (pool.length === 0) return [];
+
+      // シャッフルして先頭から選択
+      const shuffled = shuffleArray(pool.slice());
+      const picks = shuffled.slice(0, Math.min(count, shuffled.length));
+
+      const cards: KanjiCard[] = picks.map((k, i) => ({
+        id: `${Date.now()}-${Math.random()}-${i}`,
+        kanji: k.kanji,
+        reading: k.reading,
+        meaning: k.meaning,
+        level: k.level,
+        rarity: 'common',
+        imageUrl: `/kanji/level-${k.level}/images/${k.kanji}.png`
+      }));
+
+      // コレクション+ の値を増やす（同じ漢字が出たら+1ずつ加算）
+      setState(prev => {
+        const list = prev.collectionPlus ? [...prev.collectionPlus] : [];
+        const map = new Map<string, { kanji: string; plus: number; obtainedAt?: number }>();
+        for (const e of list) map.set(e.kanji, { ...e });
+
+        for (const c of cards) {
+          const existing = map.get(c.kanji);
+          if (!existing) {
+            map.set(c.kanji, { kanji: c.kanji, plus: 1, obtainedAt: Date.now() });
+          } else {
+            existing.plus = Math.min(30, (existing.plus || 0) + 1);
+            map.set(c.kanji, existing);
+          }
+        }
+
+        return { ...prev, collectionPlus: Array.from(map.values()) };
+      });
+
+      return cards;
+    };
+
   // キャラクターを装備/解除
   const equipCharacter = (character: OwnedCharacter | null) => {
     setState(prev => ({ ...prev, equippedCharacter: character }));
@@ -1075,7 +1183,6 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   // コレクションボーナスを計算
   const calculateCollectionBonus = (cards: KanjiCard[]): number => {
     if (cards.length === 0) return 0;
-
     // レアリティに応じたボーナスを計算（被りカウントは廃止）
     let bonus = 0;
     cards.forEach(card => {
@@ -1095,12 +1202,36 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    // collectionPlus によるボーナスを追加
+    // 仕様: collectionPlus の +1 ごとに XP/コインを +1000% (= +10.0) 増加させる
+    const COLLECTION_PLUS_XP_PER_POINT = 10; // +1000% -> 10.0 fraction per +1
+    try {
+      const plusList = state.collectionPlus || [];
+      const totalPlus = plusList.reduce((s, e) => s + (e.plus || 0), 0);
+      if (totalPlus > 0) {
+        bonus += totalPlus * COLLECTION_PLUS_XP_PER_POINT;
+      }
+    } catch (e) {
+      // 安全のため失敗しても無視
+    }
+
     return bonus;
   };
 
   // コレクションボーナスを取得（外部公開用）
   const getCollectionBoost = (): number => {
     return calculateCollectionBonus(state.cardCollection);
+  };
+
+  // Collection+ の合算効果を取得
+  const getCollectionPlusEffect = () => {
+    const plusList = state.collectionPlus || [];
+    const totalPlus = plusList.reduce((s, e) => s + (e.plus || 0), 0);
+    // メダル確率は +1 ごとに +1% (0.01) を追加
+    const COLLECTION_PLUS_MEDAL_PERCENT_PER_POINT = 1; // % per +1
+    const medalBoost = (totalPlus * COLLECTION_PLUS_MEDAL_PERCENT_PER_POINT) / 100; // fraction
+    const xpCoinBonusFraction = totalPlus * 10; // e.g. +1 -> 10.0
+    return { totalPlus, xpCoinBonusFraction, medalBoost };
   };
 
   // 装備中のキャラクターのブースト効果を取得
@@ -1357,8 +1488,10 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       setXp,
       setCoins,
       setMedals,
+      purchaseWithMedals,
       unlockBadge,
       purchaseItem,
+      addToCollectionPlus,
       updateStats,
       setTheme,
       setIcon,
@@ -1371,10 +1504,12 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       addCardToCollection,
       openCardPack,
       pullCharacterGacha,
+      pullCollectionPlusGacha,
       equipCharacter,
       getCharacterBoost,
       addCharacterXp,
       getCollectionBoost,
+      getCollectionPlusEffect,
       addCardsToDeck,
       removeCardFromDeck,
       upgradeCardInDeck,
