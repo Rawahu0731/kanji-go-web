@@ -25,6 +25,13 @@ function saveState(state: any) {
   }
 }
 
+// Format numbers for UI: if absolute value > 1e6 show exponential with 3 significant digits
+function formatForDisplay(n: number, smallFormatter: (v: number) => string) {
+  if (!isFinite(n)) return String(n)
+  if (Math.abs(n) > 1e6) return n.toExponential(2)
+  return smallFormatter(n)
+}
+
 function App() {
   const numberOfRings = 9
   const _saved = loadSavedState()
@@ -259,6 +266,13 @@ function App() {
     // require score to reach the next prestige threshold (doubles each time)
     const nextThreshold = getNextPrestigeThreshold()
     if (score < nextThreshold) return
+    // temporarily disable auto-buy to avoid interference during reset
+    const prevAuto = autoBuyRef.current || false
+    if (prevAuto) setAutoBuy(false)
+
+    // pause RAF loop and mark reset in progress so any queued updates are ignored
+    pauseLoopRef.current = true
+    resetRef.current = true
     setPrestigePoints((p) => p + gain)
     // record the last prestige score as the largest multiple of prestigeThreshold
     // that was just consumed (so next threshold = that + prestigeThreshold)
@@ -309,6 +323,12 @@ function App() {
     lastPosRef.current = Array(numberOfRings).fill(null)
     lastWholeRef.current = Array(numberOfRings).fill(0)
     startRef.current = null
+    // resume RAF loop on next frame and clear reset guard, then restore auto-buy
+    requestAnimationFrame(() => {
+      pauseLoopRef.current = false
+      resetRef.current = false
+      if (prevAuto) setAutoBuy(true)
+    })
   }
 
   // perform promotion: requires enough prestige points for next promotion level
@@ -322,6 +342,8 @@ function App() {
 
     // pause RAF loop so it won't read stale refs/state while we reset
     pauseLoopRef.current = true
+    resetRef.current = true
+    resetRef.current = true
 
     // increment purchased promotion level (update both state and ref synchronously)
     const newPromoLevel = (promotionLevelRef.current || promotionLevel || 0) + 1
@@ -365,6 +387,7 @@ function App() {
     // resume RAF loop on next frame and restore auto-buy to previous state
     requestAnimationFrame(() => {
       pauseLoopRef.current = false
+      resetRef.current = false
       if (prevAuto) setAutoBuy(true)
     })
   }
@@ -526,6 +549,7 @@ function App() {
     // resume RAF loop on next frame and restore auto-buy to previous state
     requestAnimationFrame(() => {
       pauseLoopRef.current = false
+      resetRef.current = false
       if (prevAuto) setAutoBuy(true)
     })
   }
@@ -539,6 +563,7 @@ function App() {
 
     // pause RAF loop so it won't read stale refs/state while we reset
     pauseLoopRef.current = true
+    resetRef.current = true
 
     // increment infinity points (update both state and ref synchronously)
     const newIP = (infinityPoints || 0) + 1
@@ -588,6 +613,7 @@ function App() {
     // resume RAF loop on next frame and restore auto-buy to previous state
     requestAnimationFrame(() => {
       pauseLoopRef.current = false
+      resetRef.current = false
       if (prevAuto) setAutoBuy(true)
     })
   }
@@ -927,29 +953,25 @@ function App() {
 
   function getSkillEffectText(type: IPUpgradeType) {
     switch (type) {
-      case 'node1': return `効果: 合計 ×${Math.pow(2, ipUpgrades[type]).toFixed(2)}（レベルごとに ×2）`
-      case 'node2': return `効果: 合計 ×${Math.pow(1.5, ipUpgrades[type]).toFixed(2)}（レベルごとに ×1.5）`
       case 'node3a': return `自動購入を解放：『Auto』チェックが使用可能になります（ON/OFF）`
-      case 'node3b': return `効果: 合計 ×${Math.pow(1.5, ipUpgrades[type]).toFixed(2)}（レベルごとに ×1.5）`
-      case 'node3c': return `効果: 合計 ×${Math.pow(1.5, ipUpgrades[type]).toFixed(2)}（回転速度：レベルごとに ×1.5）`
-      case 'node4': return `効果: 合計 ×${Math.pow(1.25, ipUpgrades[type]).toFixed(2)}（回転速度・スコア 共に レベルごとに ×1.25）`
-      case 'node5': return `効果: 合計 ×${Math.pow(2, ipUpgrades[type]).toFixed(2)}（レベルごとに ×2）`
-      case 'node6a': return `効果: 合計 ×${Math.pow(3, ipUpgrades[type]).toFixed(2)}（レベルごとに ×3）`
-      case 'node6b': return `効果: 合計 ×${Math.pow(1.4, ipUpgrades[type]).toFixed(2)}（レベルごとに ×1.4）`
-      case 'node6c': return `効果: 合計 ×${Math.pow(3, ipUpgrades[type]).toFixed(2)}（プレステージ強度：レベルごとに ×3）`
-      case 'node7': return `効果: 合計 ×${Math.pow(5, ipUpgrades[type]).toFixed(2)}（レベルごとに ×5）`
-      case 'node8': return `スコア：合計 ×${Math.pow(1.1, ipUpgrades[type]).toFixed(2)}（レベルごとに ×1.1）`
-      case 'node9': return `回転速度：合計 ×${Math.pow(1.1, ipUpgrades[type]).toFixed(2)}（レベルごとに ×1.1）`
-      case 'node10': return `プロモーション自動化を解放：条件を満たすと自動でPromotionを実行します（最大Lv1）`
-      case 'node11': return `スコア：合計 ×${Math.pow(1.15, ipUpgrades[type]).toFixed(2)}（レベルごとに ×1.15）`
-      case 'node12': return `回転速度：合計 ×${Math.pow(1.15, ipUpgrades[type]).toFixed(2)}（レベルごとに ×1.15）`
-      case 'node13': return `効果: 合計 ×${Math.pow(2, ipUpgrades[type]).toFixed(2)}（スコア・回転速度 共に レベルごとに ×2）`
-      case 'node14': return `効果: 所持IPの平方根（floor）でメダル獲得量を乗算します（購入は1回のみ）`
-      default: return ''
+      case 'node1': return `効果: 合計 ×${formatForDisplay(Math.pow(2, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×2）`
+      case 'node2': return `効果: 合計 ×${formatForDisplay(Math.pow(1.5, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.5）`
+      case 'node3b': return `効果: 合計 ×${formatForDisplay(Math.pow(1.5, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.5）`
+      case 'node3c': return `効果: 合計 ×${formatForDisplay(Math.pow(1.5, ipUpgrades[type]), v => v.toFixed(2))}（回転速度：レベルごとに ×1.5）`
+      case 'node4': return `効果: 合計 ×${formatForDisplay(Math.pow(1.25, ipUpgrades[type]), v => v.toFixed(2))}（回転速度・スコア 共に レベルごとに ×1.25）`
+      case 'node5': return `効果: 合計 ×${formatForDisplay(Math.pow(2, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×2）`
+      case 'node6a': return `効果: 合計 ×${formatForDisplay(Math.pow(3, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×3）`
+      case 'node6b': return `効果: 合計 ×${formatForDisplay(Math.pow(1.4, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.4）`
+      case 'node6c': return `効果: 合計 ×${formatForDisplay(Math.pow(3, ipUpgrades[type]), v => v.toFixed(2))}（プレステージ強度：レベルごとに ×3）`
+      case 'node7': return `効果: 合計 ×${formatForDisplay(Math.pow(5, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×5）`
+      case 'node8': return `スコア：合計 ×${formatForDisplay(Math.pow(1.1, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.1）`
+      case 'node9': return `回転速度：合計 ×${formatForDisplay(Math.pow(1.1, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.1）`
     }
   }
   // allow temporarily pausing the RAF loop during state resets (promotion / prestige)
   const pauseLoopRef = useRef<boolean>(false)
+  // guard to ignore any queued score updates while performing a reset
+  const resetRef = useRef<boolean>(false)
   // automatic purchase effect: when score updates and autoBuy enabled,
   // attempt to purchase as many affordable speed upgrades as possible
   useEffect(() => {
@@ -991,7 +1013,10 @@ function App() {
       const baseCost = 1
     const cost = baseCost * Math.pow(100, i) * Math.pow(COST_GROWTH, purch)
     if (score >= cost) {
-      setScore((s) => +(s - cost).toFixed(4))
+      setScore((s) => {
+        if (resetRef.current) return s
+        return +(s - cost).toFixed(4)
+      })
       setSpeedLevels((arr) => {
         const copy = [...arr]
         copy[i] = Math.min((copy[i] || 0) + 1, 100) // cap visible level at 100
@@ -1179,7 +1204,10 @@ function App() {
               const n11 = Math.pow(1.15, ipUpgradesRef.current.node11 || 0)
               const ipScoreMult = n1 * n6a * n6bscore * n7sm * n3bscore * n4score * n8 * n11 * n13
             // multiply score by the number of rotations that occurred
-            setScore((s) => s + prod * prestigeMul * ipScoreMult * rotationsSinceLastUpdate)
+            setScore((s) => {
+              if (resetRef.current) return 0
+              return s + prod * prestigeMul * ipScoreMult * rotationsSinceLastUpdate
+            })
             // multiply increment by the number of rotations that occurred
             return arr.map((v, idx) => (idx === i ? +((v + inc * rotationsSinceLastUpdate).toFixed(2)) : v))
           })
@@ -1225,7 +1253,7 @@ function App() {
               <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                   {hasReachedInfinity ? (
-                    <div style={{ color: '#c0f', fontWeight: 700, fontSize: '1.5rem' }}>IP: {infinityPoints}</div>
+                    <div style={{ color: '#c0f', fontWeight: 700, fontSize: '1.5rem' }}>IP: {formatForDisplay(infinityPoints, v => v.toLocaleString())}</div>
                   ) : null}
                   {/* Debug IP controls removed in production build */}
                 </div>
@@ -1802,22 +1830,22 @@ function App() {
         <div className="color-numbers" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           {ringColors.map((c, i) => (
             <span key={i} style={{ color: c, fontWeight: 700, fontSize: '1rem' }}>
-              {rotValues[i].toFixed(2)}{i < numberOfRings - 1 ? '×' : ''}
+              {formatForDisplay(rotValues[i], v => v.toFixed(2))}{i < numberOfRings - 1 ? '×' : ''}
             </span>
           ))}
         </div>
-        <div className="score" style={{ marginLeft: 8 }}>Score: {score.toFixed(4)}</div>
+        <div className="score" style={{ marginLeft: 8 }}>Score: {formatForDisplay(score, v => v.toFixed(4))}</div>
         <div style={{ marginLeft: 8, whiteSpace: 'nowrap' }}>
             {(() => {
               const displayedMul = computePrestigeMultiplierFromPoints(prestigePoints)
               const promoLevel = promotionLevel || 0
               const promoMultiplier = Math.pow(PROMO_MULT_PER_LEVEL, promoLevel)
-              return `Prestige: ${prestigePoints} (×${displayedMul.toFixed(2)}) ${promoLevel > 0 ? `| Promotion L${promoLevel} (×${promoMultiplier.toFixed(2)})` : '| Promotion: locked'}`
+              return `Prestige: ${formatForDisplay(prestigePoints, v => v.toLocaleString())} (×${formatForDisplay(displayedMul, v => v.toFixed(2))}) ${promoLevel > 0 ? `| Promotion L${promoLevel} (×${formatForDisplay(promoMultiplier, v => v.toFixed(2))})` : '| Promotion: locked'}`
             })()}
         </div>
         <div style={{ marginLeft: 8, display: 'flex', gap: 8, alignItems: 'center', whiteSpace: 'nowrap' }}>
           {hasReachedInfinity ? (
-            <div style={{ color: '#c0f', fontWeight: 700 }}>IP: {infinityPoints}</div>
+                    <div style={{ color: '#c0f', fontWeight: 700 }}>IP: {formatForDisplay(infinityPoints, v => v.toLocaleString())}</div>
           ) : null}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             {hasReachedInfinity ? (
@@ -1853,27 +1881,27 @@ function App() {
                 onClick={doPrestige}
                 style={{ padding: '0.4em 1em', fontSize: '1rem' }}
               >
-                Prestige +{predictedGainNow}
+                Prestige +{formatForDisplay(predictedGainNow, v => Math.floor(v).toLocaleString())}
               </button>
-              <small style={{ marginLeft: 8, color: '#333' }}>If prestige now: ×{predictedMulNow.toFixed(2)}</small>
+              <small style={{ marginLeft: 8, color: '#333' }}>If prestige now: ×{formatForDisplay(predictedMulNow, v => v.toFixed(2))}</small>
               {/* Promotion button: appears when next promotion level is unlocked */}
               {(() => {
                 const nextReq = ((promotionLevel || 0) + 1) * PROMO_THRESHOLD
                 return nextReq <= prestigePoints ? (
                   <button onClick={doPromotion} style={{ marginLeft: 12, padding: '0.4em 0.8em' }}>
-                    Promotion (Cost: {nextReq.toExponential(2)})
+                    Promotion (Cost: {formatForDisplay(nextReq, v => v.toExponential(2))})
                   </button>
                 ) : null
               })()}
               {/* predicted promotion availability after prestige */}
               {predictedPromotionAvailable && (
-                <small style={{ marginLeft: 8, color: '#336' }}>If prestige now → Promotion available (×{predictedPromotionMultiplier.toFixed(2)})</small>
+                <small style={{ marginLeft: 8, color: '#336' }}>If prestige now → Promotion available (×{formatForDisplay(predictedPromotionMultiplier, v => v.toFixed(2))})</small>
               )}
             </>
           )}
           {score < getNextPrestigeThreshold() && (
-            <small style={{ marginLeft: 6, color: '#666' }}>
-              Next: {getNextPrestigeThreshold().toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    <small style={{ marginLeft: 6, color: '#666' }}>
+              Next: {formatForDisplay(getNextPrestigeThreshold(), v => v.toLocaleString(undefined, { maximumFractionDigits: 0 }))}
             </small>
           )}
         {!isFinite(score) && score === Infinity && (
@@ -1912,21 +1940,21 @@ function App() {
               const purch = purchaseCounts[i] || 0
               // cost for next purchase is based on cumulative purchases (so ascension doesn't reset it)
               const cost = baseCost * Math.pow(100, i) * Math.pow(COST_GROWTH, purch)
-              const costLabel = cost >= 1e6 ? cost.toExponential(2) : cost.toLocaleString()
+              const costLabel = cost > 1e6 ? cost.toExponential(2) : cost.toLocaleString()
               return (
                 <div key={i} className="rot-value-item">
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     <span style={{ minWidth: 24, fontWeight: 600 }}>#{i + 1}</span>
-                    <small>{revsPerSec.toFixed(1)}r/s</small>
+                    <small>{formatForDisplay(revsPerSec, v => v.toFixed(1))}r/s</small>
                     {isStatic && <small style={{ color: '#888' }}>⚡</small>}
                     <small>P:{purch}</small>
                     
                     <button
-                      onClick={() => buyUpgrade(i)}
-                      disabled={score < cost}
+                      onClick={() => { if ((level || 0) < 100) buyUpgrade(i) }}
+                      disabled={score < cost || (level || 0) >= 100}
                       style={{ padding: '0.3em 0.8em', fontSize: '0.9rem' }}
                     >
-                      Lv{level}
+                      {(level || 0) >= 100 ? 'Lv100 (MAX)' : `Lv${level}`}
                     </button>
                     <small style={{ fontSize: '0.8rem' }}>{costLabel}</small>
                     
