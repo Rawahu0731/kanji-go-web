@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { getKnownIssues, getPatchNotes } from './lib/microcms'
 import type { Article } from './lib/microcms'
 import { useGamification } from './contexts/GamificationContext'
@@ -253,15 +253,7 @@ function App() {
     }
     return reasons;
   };
-  const location = useLocation();
-  const showChallengeButton = (() => {
-    try {
-      const p = new URLSearchParams(location.search).get('challenge');
-      return p === 'true' || p === '1';
-    } catch (e) {
-      return false;
-    }
-  })();
+  // チャレンジ機能は削除済み — URLフラグ検出ロジックも不要になった
   const [choices, setChoices] = useState<string[]>([]); // 四択の選択肢
   // 単語帳モード: 一覧で読みを隠すかどうか
   const [studyMode, setStudyMode] = useState(false);
@@ -1001,9 +993,7 @@ function App() {
           <Link to="/characters" className="nav-link">⭐ キャラクター</Link>
           <Link to="/shop" className="nav-link">ショップ</Link>
           <Link to="/skill-tree" className="nav-link">🌳 スキルツリー</Link>
-          {showChallengeButton && (
-            <Link to="/challenge" className="nav-link">チャレンジ</Link>
-          )}
+          {/* チャレンジ機能は削除済み */}
           {typeof getSkillLevel === 'function' && getSkillLevel('unlock_rotation') > 0 && (
             <Link to="/revolution" className="nav-link">回転</Link>
           )}

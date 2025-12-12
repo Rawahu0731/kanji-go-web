@@ -14,7 +14,6 @@ import Characters from './pages/Characters.tsx'
 import Ranking from './pages/Ranking.tsx'
 import Terms from './pages/Terms.tsx'
 import SkillTree from './pages/SkillTree.tsx'
-import Challenge from './pages/Challenge.tsx'
 import Revolution from './pages/Revolution.tsx'
 import Maintenance from './pages/Maintenance.tsx'
 import { GamificationProvider } from './contexts/GamificationContext.tsx'
@@ -50,7 +49,6 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="/ranking" element={<Ranking />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/skill-tree" element={<SkillTree />} />
-                <Route path="/challenge" element={<Challenge />} />
                 <Route path="/revolution" element={<Revolution />} />
               </Routes>
             </BrowserRouter>

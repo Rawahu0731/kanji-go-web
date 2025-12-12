@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { SKILLS, type Skill } from '../data/skillTree';
 import { useGamification } from '../contexts/GamificationContext';
 import '../styles/SkillTree.css';
@@ -441,16 +440,7 @@ const SkillTree = () => {
               </div>
             </div>
             <div style={{ marginLeft: 'auto' }}>
-              {/* チャレンジへの遷移ボタン（URLで有効化されているときのみ表示） */}
-              {typeof window !== 'undefined' && (() => {
-                const params = new URLSearchParams(window.location.search);
-                const enabled = params.get('challenge') || params.get('enableChallenge') || params.get('feature');
-                const show = !!enabled && !['0','false','no'].includes((enabled||'').toLowerCase());
-                if (!show) return null;
-                return (
-                  <Link to="/challenge"><button className="challenge-link">チャレンジ</button></Link>
-                );
-              })()}
+              {/* チャレンジ機能は削除済み */}
             </div>
           </div>
 

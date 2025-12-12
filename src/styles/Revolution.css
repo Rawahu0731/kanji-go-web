@@ -202,3 +202,33 @@
     font-size: 0.85rem;
   }
 }
+
+/* Challenge full-screen panel */
+.challenge-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #f9f0ff, #fff0f9);
+  z-index: 9999;
+  overflow: auto;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.challenge-panel__content {
+  background: rgba(255,255,255,0.98);
+  padding: 28px;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+  max-width: 1200px;
+  width: 100%;
+  text-align: left;
+}
+.challenge-panel button {
+  padding: 0.5em 0.9em;
+  font-size: 0.95rem;
+  border-radius: 6px;
+}

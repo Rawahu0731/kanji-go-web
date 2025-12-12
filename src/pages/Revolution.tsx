@@ -137,6 +137,9 @@ function App() {
      node13: number
     node14: number
     node15: number
+    node16: number
+    node17a: number
+    node17b: number
   }>(() => {
     const s = _saved
     if (s && s.ipUpgrades) {
@@ -160,6 +163,9 @@ function App() {
          node13: s.ipUpgrades.node13 || 0,
          node14: s.ipUpgrades.node14 || 0,
          node15: s.ipUpgrades.node15 || 0,
+         node16: s.ipUpgrades.node16 || 0,
+         node17a: s.ipUpgrades.node17a || 0,
+         node17b: s.ipUpgrades.node17b || 0,
       }
     }
     return {
@@ -181,11 +187,16 @@ function App() {
       node12: 0,
        node13: 0,
        node14: 0,
-       node15: 0,
+        node15: 0,
+        node16: 0,
+        node17a: 0,
+        node17b: 0,
     }
   })
   // control visibility of the IP upgrades shop panel
   const [showIpShop, setShowIpShop] = useState<boolean>(false)
+  // control visibility of the Challenge full-screen panel
+  const [showChallengePanel, setShowChallengePanel] = useState<boolean>(false)
   // manual sync status message (一時表示)
   const [syncStatus, setSyncStatus] = useState<string | null>(null)
   
@@ -407,7 +418,7 @@ function App() {
   }
 
   // purchase IP upgrade functions (horizontal skill tree)
-  type IPUpgradeType = 'node1' | 'node2' | 'node3a' | 'node3b' | 'node3c' | 'node4' | 'node5' | 'node6a' | 'node6b' | 'node6c' | 'node7' | 'node8' | 'node9' | 'node10' | 'node11' | 'node12' | 'node15' | 'node13' | 'node14'
+  type IPUpgradeType = 'node1' | 'node2' | 'node3a' | 'node3b' | 'node3c' | 'node4' | 'node5' | 'node6a' | 'node6b' | 'node6c' | 'node7' | 'node8' | 'node9' | 'node10' | 'node11' | 'node12' | 'node15' | 'node13' | 'node14' | 'node16' | 'node17a' | 'node17b'
 
   // check if skill is unlocked (left-to-right progression)
   function isSkillUnlocked(type: IPUpgradeType): boolean {
@@ -450,6 +461,11 @@ function App() {
         return ipUpgrades.node15 >= 1
       case 'node14':
         return ipUpgrades.node13 >= 1
+      case 'node16':
+        return ipUpgrades.node14 >= 1
+      case 'node17a':
+      case 'node17b':
+        return ipUpgrades.node16 >= 1
       default:
         return false
     }
@@ -479,6 +495,10 @@ function App() {
     if (type === 'node15') return 1
     // node14: medal amplifier — single-use
     if (type === 'node14') return 1
+    // node16: challenge unlock — single-use
+    if (type === 'node16') return 1
+    // node17a/node17b: unlimited-level multipliers
+    if (type === 'node17a' || type === 'node17b') return Infinity
     return 5
   }
 
@@ -804,7 +824,7 @@ function App() {
   const treeContainerRef = useRef<HTMLDivElement | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const nodeRefs = useRef<Record<string, HTMLDivElement | null>>({})
-  const nodeKeys = ['node1','node2','node3a','node3b','node3c','node4','node5','node6a','node6b','node6c','node7','node8','node9','node10','node11','node12','node15','node13','node14']
+  const nodeKeys = ['node1','node2','node3a','node3b','node3c','node4','node5','node6a','node6b','node6c','node7','node8','node9','node10','node11','node12','node15','node13','node14','node16','node17a','node17b']
   // Unified color palette by effect category. Map each node to an effect,
   // then generate `nodeColors` from that mapping so all nodes of the same
   // effect share the same color (e.g. Rotate = blue, Score = purple).
@@ -840,6 +860,9 @@ function App() {
     node13: 'both',
     node15: 'automation',
     node14: 'medal',
+    node16: 'automation',
+    node17a: 'score',
+    node17b: 'rotate',
   }
 
   const nodeColors: Record<string, string> = Object.fromEntries(
@@ -856,6 +879,7 @@ function App() {
     ['node5','node6a','#c60'], ['node5','node6b','#f0c'], ['node5','node6c','#09c'],
     ['node6a','node7','#c60'], ['node6b','node7','#f0c'], ['node6c','node7','#09c'],
     ['node7','node8','#f95'], ['node8','node9','#f95'], ['node9','node10','#f95'], ['node10','node11','#f95'], ['node11','node12','#f95'], ['node12','node15','#f95'], ['node15','node13','#f95'], ['node13','node14','#f95'],
+    ['node14','node16','#f95'], ['node16','node17a','#f95'], ['node16','node17b','#f95'],
   ]
   const trailRefs = useRef<(HTMLCanvasElement | null)[]>(Array(numberOfRings).fill(null))
   const overlayRef = useRef<HTMLCanvasElement | null>(null)
@@ -1024,7 +1048,7 @@ function App() {
 
   function getSkillTitle(type: IPUpgradeType) {
     const titles: Record<IPUpgradeType, string> = {
-      node1: 'Score', node2: 'Rotate', node3a: 'Automation', node3b: 'Score Multi', node3c: 'Rotate', node4: 'Boost', node5: 'Rotate+', node6a: 'Mega', node6b: 'Score+', node6c: 'Strong', node7: 'Ultimate', node8: 'Score', node9: 'Rotate', node10: 'Auto Promo', node11: 'Promo+', node12: 'Rotate+', node15: 'Auto Infinity', node13: 'Both', node14: 'Medal Amplifier'
+      node1: 'Score', node2: 'Rotate', node3a: 'Automation', node3b: 'Score Multi', node3c: 'Rotate', node4: 'Boost', node5: 'Rotate+', node6a: 'Mega', node6b: 'Score+', node6c: 'Strong', node7: 'Ultimate', node8: 'Score', node9: 'Rotate', node10: 'Auto Promo', node11: 'Promo+', node12: 'Rotate+', node15: 'Auto Infinity', node13: 'Both', node14: 'Medal Amplifier', node16: 'Challenge', node17a: 'Score x1.2', node17b: 'Rotate x1.2'
     }
     return titles[type]
   }
@@ -1049,7 +1073,10 @@ function App() {
       case 'node12': return `回転速度：合計 ×${formatForDisplay(Math.pow(1.15, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.15）`
       case 'node13': return `効果: 両方の倍率を強化：合計 ×${formatForDisplay(Math.pow(2, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×2）`
       case 'node15': return `効果: 自動Infiniteを解放：スコアが Infinity に到達したとき自動で Infinite を実行します（ON/OFF）`
-      case 'node14': return `効果: メダル獲得倍率を増加（レベルごとに増加）`
+      case 'node14': return `効果: メダル獲得倍率を増加`
+      case 'node16': return `チャレンジ！！`
+      case 'node17a': return `効果: スコア ×${formatForDisplay(Math.pow(1.2, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.2、上限なし）`
+      case 'node17b': return `効果: 回転速度 ×${formatForDisplay(Math.pow(1.2, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.2、上限なし）`
     }
   }
   // allow temporarily pausing the RAF loop during state resets (promotion / prestige)
@@ -1271,8 +1298,9 @@ function App() {
           const n9 = Math.pow(1.1, ipUpgradesRef.current.node9 || 0)
           const n12 = Math.pow(1.15, ipUpgradesRef.current.node12 || 0)
           const n13 = Math.pow(2, ipUpgradesRef.current.node13 || 0)
+          const n17b = Math.pow(1.2, ipUpgradesRef.current.node17b || 0)
           // include node3c as a small per-level rotation speed boost (×1.1 per level)
-          const ipRotationBoost = n2 * n5 * n7 * n4 * n3c * n9 * n12 * n13
+          const ipRotationBoost = n2 * n5 * n7 * n4 * n3c * n9 * n12 * n13 * n17b
           const n3b = Math.pow(1.5, ipUpgradesRef.current.node3b || 0)
           const inc = 0.01 * prestigeMultiplier * promotionMultiplier * ipRotationBoost * n3b * n4
           setRotValues((arr) => {
@@ -1287,7 +1315,8 @@ function App() {
               const n3bscore = Math.pow(1.5, ipUpgradesRef.current.node3b || 0)
               const n4score = Math.pow(1.25, ipUpgradesRef.current.node4 || 0)
               const n8 = Math.pow(1.1, ipUpgradesRef.current.node8 || 0)
-              const ipScoreMult = n1 * n6a * n6bscore * n7sm * n3bscore * n4score * n8 * n13
+              const n17a = Math.pow(1.2, ipUpgradesRef.current.node17a || 0)
+              const ipScoreMult = n1 * n6a * n6bscore * n7sm * n3bscore * n4score * n8 * n13 * n17a
             // multiply score by the number of rotations that occurred
             setScore((s) => {
               if (resetRef.current) return 0
@@ -1348,6 +1377,9 @@ function App() {
                     </label>
                   ) : null}
                 </div>
+                {isSkillUnlocked('node16') ? (
+                  <button onClick={() => { setShowIpShop(false); setShowChallengePanel(true) }} style={{ padding: '0.6em 1.2em', fontSize: '1.1rem', marginRight: 8 }}>チャレンジ</button>
+                ) : null}
                 <button onClick={() => setShowIpShop(false)} style={{ padding: '0.6em 1.2em', fontSize: '1.1rem' }}>Close</button>
               </div>
             </div>
@@ -1596,6 +1628,69 @@ function App() {
                   <div style={{ fontWeight: 700, marginBottom: 6, color: nodeColors.node14, fontSize: '1.1rem' }}>Medal</div>
                   <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: 8 }}></div>
                   <button onClick={() => setSelectedSkill('node14')} disabled={!isSkillUnlocked('node14')} style={{ padding: '0.4em 0.8em', fontSize: '0.85rem', width: '100%' }}>Open</button>
+                </div>
+              </div>
+              <div ref={(el) => { nodeRefs.current['node16'] = el }} style={{ position: 'absolute', left: '2590px', top: '160px', width: '80px', height: '80px', zIndex: 2 }}>
+                <div style={{
+                  boxSizing: 'border-box',
+                  width: '100%',
+                  height: '100%',
+                  padding: 8,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  background: isSkillUnlocked('node16') ? 'rgba(255,255,255,0.95)' : 'rgba(200,200,200,0.3)',
+                  borderRadius: 8,
+                  border: isSkillUnlocked('node16') ? `3px solid ${nodeColors.node16}` : '3px dashed #999',
+                  boxShadow: isSkillUnlocked('node16') ? '0 6px 12px rgba(0,0,0,0.2)' : 'none',
+                  opacity: isSkillUnlocked('node16') ? 1 : 0.85
+                }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6, color: nodeColors.node16, fontSize: '1.1rem' }}>Challenge</div>
+                  <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: 8 }}></div>
+                  <button onClick={() => setSelectedSkill('node16')} disabled={!isSkillUnlocked('node16')} style={{ padding: '0.4em 0.8em', fontSize: '0.85rem', width: '100%' }}>Open</button>
+                </div>
+              </div>
+              <div ref={(el) => { nodeRefs.current['node17a'] = el }} style={{ position: 'absolute', left: '2750px', top: '80px', width: '80px', height: '80px', zIndex: 2 }}>
+                <div style={{
+                  boxSizing: 'border-box',
+                  width: '100%',
+                  height: '100%',
+                  padding: 8,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  background: isSkillUnlocked('node17a') ? 'rgba(255,255,255,0.95)' : 'rgba(200,200,200,0.3)',
+                  borderRadius: 8,
+                  border: isSkillUnlocked('node17a') ? `3px solid ${nodeColors.node17a}` : '3px dashed #999',
+                  boxShadow: isSkillUnlocked('node17a') ? '0 6px 12px rgba(0,0,0,0.2)' : 'none',
+                  opacity: isSkillUnlocked('node17a') ? 1 : 0.85
+                }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6, color: nodeColors.node17a, fontSize: '1.1rem' }}>Score x1.2</div>
+                  <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: 8 }}></div>
+                  <button onClick={() => setSelectedSkill('node17a')} disabled={!isSkillUnlocked('node17a')} style={{ padding: '0.4em 0.8em', fontSize: '0.85rem', width: '100%' }}>Open</button>
+                </div>
+              </div>
+              <div ref={(el) => { nodeRefs.current['node17b'] = el }} style={{ position: 'absolute', left: '2750px', top: '240px', width: '80px', height: '80px', zIndex: 2 }}>
+                <div style={{
+                  boxSizing: 'border-box',
+                  width: '100%',
+                  height: '100%',
+                  padding: 8,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  background: isSkillUnlocked('node17b') ? 'rgba(255,255,255,0.95)' : 'rgba(200,200,200,0.3)',
+                  borderRadius: 8,
+                  border: isSkillUnlocked('node17b') ? `3px solid ${nodeColors.node17b}` : '3px dashed #999',
+                  boxShadow: isSkillUnlocked('node17b') ? '0 6px 12px rgba(0,0,0,0.2)' : 'none',
+                  opacity: isSkillUnlocked('node17b') ? 1 : 0.85
+                }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6, color: nodeColors.node17b, fontSize: '1.1rem' }}>Rotate x1.2</div>
+                  <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: 8 }}></div>
+                  <button onClick={() => setSelectedSkill('node17b')} disabled={!isSkillUnlocked('node17b')} style={{ padding: '0.4em 0.8em', fontSize: '0.85rem', width: '100%' }}>Open</button>
                 </div>
               </div>
               <div ref={(el) => { nodeRefs.current['node2'] = el }} style={{ position: 'absolute', left: '150px', top: '160px', width: '80px', height: '80px', zIndex: 2 }}>
@@ -1932,6 +2027,22 @@ function App() {
                 </div>
 
               </div>
+          </div>
+        </div>
+      )}
+
+      {/* Challenge full-screen panel (covers entire viewport) */}
+      {showChallengePanel && (
+        <div className="challenge-panel" onClick={() => setShowChallengePanel(false)}>
+          <div className="challenge-panel__content" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800 }}>チャレンジ</div>
+              <div>
+                <button style={{ marginRight: 8 }} onClick={() => { setShowChallengePanel(false); setShowIpShop(true) }}>戻る</button>
+                <button onClick={() => setShowChallengePanel(false)}>閉じる</button>
+              </div>
+            </div>
+            <div style={{ fontSize: '1.1rem', color: '#444' }}>準備中です</div>
           </div>
         </div>
       )}

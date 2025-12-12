@@ -70,8 +70,7 @@ export interface GamificationState {
   lastInterestTime?: number; // 最後に利子を計算した時刻（ミリ秒）
   // デバッグ: 最後に計算した報酬や倍率などの情報（UIで確認するため）
   debugLastReward?: Record<string, any>;
-  // チャレンジ関連: 永続的に付与されるボーナス (例: { "no_skill_purchase_10min": { xp: 0.05 } })
-  challengeBonuses?: Record<string, { xp?: number; coin?: number }>;
+  // (Challenge 機能削除)
   // 最後にスキルを購入(アップグレード)した時刻（ミリ秒）
   lastSkillPurchaseTime?: number;
   // コレクション（漢字ごとの + 値。最大30でカンスト）
@@ -130,10 +129,7 @@ type GamificationContextType = {
   getSkillLevel: (skillId: string) => number;
   getSkillBoost: (type: 'xp_boost' | 'coin_boost' | 'medal_boost' | 'streak_amp' | 'double_reward' | 'critical_hit' | 'lucky_coin' | 'xp_multiplier' | 'time_bonus') => number;
   useStreakProtection: () => boolean;
-  // チャレンジを完了扱いにして恒久ボーナスを付与する
-  completeChallenge: (challengeId: string, bonus: { xp?: number; coin?: number }) => void;
-  // チャレンジ由来の現在のブーストを取得（合計）
-  getChallengeBoost: (type: 'xp' | 'coin') => number;
+  // (Challenge 機能削除)
   // デバッグ情報をセット/クリアする
   setDebugInfo: (info: Record<string, any> | null) => void;
   syncWithFirebase: (userId: string) => Promise<void>;
@@ -175,7 +171,6 @@ const INITIAL_STATE: GamificationState = {
   username: 'プレイヤー',
   lastInterestTime: Date.now()
   ,
-  challengeBonuses: {},
   lastSkillPurchaseTime: undefined
   ,
   collectionPlus: [],
@@ -325,10 +320,7 @@ function migrateData(data: any): GamificationState {
   if (data.streakProtectionCount === undefined) {
     data.streakProtectionCount = 0;
   }
-  // チャレンジ関連の初期化
-  if (!data.challengeBonuses) {
-    data.challengeBonuses = {};
-  }
+  // (Challenge 機能削除)
   if (data.lastSkillPurchaseTime === undefined) {
     data.lastSkillPurchaseTime = undefined;
   }
@@ -689,9 +681,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       // コレクションボーナスを適用（掛け算）
       const collectionBonus = calculateCollectionBonus(prev.cardCollection);
       multiplier *= (1 + collectionBonus);
-      // チャレンジ由来の恒久XPボーナスを適用
-      const challengeXpBoost = prev.challengeBonuses ? Object.values(prev.challengeBonuses).reduce((acc, b) => acc + (b.xp || 0), 0) : 0;
-      multiplier *= (1 + challengeXpBoost);
+      // (Challenge 機能削除)
       
       const boostedAmount = Math.floor(amount * multiplier);
       // 累計XP(totalXp)は常に加算する
@@ -781,9 +771,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       // コレクションボーナスを適用（掛け算）
       const collectionBonus = calculateCollectionBonus(prev.cardCollection);
       multiplier *= (1 + collectionBonus);
-      // チャレンジ由来の恒久コインボーナスを適用
-      const challengeCoinBoost = prev.challengeBonuses ? Object.values(prev.challengeBonuses).reduce((acc, b) => acc + (b.coin || 0), 0) : 0;
-      multiplier *= (1 + challengeCoinBoost);
+      // (Challenge 機能削除)
       
       const boostedAmount = Math.floor(amount * multiplier);
       const newCoins = prev.coins + boostedAmount;
@@ -1568,33 +1556,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  // チャレンジを完了扱いにして恒久ボーナスを付与する
-  const completeChallenge = (challengeId: string, bonus: { xp?: number; coin?: number }) => {
-    setState(prev => {
-      const existing = prev.challengeBonuses || {};
-      if (existing[challengeId]) return prev; // 既に付与済み
-
-      const newBonuses = { ...(prev.challengeBonuses || {}), [challengeId]: bonus };
-
-      // 簡易通知
-      try {
-        const n = document.createElement('div');
-        n.style.cssText = 'position:fixed;top:20px;right:20px;padding:12px 16px;background:#2b6cb0;color:white;border-radius:10px;z-index:12000;box-shadow:0 8px 20px rgba(0,0,0,0.2);';
-        n.textContent = '🎖️ チャレンジ達成！恒久ボーナスを獲得しました';
-        document.body.appendChild(n);
-        setTimeout(() => { n.style.opacity = '0'; n.style.transition = 'opacity 0.4s'; setTimeout(() => n.remove(), 450); }, 2000);
-      } catch (e) {
-        // ignore
-      }
-
-      return { ...prev, challengeBonuses: newBonuses };
-    });
-  };
-
-  const getChallengeBoost = (type: 'xp' | 'coin') => {
-    const c = state.challengeBonuses || {};
-    return Object.values(c).reduce((acc, b) => acc + (type === 'xp' ? (b.xp || 0) : (b.coin || 0)), 0);
-  };
+  // (Challenge 機能削除)
 
   return (
     <GamificationContext.Provider value={{
@@ -1641,8 +1603,6 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       getSkillLevel,
       getSkillBoost,
       useStreakProtection,
-      completeChallenge,
-      getChallengeBoost,
       setDebugInfo,
       syncWithFirebase,
       loadFromFirebase
