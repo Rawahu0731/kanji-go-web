@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { BADGES } from '../data/badges';
 import type { Badge } from '../data/badges';
@@ -137,7 +137,7 @@ type GamificationContextType = {
   // デバッグ情報をセット/クリアする
   setDebugInfo: (info: Record<string, any> | null) => void;
   syncWithFirebase: (userId: string) => Promise<void>;
-  loadFromFirebase: (userId: string) => Promise<void>;
+  loadFromFirebase: (userId: string, preferRemote?: boolean) => Promise<void>;
 
   // コレクション（漢字ごとの値。最大30でカンスト）
   collectionPlus?: { kanji: string; plus: number; obtainedAt?: number }[];
@@ -433,6 +433,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [medalSystemEnabled, setMedalSystemEnabled] = useState(isMedalSystemEnabled());
   const auth = useAuth();
+  const prevAuthRef = useRef<typeof auth.user | null>(auth.user || null);
 
   // URLパラメータの変化を監視してメダルシステムの有効状態を更新
   useEffect(() => {
@@ -474,8 +475,11 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   // ログイン時にFirebaseからデータを読み込み
   useEffect(() => {
     if (auth.user && isFirebaseEnabled) {
-      loadFromFirebase(auth.user.uid);
+      const comingFromLoggedOut = !prevAuthRef.current && !!auth.user
+      // pass flag to prefer remote when coming from logged-out
+      loadFromFirebase(auth.user.uid, comingFromLoggedOut);
     }
+    prevAuthRef.current = auth.user || null
   }, [auth.user]);
 
   // 負債の利子計算（5分ごと、複利10%）
@@ -598,7 +602,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   };
 
   // Firebaseからデータを読み込み
-  const loadFromFirebase = async (userId: string) => {
+  const loadFromFirebase = async (userId: string, preferRemote: boolean = false) => {
     if (!isFirebaseEnabled) return;
     
     try {
@@ -617,10 +621,12 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       const remoteTs = migratedRemote ? ((migratedRemote as any).updatedAt || 0) : 0;
       const localTs = migratedLocal ? ((migratedLocal as any).updatedAt || 0) : 0;
 
-      // 最新の方を採用する
+      // 最新の方を採用する（ただし未ログイン→ログインの場合は preferRemote フラグでリモートを優先）
       let chosen: any = null;
 
-      if (migratedRemote && remoteTs > localTs) {
+      if (preferRemote && migratedRemote) {
+        chosen = migratedRemote;
+      } else if (migratedRemote && remoteTs > localTs) {
         chosen = migratedRemote;
       } else if (migratedLocal && localTs >= remoteTs) {
         chosen = migratedLocal;

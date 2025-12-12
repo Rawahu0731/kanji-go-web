@@ -40,6 +40,8 @@ function App() {
   
   const auth = useAuth()
 
+  const prevAuthRef = useRef<typeof auth.user | null>(auth.user || null)
+
   // primary gameplay state
   const [rotValues, setRotValues] = useState<number[]>(() => {
     const s = _saved
@@ -92,6 +94,11 @@ function App() {
     return s && typeof s.autoPromo === 'boolean' ? s.autoPromo : false
   })
 
+  const [autoInfinite, setAutoInfinite] = useState<boolean>(() => {
+    const s = _saved
+    return s && typeof s.autoInfinite === 'boolean' ? s.autoInfinite : false
+  })
+
   const [infinityPoints, setInfinityPoints] = useState<number>(() => {
     const s = _saved
     return s && typeof s.infinityPoints === 'number' ? s.infinityPoints : 0
@@ -128,7 +135,8 @@ function App() {
     node11: number
     node12: number
      node13: number
-     node14: number
+    node14: number
+    node15: number
   }>(() => {
     const s = _saved
     if (s && s.ipUpgrades) {
@@ -151,6 +159,7 @@ function App() {
         node12: s.ipUpgrades.node12 || 0,
          node13: s.ipUpgrades.node13 || 0,
          node14: s.ipUpgrades.node14 || 0,
+         node15: s.ipUpgrades.node15 || 0,
       }
     }
     return {
@@ -172,6 +181,7 @@ function App() {
       node12: 0,
        node13: 0,
        node14: 0,
+       node15: 0,
     }
   })
   // control visibility of the IP upgrades shop panel
@@ -397,7 +407,7 @@ function App() {
   }
 
   // purchase IP upgrade functions (horizontal skill tree)
-  type IPUpgradeType = 'node1' | 'node2' | 'node3a' | 'node3b' | 'node3c' | 'node4' | 'node5' | 'node6a' | 'node6b' | 'node6c' | 'node7' | 'node8' | 'node9' | 'node10' | 'node11' | 'node12' | 'node13' | 'node14'
+  type IPUpgradeType = 'node1' | 'node2' | 'node3a' | 'node3b' | 'node3c' | 'node4' | 'node5' | 'node6a' | 'node6b' | 'node6c' | 'node7' | 'node8' | 'node9' | 'node10' | 'node11' | 'node12' | 'node15' | 'node13' | 'node14'
 
   // check if skill is unlocked (left-to-right progression)
   function isSkillUnlocked(type: IPUpgradeType): boolean {
@@ -434,8 +444,10 @@ function App() {
         return ipUpgrades.node10 >= 1
       case 'node12':
         return ipUpgrades.node11 >= 1
-      case 'node13':
+      case 'node15':
         return ipUpgrades.node12 >= 1
+      case 'node13':
+        return ipUpgrades.node15 >= 1
       case 'node14':
         return ipUpgrades.node13 >= 1
       default:
@@ -463,6 +475,8 @@ function App() {
     if (type === 'node3a') return 1
     // node10: unlocks promotion automation — single-use (max 1)
     if (type === 'node10') return 1
+    // node15: auto-infinity unlock — single-use
+    if (type === 'node15') return 1
     // node14: medal amplifier — single-use
     if (type === 'node14') return 1
     return 5
@@ -622,7 +636,7 @@ function App() {
 
   // persist state to localStorage whenever important pieces change
   useEffect(() => {
-    saveState({ rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, purchaseCounts, lastPrestigeScore, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount })
+    saveState({ rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, autoInfinite, purchaseCounts, lastPrestigeScore, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount })
   }, [
     JSON.stringify(rotValues),
     score,
@@ -632,6 +646,7 @@ function App() {
     promotionLevel,
     autoBuy,
     autoPromo,
+    autoInfinite,
     JSON.stringify(purchaseCounts),
     lastPrestigeScore,
     infinityPoints,
@@ -642,7 +657,7 @@ function App() {
 
   // Manual sync helper: save localStorage and optionally push to Firestore only when user requests
   const handleManualSync = async () => {
-    const toSave = { rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, purchaseCounts, lastPrestigeScore, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount }
+    const toSave = { rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, autoInfinite, purchaseCounts, lastPrestigeScore, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount }
     // always save to localStorage (already done by other effect, but ensure freshness)
     saveState(toSave)
 
@@ -671,7 +686,12 @@ function App() {
 
   // Load Revolution state from Firestore when user signs in
   useEffect(() => {
-    if (!auth.user || !isFirebaseEnabled) return
+    if (!isFirebaseEnabled) return
+
+    // detect transition from logged-out -> logged-in using prevAuthRef
+    const comingFromLoggedOut = prevAuthRef.current == null && auth.user != null
+    // update prevAuthRef for next render
+    prevAuthRef.current = auth.user || null
 
     let cancelled = false
     const load = async () => {
@@ -679,37 +699,77 @@ function App() {
         const remote = await loadRevolutionState(auth.user!.uid)
         if (!remote || cancelled) return
 
-        // Merge remote values into local state, preserving defaults
-        if (Array.isArray(remote.rotValues)) {
-          const arr = Array(numberOfRings).fill(1)
-          for (let i = 0; i < Math.min(remote.rotValues.length, numberOfRings); i++) arr[i] = remote.rotValues[i]
-          setRotValues(arr)
+        if (comingFromLoggedOut) {
+          // Overwrite local state fully with remote values (apply sensible defaults)
+          try { saveState(remote) } catch (e) { /* ignore */ }
+
+          // Replace whole pieces of state where remote provides values,
+          // but fall back to defaults for missing fields to keep UI stable.
+          if (Array.isArray(remote.rotValues)) {
+            const arr = Array(numberOfRings).fill(1)
+            for (let i = 0; i < Math.min(remote.rotValues.length, numberOfRings); i++) arr[i] = remote.rotValues[i]
+            setRotValues(arr)
+          }
+          setScore(typeof remote.score === 'number' ? remote.score : 0)
+          if (Array.isArray(remote.speedLevels)) {
+            const arr = Array(numberOfRings).fill(0)
+            for (let i = 0; i < Math.min(remote.speedLevels.length, numberOfRings); i++) arr[i] = remote.speedLevels[i]
+            setSpeedLevels(arr)
+          }
+          setPrestigePoints(typeof remote.prestigePoints === 'number' ? remote.prestigePoints : 0)
+          setPrestigeStrength(typeof remote.prestigeStrength === 'number' ? remote.prestigeStrength : 0)
+          setPromotionLevel(typeof remote.promotionLevel === 'number' ? remote.promotionLevel : 0)
+          setAutoBuy(typeof remote.autoBuy === 'boolean' ? remote.autoBuy : false)
+          setAutoPromo(typeof remote.autoPromo === 'boolean' ? remote.autoPromo : false)
+          setAutoInfinite(typeof remote.autoInfinite === 'boolean' ? remote.autoInfinite : false)
+          setInfinityPoints(typeof remote.infinityPoints === 'number' ? remote.infinityPoints : 0)
+          setHasReachedInfinity(typeof remote.hasReachedInfinity === 'boolean' ? remote.hasReachedInfinity : false)
+          setInfinityReachCount(typeof remote.infinityReachCount === 'number' ? remote.infinityReachCount : 0)
+          if (remote.ipUpgrades && typeof remote.ipUpgrades === 'object') {
+            const ip: any = {}
+            for (const k of Object.keys(remote.ipUpgrades)) ip[k] = remote.ipUpgrades[k] || 0
+            setIpUpgrades(ip)
+          }
+          if (Array.isArray(remote.purchaseCounts)) {
+            const arr = Array(numberOfRings).fill(0)
+            for (let i = 0; i < Math.min(remote.purchaseCounts.length, numberOfRings); i++) arr[i] = remote.purchaseCounts[i]
+            setPurchaseCounts(arr)
+          }
+          setLastPrestigeScore(typeof remote.lastPrestigeScore === 'number' ? remote.lastPrestigeScore : 0)
+        } else {
+          // normal behavior: merge remote into local state (preserve unspecified local fields)
+          if (Array.isArray(remote.rotValues)) {
+            const arr = Array(numberOfRings).fill(1)
+            for (let i = 0; i < Math.min(remote.rotValues.length, numberOfRings); i++) arr[i] = remote.rotValues[i]
+            setRotValues(arr)
+          }
+          if (typeof remote.score === 'number') setScore(remote.score)
+          if (Array.isArray(remote.speedLevels)) {
+            const arr = Array(numberOfRings).fill(0)
+            for (let i = 0; i < Math.min(remote.speedLevels.length, numberOfRings); i++) arr[i] = remote.speedLevels[i]
+            setSpeedLevels(arr)
+          }
+          if (typeof remote.prestigePoints === 'number') setPrestigePoints(remote.prestigePoints)
+          if (typeof remote.prestigeStrength === 'number') setPrestigeStrength(remote.prestigeStrength)
+          if (typeof remote.promotionLevel === 'number') setPromotionLevel(remote.promotionLevel)
+          if (typeof remote.autoBuy === 'boolean') setAutoBuy(remote.autoBuy)
+          if (typeof remote.autoPromo === 'boolean') setAutoPromo(remote.autoPromo)
+          if (typeof remote.autoInfinite === 'boolean') setAutoInfinite(remote.autoInfinite)
+          if (typeof remote.infinityPoints === 'number') setInfinityPoints(remote.infinityPoints)
+          if (typeof remote.hasReachedInfinity === 'boolean') setHasReachedInfinity(remote.hasReachedInfinity)
+          if (typeof remote.infinityReachCount === 'number') setInfinityReachCount(remote.infinityReachCount)
+          if (remote.ipUpgrades && typeof remote.ipUpgrades === 'object') {
+            const ip: any = {}
+            for (const k of Object.keys(remote.ipUpgrades)) ip[k] = remote.ipUpgrades[k] || 0
+            setIpUpgrades((prev) => ({ ...prev, ...ip }))
+          }
+          if (Array.isArray(remote.purchaseCounts)) {
+            const arr = Array(numberOfRings).fill(0)
+            for (let i = 0; i < Math.min(remote.purchaseCounts.length, numberOfRings); i++) arr[i] = remote.purchaseCounts[i]
+            setPurchaseCounts(arr)
+          }
+          if (typeof remote.lastPrestigeScore === 'number') setLastPrestigeScore(remote.lastPrestigeScore)
         }
-        if (typeof remote.score === 'number') setScore(remote.score)
-        if (Array.isArray(remote.speedLevels)) {
-          const arr = Array(numberOfRings).fill(0)
-          for (let i = 0; i < Math.min(remote.speedLevels.length, numberOfRings); i++) arr[i] = remote.speedLevels[i]
-          setSpeedLevels(arr)
-        }
-        if (typeof remote.prestigePoints === 'number') setPrestigePoints(remote.prestigePoints)
-        if (typeof remote.prestigeStrength === 'number') setPrestigeStrength(remote.prestigeStrength)
-        if (typeof remote.promotionLevel === 'number') setPromotionLevel(remote.promotionLevel)
-        if (typeof remote.autoBuy === 'boolean') setAutoBuy(remote.autoBuy)
-        if (typeof remote.autoPromo === 'boolean') setAutoPromo(remote.autoPromo)
-        if (typeof remote.infinityPoints === 'number') setInfinityPoints(remote.infinityPoints)
-        if (typeof remote.hasReachedInfinity === 'boolean') setHasReachedInfinity(remote.hasReachedInfinity)
-        if (typeof remote.infinityReachCount === 'number') setInfinityReachCount(remote.infinityReachCount)
-        if (remote.ipUpgrades && typeof remote.ipUpgrades === 'object') {
-          const ip: any = {}
-          for (const k of Object.keys(remote.ipUpgrades)) ip[k] = remote.ipUpgrades[k] || 0
-          setIpUpgrades((prev) => ({ ...prev, ...ip }))
-        }
-        if (Array.isArray(remote.purchaseCounts)) {
-          const arr = Array(numberOfRings).fill(0)
-          for (let i = 0; i < Math.min(remote.purchaseCounts.length, numberOfRings); i++) arr[i] = remote.purchaseCounts[i]
-          setPurchaseCounts(arr)
-        }
-        if (typeof remote.lastPrestigeScore === 'number') setLastPrestigeScore(remote.lastPrestigeScore)
       } catch (e) {
         console.warn('Failed to load revolution state from Firebase:', e)
       }
@@ -744,7 +804,7 @@ function App() {
   const treeContainerRef = useRef<HTMLDivElement | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const nodeRefs = useRef<Record<string, HTMLDivElement | null>>({})
-  const nodeKeys = ['node1','node2','node3a','node3b','node3c','node4','node5','node6a','node6b','node6c','node7','node8','node9','node10','node11','node12','node13','node14']
+  const nodeKeys = ['node1','node2','node3a','node3b','node3c','node4','node5','node6a','node6b','node6c','node7','node8','node9','node10','node11','node12','node15','node13','node14']
   // Unified color palette by effect category. Map each node to an effect,
   // then generate `nodeColors` from that mapping so all nodes of the same
   // effect share the same color (e.g. Rotate = blue, Score = purple).
@@ -778,6 +838,7 @@ function App() {
     node11: 'score',
     node12: 'rotate',
     node13: 'both',
+    node15: 'automation',
     node14: 'medal',
   }
 
@@ -794,7 +855,7 @@ function App() {
     ['node4','node5','#888'],
     ['node5','node6a','#c60'], ['node5','node6b','#f0c'], ['node5','node6c','#09c'],
     ['node6a','node7','#c60'], ['node6b','node7','#f0c'], ['node6c','node7','#09c'],
-    ['node7','node8','#f95'], ['node8','node9','#f95'], ['node9','node10','#f95'], ['node10','node11','#f95'], ['node11','node12','#f95'], ['node12','node13','#f95'], ['node13','node14','#f95'],
+    ['node7','node8','#f95'], ['node8','node9','#f95'], ['node9','node10','#f95'], ['node10','node11','#f95'], ['node11','node12','#f95'], ['node12','node15','#f95'], ['node15','node13','#f95'], ['node13','node14','#f95'],
   ]
   const trailRefs = useRef<(HTMLCanvasElement | null)[]>(Array(numberOfRings).fill(null))
   const overlayRef = useRef<HTMLCanvasElement | null>(null)
@@ -926,6 +987,18 @@ function App() {
       // ignore
     }
   }, [score, prestigePoints, ipUpgrades.node10, promotionLevel])
+  // Auto-Infinite: when score reaches Infinity and feature purchased + enabled, perform Infinite
+  useEffect(() => {
+    if ((ipUpgrades.node15 || 0) < 1) return
+    if (!autoInfiniteRef.current) return
+    try {
+      if (score === Infinity) {
+        doInfinite()
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [score, ipUpgrades.node15, autoInfinite])
   // unlock auto-buy when node3a is purchased
   useEffect(() => {
     if ((ipUpgrades.node3a || 0) >= 1) {
@@ -942,11 +1015,16 @@ function App() {
   useEffect(() => {
     autoPromoRef.current = autoPromo
   }, [autoPromo])
+  // auto-infinite toggle ref
+  const autoInfiniteRef = useRef<boolean>(autoInfinite)
+  useEffect(() => {
+    autoInfiniteRef.current = autoInfinite
+  }, [autoInfinite])
   const [selectedSkill, setSelectedSkill] = useState<IPUpgradeType | null>(null)
 
   function getSkillTitle(type: IPUpgradeType) {
     const titles: Record<IPUpgradeType, string> = {
-      node1: 'Score', node2: 'Rotate', node3a: 'Automation', node3b: 'Score Multi', node3c: 'Rotate', node4: 'Boost', node5: 'Rotate+', node6a: 'Mega', node6b: 'Score+', node6c: 'Strong', node7: 'Ultimate', node8: 'Score', node9: 'Rotate', node10: 'Auto Promo', node11: 'Promo+', node12: 'Rotate+', node13: 'Both', node14: 'Medal Amplifier'
+      node1: 'Score', node2: 'Rotate', node3a: 'Automation', node3b: 'Score Multi', node3c: 'Rotate', node4: 'Boost', node5: 'Rotate+', node6a: 'Mega', node6b: 'Score+', node6c: 'Strong', node7: 'Ultimate', node8: 'Score', node9: 'Rotate', node10: 'Auto Promo', node11: 'Promo+', node12: 'Rotate+', node15: 'Auto Infinity', node13: 'Both', node14: 'Medal Amplifier'
     }
     return titles[type]
   }
@@ -970,6 +1048,7 @@ function App() {
       case 'node11': return `効果: プロモーション倍率 ×${formatForDisplay(Math.pow(5, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×5、プロモーションの恩恵が強化されます）`
       case 'node12': return `回転速度：合計 ×${formatForDisplay(Math.pow(1.15, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.15）`
       case 'node13': return `効果: 両方の倍率を強化：合計 ×${formatForDisplay(Math.pow(2, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×2）`
+      case 'node15': return `効果: 自動Infiniteを解放：スコアが Infinity に到達したとき自動で Infinite を実行します（ON/OFF）`
       case 'node14': return `効果: メダル獲得倍率を増加（レベルごとに増加）`
     }
   }
@@ -1261,7 +1340,13 @@ function App() {
                   {hasReachedInfinity ? (
                     <div style={{ color: '#c0f', fontWeight: 700, fontSize: '1.5rem' }}>IP: {formatForDisplay(infinityPoints, v => v.toLocaleString())}</div>
                   ) : null}
-                  {/* Debug IP controls removed in production build */}
+                  {/* Auto-Infinite toggle: shown only after node15 unlocked */}
+                  {isSkillUnlocked('node15') ? (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#444' }}>
+                      <input type="checkbox" checked={autoInfinite} onChange={(e) => setAutoInfinite(e.target.checked)} disabled={(ipUpgrades.node15 || 0) < 1} />
+                      <span style={{ fontSize: '0.95rem' }}>{(ipUpgrades.node15 || 0) >= 1 ? 'Auto∞' : 'Auto∞ (購入で有効)'}</span>
+                    </label>
+                  ) : null}
                 </div>
                 <button onClick={() => setShowIpShop(false)} style={{ padding: '0.6em 1.2em', fontSize: '1.1rem' }}>Close</button>
               </div>
@@ -1449,7 +1534,29 @@ function App() {
                 </div>
               </div>
 
-              <div ref={(el) => { nodeRefs.current['node13'] = el }} style={{ position: 'absolute', left: '2110px', top: '160px', width: '80px', height: '80px', zIndex: 2 }}>
+              <div ref={(el) => { nodeRefs.current['node15'] = el }} style={{ position: 'absolute', left: '2110px', top: '160px', width: '80px', height: '80px', zIndex: 2 }}>
+                <div style={{
+                  boxSizing: 'border-box',
+                  width: '100%',
+                  height: '100%',
+                  padding: 8,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  background: isSkillUnlocked('node15') ? 'rgba(255,255,255,0.95)' : 'rgba(200,200,200,0.3)',
+                  borderRadius: 8,
+                  border: isSkillUnlocked('node15') ? `3px solid ${nodeColors.node15}` : '3px dashed #999',
+                  boxShadow: isSkillUnlocked('node15') ? '0 6px 12px rgba(0,0,0,0.2)' : 'none',
+                  opacity: isSkillUnlocked('node15') ? 1 : 0.85
+                }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6, color: nodeColors.node15, fontSize: '1.1rem' }}>Auto∞</div>
+                  <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: 8 }}></div>
+                  <button onClick={() => setSelectedSkill('node15')} disabled={!isSkillUnlocked('node15')} style={{ padding: '0.4em 0.8em', fontSize: '0.85rem', width: '100%' }}>Open</button>
+                </div>
+              </div>
+
+              <div ref={(el) => { nodeRefs.current['node13'] = el }} style={{ position: 'absolute', left: '2270px', top: '160px', width: '80px', height: '80px', zIndex: 2 }}>
                 <div style={{
                   boxSizing: 'border-box',
                   width: '100%',
@@ -1470,7 +1577,7 @@ function App() {
                   <button onClick={() => setSelectedSkill('node13')} disabled={!isSkillUnlocked('node13')} style={{ padding: '0.4em 0.8em', fontSize: '0.85rem', width: '100%' }}>Open</button>
                 </div>
               </div>
-              <div ref={(el) => { nodeRefs.current['node14'] = el }} style={{ position: 'absolute', left: '2270px', top: '160px', width: '80px', height: '80px', zIndex: 2 }}>
+              <div ref={(el) => { nodeRefs.current['node14'] = el }} style={{ position: 'absolute', left: '2430px', top: '160px', width: '80px', height: '80px', zIndex: 2 }}>
                 <div style={{
                   boxSizing: 'border-box',
                   width: '100%',
