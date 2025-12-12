@@ -9,8 +9,8 @@ import { getRarityName as getCharacterRarityName, MAX_CHARACTER_COUNT, CHARACTER
 import '../styles/Shop.css';
 
 function Shop() {
-  const { state, purchaseItem, purchaseWithMedals, pullCollectionPlusGacha, setTheme, setIcon, setCustomIconUrl, addCardToCollection, openCardPack, pullCharacterGacha, useTicket } = useGamification();
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'theme' | 'icon' | 'collection' | 'gacha' | 'medal'>('all');
+  const { state, purchaseItem, purchaseWithMedals, pullCollectionPlusGacha, setTheme, setIcon, setCustomIconUrl, addCardToCollection, openCardPack, pullCharacterGacha, addTickets, useTicket } = useGamification();
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'theme' | 'icon' | 'collection' | 'gacha' | 'medal' | 'ticket'>('all');
   const [purchaseMessage, setPurchaseMessage] = useState<string>('');
   const [showCustomIconModal, setShowCustomIconModal] = useState(false);
   const [customIconError, setCustomIconError] = useState('');
@@ -163,6 +163,16 @@ function Shop() {
         setPurchaseMessage('メダルが足りません');
         setTimeout(() => setPurchaseMessage(''), 2000);
       }
+      return;
+    }
+
+    // チケット（配布用・使用）
+    if (item.category === 'ticket') {
+      // 無料チケットは配布で付与する想定だが、ショップで直接獲得できる場合は付与処理を行う
+      const count = item.id.endsWith('_3') ? 3 : 1;
+      addTickets(item.id, count);
+      setPurchaseMessage(`チケットを${count}枚獲得しました！`);
+      setTimeout(() => setPurchaseMessage(''), 2000);
       return;
     }
 
@@ -360,7 +370,30 @@ function Shop() {
                   <div className="item-price">
                     {isFree ? '無料' : hasCollectionPlusTicket ? `🎫 チケット ×${ticketCount}` : isMedal ? `🏅 ${item.price}` : `💰 ${item.price}`}
                   </div>
-                  {hasCollectionPlusTicket ? (
+                  {item.category === 'ticket' ? (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => {
+                          const cards = useTicket(item.id);
+                          if (cards && cards.length > 0) {
+                            setOpenedCards(cards);
+                            setIsCollectionPlusModal(true);
+                            setShowCardPackModal(true);
+                            setPurchaseMessage('チケットを使用しました');
+                            setTimeout(() => setPurchaseMessage(''), 2000);
+                          } else {
+                            setPurchaseMessage('チケットが足りません');
+                            setTimeout(() => setPurchaseMessage(''), 2000);
+                          }
+                        }}
+                        disabled={!(state.tickets && state.tickets[item.id] > 0)}
+                        className={`purchase-button`}
+                      >
+                        使用
+                      </button>
+                      <button onClick={() => handlePurchase(item)} className="purchase-button">獲得</button>
+                    </div>
+                    ) : hasCollectionPlusTicket ? (
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button
                         onClick={() => {
