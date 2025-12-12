@@ -946,7 +946,7 @@ function App() {
 
   function getSkillTitle(type: IPUpgradeType) {
     const titles: Record<IPUpgradeType, string> = {
-      node1: 'Score', node2: 'Rotate', node3a: 'Automation', node3b: 'Score Multi', node3c: 'Rotate', node4: 'Boost', node5: 'Rotate+', node6a: 'Mega', node6b: 'Score+', node6c: 'Strong', node7: 'Ultimate', node8: 'Score', node9: 'Rotate', node10: 'Auto Promo', node11: 'Score+', node12: 'Rotate+', node13: 'Both', node14: 'Medal Amplifier'
+      node1: 'Score', node2: 'Rotate', node3a: 'Automation', node3b: 'Score Multi', node3c: 'Rotate', node4: 'Boost', node5: 'Rotate+', node6a: 'Mega', node6b: 'Score+', node6c: 'Strong', node7: 'Ultimate', node8: 'Score', node9: 'Rotate', node10: 'Auto Promo', node11: 'Promo+', node12: 'Rotate+', node13: 'Both', node14: 'Medal Amplifier'
     }
     return titles[type]
   }
@@ -966,6 +966,11 @@ function App() {
       case 'node7': return `効果: 合計 ×${formatForDisplay(Math.pow(5, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×5）`
       case 'node8': return `スコア：合計 ×${formatForDisplay(Math.pow(1.1, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.1）`
       case 'node9': return `回転速度：合計 ×${formatForDisplay(Math.pow(1.1, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.1）`
+      case 'node10': return `自動プロモーションを解放（ON/OFF）：自動でプロモーションが実行されます（レベルは最大1）`
+      case 'node11': return `効果: プロモーション倍率 ×${formatForDisplay(Math.pow(5, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×5、プロモーションの恩恵が強化されます）`
+      case 'node12': return `回転速度：合計 ×${formatForDisplay(Math.pow(1.15, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.15）`
+      case 'node13': return `効果: 両方の倍率を強化：合計 ×${formatForDisplay(Math.pow(2, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×2）`
+      case 'node14': return `効果: メダル獲得倍率を増加（レベルごとに増加）`
     }
   }
   // allow temporarily pausing the RAF loop during state resets (promotion / prestige)
@@ -1175,7 +1180,9 @@ function App() {
           // use purchased promotion level (persisted) rather than points-derived level
           const promotionLevelVal = promotionLevelRef.current || 0
           // promotion multiplies multi-gain by 10 per level
-          const promotionMultiplier = Math.pow(PROMO_MULT_PER_LEVEL, promotionLevelVal)
+          // node11 now strengthens the promotion multiplier (×1.15 per node11 level)
+          const promoNode11 = Math.pow(5, ipUpgradesRef.current.node11 || 0)
+          const promotionMultiplier = Math.pow(PROMO_MULT_PER_LEVEL, promotionLevelVal) * promoNode11
           // apply IP rotation speed boost from ref
           const n2 = Math.pow(1.5, ipUpgradesRef.current.node2 || 0)
           const n5 = Math.pow(2, ipUpgradesRef.current.node5 || 0)
@@ -1201,8 +1208,7 @@ function App() {
               const n3bscore = Math.pow(1.5, ipUpgradesRef.current.node3b || 0)
               const n4score = Math.pow(1.25, ipUpgradesRef.current.node4 || 0)
               const n8 = Math.pow(1.1, ipUpgradesRef.current.node8 || 0)
-              const n11 = Math.pow(1.15, ipUpgradesRef.current.node11 || 0)
-              const ipScoreMult = n1 * n6a * n6bscore * n7sm * n3bscore * n4score * n8 * n11 * n13
+              const ipScoreMult = n1 * n6a * n6bscore * n7sm * n3bscore * n4score * n8 * n13
             // multiply score by the number of rotations that occurred
             setScore((s) => {
               if (resetRef.current) return 0
@@ -1846,8 +1852,8 @@ function App() {
         </div>
       </div>
 
-      {/* Infinity row: appears only when player reached Infinity; dedicated line */}
-      {hasReachedInfinity && (
+      {/* Infinity row: appears when player has reached Infinity before, or when score is currently Infinity */}
+      {(hasReachedInfinity || (!isFinite(score) && score === Infinity)) && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, alignItems: 'center', marginBottom: 6 }}>
           <div style={{ color: '#c0f', fontWeight: 700 }}>IP: {formatForDisplay(infinityPoints, v => v.toLocaleString())}</div>
           <button
