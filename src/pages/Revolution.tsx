@@ -1826,7 +1826,8 @@ function App() {
       {/* Main Game Screen - hidden when IP shop is open */}
       {!showIpShop && (
       <>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, fontSize: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+      {/* Top info row: ring values, score, prestige summary */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, fontSize: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
         <div className="color-numbers" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           {ringColors.map((c, i) => (
             <span key={i} style={{ color: c, fontWeight: 700, fontSize: '1rem' }}>
@@ -1843,38 +1844,47 @@ function App() {
               return `Prestige: ${formatForDisplay(prestigePoints, v => v.toLocaleString())} (×${formatForDisplay(displayedMul, v => v.toFixed(2))}) ${promoLevel > 0 ? `| Promotion L${promoLevel} (×${formatForDisplay(promoMultiplier, v => v.toFixed(2))})` : '| Promotion: locked'}`
             })()}
         </div>
-        <div style={{ marginLeft: 8, display: 'flex', gap: 8, alignItems: 'center', whiteSpace: 'nowrap' }}>
-          {hasReachedInfinity ? (
-                    <div style={{ color: '#c0f', fontWeight: 700 }}>IP: {formatForDisplay(infinityPoints, v => v.toLocaleString())}</div>
-          ) : null}
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            {hasReachedInfinity ? (
-              <button
-                onClick={() => setShowIpShop(true)}
-                style={{ padding: '0.3em 0.6em' }}
-              >
-                Infinity Upgrades
-              </button>
-            ) : null}
-            {/* Debug IP controls removed */}
-          </div>
+      </div>
+
+      {/* Infinity row: appears only when player reached Infinity; dedicated line */}
+      {hasReachedInfinity && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+          <div style={{ color: '#c0f', fontWeight: 700 }}>IP: {formatForDisplay(infinityPoints, v => v.toLocaleString())}</div>
+          <button
+            onClick={() => setShowIpShop(true)}
+            style={{ padding: '0.4em 0.8em' }}
+          >
+            Infinity Upgrades
+          </button>
+          {!isFinite(score) && score === Infinity && (
+            <button
+              onClick={doInfinite}
+              style={{ padding: '0.4em 1em', fontSize: '1rem', background: 'linear-gradient(135deg, #c0f, #f0c)', color: 'white', fontWeight: 700, border: '2px solid #90c' }}
+            >
+              Infinite +1 IP
+            </button>
+          )}
         </div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8, whiteSpace: 'nowrap' }}>
+      )}
+
+      {/* Controls row: from Auto onwards (wrapped to new line) */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
           <input type="checkbox" checked={autoBuy} onChange={(e) => setAutoBuy(e.target.checked)} disabled={(ipUpgrades.node3a || 0) < 1} />
           <small>Auto</small>
         </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8, whiteSpace: 'nowrap' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
           <input type="checkbox" checked={autoPromo} onChange={(e) => setAutoPromo(e.target.checked)} disabled={(ipUpgrades.node10 || 0) < 1} />
           <small>Auto Promo</small>
         </label>
-        <button onClick={handleManualSync} style={{ marginLeft: 8, padding: '0.4em 0.8em' }}>
+        <button onClick={handleManualSync} style={{ padding: '0.4em 0.8em' }}>
           Sync
         </button>
         {syncStatus && (
-          <span style={{ marginLeft: 8, color: syncStatus.includes('成功') ? '#2e7d32' : '#c62828', fontWeight: 700 }}>{syncStatus}</span>
+          <span style={{ color: syncStatus.includes('成功') ? '#2e7d32' : '#c62828', fontWeight: 700 }}>{syncStatus}</span>
         )}
-        
-        {/* Debug score controls removed */}
+
+        {/* Prestige / Promotion / Infinite buttons (stay in controls row) */}
         {score >= getNextPrestigeThreshold() && (
             <>
               <button
@@ -1900,22 +1910,13 @@ function App() {
             </>
           )}
           {score < getNextPrestigeThreshold() && (
-                    <small style={{ marginLeft: 6, color: '#666' }}>
+                    <small style={{ color: '#666' }}>
               Next: {formatForDisplay(getNextPrestigeThreshold(), v => v.toLocaleString(undefined, { maximumFractionDigits: 0 }))}
             </small>
           )}
-        {!isFinite(score) && score === Infinity && (
-          <button
-            onClick={doInfinite}
-            style={{ padding: '0.4em 1em', fontSize: '1rem', background: 'linear-gradient(135deg, #c0f, #f0c)', color: 'white', fontWeight: 700, border: '2px solid #90c', marginLeft: 12 }}
-          >
-            Infinite +1 IP
-          </button>
-        )}
-        {/* Clear button removed (reset functionality disabled) */}
+        {/* Infinite button moved into Infinity row */}
       </div>
 
-      
       <div className="card">
         <div className="rotation-area">
           <div className="canvas-wrap" style={{ width: canvasSize, height: canvasSize, margin: '0 auto' }}>
