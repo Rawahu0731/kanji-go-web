@@ -1920,6 +1920,12 @@ function App() {
               Next: {formatForDisplay(getNextPrestigeThreshold(), v => v.toLocaleString(undefined, { maximumFractionDigits: 0 }))}
             </small>
           )}
+          {/* Allow Promotion when player already has enough prestige points even if they haven't reached the next prestige threshold */}
+          {score < getNextPrestigeThreshold() && ((promotionLevel || 0) + 1) * PROMO_THRESHOLD <= (prestigePoints || 0) && (
+            <button onClick={doPromotion} style={{ marginLeft: 12, padding: '0.4em 0.8em' }}>
+              Promotion (Cost: {formatForDisplay(((promotionLevel || 0) + 1) * PROMO_THRESHOLD, v => v.toExponential(2))})
+            </button>
+          )}
         {/* Infinite button moved into Infinity row */}
       </div>
 
