@@ -525,7 +525,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   // 状態変更時は localStorage にのみ保存する（同期はユーザー操作で行う）
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      const toSave = { ...state, updatedAt: Date.now() } as any;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
     } catch (e) {
       console.warn('Failed to persist gamification state to localStorage:', e);
     }
@@ -602,44 +603,66 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     
     try {
       const data = await loadUserData(userId);
-      if (data) {
-        const migrated = migrateData(data);
+
+      // ローカルに保存されているデータ（updatedAt を含む可能性あり）を取得
+      const localRaw = localStorage.getItem(STORAGE_KEY);
+      let localParsed: any = null;
+      if (localRaw) {
+        try { localParsed = JSON.parse(localRaw); } catch (e) { localParsed = null; }
+      }
+
+      const migratedRemote = data ? migrateData(data) : null;
+      const migratedLocal = localParsed ? migrateData(localParsed) : null;
+
+      const remoteTs = migratedRemote ? ((migratedRemote as any).updatedAt || 0) : 0;
+      const localTs = migratedLocal ? ((migratedLocal as any).updatedAt || 0) : 0;
+
+      // 最新の方を採用する
+      let chosen: any = null;
+
+      if (migratedRemote && remoteTs > localTs) {
+        chosen = migratedRemote;
+      } else if (migratedLocal && localTs >= remoteTs) {
+        chosen = migratedLocal;
+      } else if (migratedRemote) {
+        chosen = migratedRemote;
+      }
+
+      if (chosen) {
         // If customIconUrl references Cloud Storage (gs://...), resolve to a downloadable URL
         try {
-          if (migrated.customIconUrl && typeof migrated.customIconUrl === 'string' && migrated.customIconUrl.startsWith('gs://')) {
-            const resolved = await getStorageDownloadUrl(migrated.customIconUrl);
-            migrated.customIconUrl = resolved;
+          if (chosen.customIconUrl && typeof chosen.customIconUrl === 'string' && chosen.customIconUrl.startsWith('gs://')) {
+            const resolved = await getStorageDownloadUrl(chosen.customIconUrl);
+            chosen.customIconUrl = resolved;
           }
         } catch (e) {
           console.warn('Failed to resolve customIconUrl to download URL:', e);
         }
 
         // 初回ログイン時のみの配布: マイグレーションで配布フラグが立っていればここで付与して永続化する
-        if (migrated.apologyCompensationAvailable && migrated.apologyCompensationClaimedVersion !== CURRENT_VERSION) {
+        if (chosen.apologyCompensationAvailable && chosen.apologyCompensationClaimedVersion !== CURRENT_VERSION) {
           try {
-            migrated.coins = (migrated.coins || 0) + 30000;
-            migrated.medals = (migrated.medals || 0) + 50;
-            migrated.unlockedBadges = Array.from(new Set([...(migrated.unlockedBadges || []), 'apology_maintenance']));
-            migrated.tickets = migrated.tickets || {};
-            migrated.tickets['ticket_collection_plus'] = (migrated.tickets['ticket_collection_plus'] || 0) + 3;
-            migrated.apologyCompensationClaimedVersion = CURRENT_VERSION;
-            migrated.apologyCompensationAvailable = false;
-
-            // サーバに永続化（読み込み時に一度だけ実行）
-            try {
-              await saveUserData(userId, migrated);
-              console.log('Applied maintenance compensation on first login and saved to Firebase');
-            } catch (e) {
-              console.warn('Failed to save maintenance compensation to Firebase:', e);
-            }
+            chosen.coins = (chosen.coins || 0) + 30000;
+            chosen.medals = (chosen.medals || 0) + 50;
+            chosen.unlockedBadges = Array.from(new Set([...(chosen.unlockedBadges || []), 'apology_maintenance']));
+            chosen.tickets = chosen.tickets || {};
+            chosen.tickets['ticket_collection_plus'] = (chosen.tickets['ticket_collection_plus'] || 0) + 3;
+            chosen.apologyCompensationClaimedVersion = CURRENT_VERSION;
+            chosen.apologyCompensationAvailable = false;
           } catch (e) {
             console.error('Failed to apply maintenance compensation during loadFromFirebase:', e);
           }
         }
 
-        setState(migrated);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-        console.log('Data loaded from Firebase');
+        // 状態を反映してローカルに保存（ローカルが新しい場合でもサーバへ自動送信は行わない）
+        setState(chosen);
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(chosen)); } catch (e) { /* ignore */ }
+
+        if (migratedLocal && localTs >= remoteTs) {
+          console.log('Local data is newer; keeping local state and not pushing to Firebase');
+        } else {
+          console.log('Data loaded from Firebase (remote chosen)');
+        }
       }
     } catch (error) {
       console.error('Failed to load from Firebase:', error);
