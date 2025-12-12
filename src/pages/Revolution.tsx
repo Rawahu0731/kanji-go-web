@@ -1235,7 +1235,7 @@ function App() {
   const predictedPointsAfter = (prestigePoints || 0) + predictedGainNow
   const predictedMulNow = computePrestigeMultiplierFromPoints(predictedPointsAfter)
   const predictedPromotionAvailable = predictedPointsAfter >= PROMO_THRESHOLD * ((promotionLevel || 0) + 1)
-  const predictedPromotionMultiplier = Math.pow(PROMO_MULT_PER_LEVEL, (promotionLevel || 0) + (predictedPromotionAvailable ? 1 : 0))
+  const predictedPromotionMultiplier = Math.pow(PROMO_MULT_PER_LEVEL, (promotionLevel || 0) + (predictedPromotionAvailable ? 1 : 0)) * Math.pow(5, ipUpgrades.node11 || 0)
 
   return (
     <>
@@ -1846,7 +1846,7 @@ function App() {
             {(() => {
               const displayedMul = computePrestigeMultiplierFromPoints(prestigePoints)
               const promoLevel = promotionLevel || 0
-              const promoMultiplier = Math.pow(PROMO_MULT_PER_LEVEL, promoLevel)
+              const promoMultiplier = Math.pow(PROMO_MULT_PER_LEVEL, promoLevel) * Math.pow(5, ipUpgrades.node11 || 0)
               return `Prestige: ${formatForDisplay(prestigePoints, v => v.toLocaleString())} (×${formatForDisplay(displayedMul, v => v.toFixed(2))}) ${promoLevel > 0 ? `| Promotion L${promoLevel} (×${formatForDisplay(promoMultiplier, v => v.toFixed(2))})` : '| Promotion: locked'}`
             })()}
         </div>
