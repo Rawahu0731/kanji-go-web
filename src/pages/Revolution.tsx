@@ -1959,7 +1959,13 @@ function App() {
                     <button
                       onClick={() => { if ((level || 0) < 100) buyUpgrade(i) }}
                       disabled={score < cost || (level || 0) >= 100}
-                      style={{ padding: '0.3em 0.8em', fontSize: '0.9rem' }}
+                      style={{
+                        padding: '0.3em 0.8em',
+                        fontSize: '0.9rem',
+                        opacity: (score < cost && (level || 0) < 100) ? 0.45 : 1,
+                        cursor: (score < cost || (level || 0) >= 100) ? 'not-allowed' : 'pointer',
+                        transition: 'opacity 120ms ease'
+                      }}
                     >
                       {(level || 0) >= 100 ? 'Lv100 (MAX)' : `Lv${level}`}
                     </button>
