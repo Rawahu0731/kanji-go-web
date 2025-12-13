@@ -99,6 +99,26 @@ function App() {
     return s && typeof s.autoInfinite === 'boolean' ? s.autoInfinite : false
   })
 
+  // Auto-prestige: user-configurable multiplier n (when predicted prestige >= current * n)
+  const [autoPrestigeEnabled, setAutoPrestigeEnabled] = useState<boolean>(() => {
+    const s = _saved
+    return s && typeof s.autoPrestigeEnabled === 'boolean' ? s.autoPrestigeEnabled : false
+  })
+  // store as string to preserve user input (supports decimals and exponential strings)
+  const [autoPrestigeMultiplier, setAutoPrestigeMultiplier] = useState<string>(() => {
+    const s = _saved
+    if (s && (typeof s.autoPrestigeMultiplier === 'number' || typeof s.autoPrestigeMultiplier === 'string')) return String(s.autoPrestigeMultiplier)
+    return '2'
+  })
+  // Debug mode: enabled when URL contains "DebugMode" (no local/Firebase save in this mode)
+  const [debugMode] = useState<boolean>(() => {
+    try {
+      return typeof window !== 'undefined' && window.location.href.includes('DebugMode')
+    } catch (e) {
+      return false
+    }
+  })
+
   const [infinityPoints, setInfinityPoints] = useState<number>(() => {
     const s = _saved
     return s && typeof s.infinityPoints === 'number' ? s.infinityPoints : 0
@@ -497,6 +517,8 @@ function App() {
     if (type === 'node14') return 1
     // node16: challenge unlock — single-use
     if (type === 'node16') return 1
+    // node6c: unlocks Auto-Prestige — single-use
+    if (type === 'node6c') return 1
     // node17a/node17b: unlimited-level multipliers
     if (type === 'node17a' || type === 'node17b') return Infinity
     return 5
@@ -512,14 +534,13 @@ function App() {
 
   // compute effective multipliers from IP upgrades (horizontal skill tree)
   function getIPPrestigeMultiplier() {
-    const n6c = Math.pow(3, ipUpgrades.node6c)
     const n7 = Math.pow(5, ipUpgrades.node7)
-    return n6c * n7
+    return n7
   }
 
   function getIPPrestigeStrengthBoost() {
-    const n6c = Math.pow(3, ipUpgrades.node6c)
-    return n6c
+    // node6c no longer grants prestige strength; return neutral boost
+    return 1
   }
 
   
@@ -656,7 +677,8 @@ function App() {
 
   // persist state to localStorage whenever important pieces change
   useEffect(() => {
-    saveState({ rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, autoInfinite, purchaseCounts, lastPrestigeScore, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount })
+    if (debugModeRef.current) return
+    saveState({ rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, autoInfinite, autoPrestigeEnabled, autoPrestigeMultiplier, purchaseCounts, lastPrestigeScore, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount })
   }, [
     JSON.stringify(rotValues),
     score,
@@ -673,10 +695,21 @@ function App() {
     infinityReachCount,
     JSON.stringify(ipUpgrades),
     hasReachedInfinity,
+    autoPrestigeEnabled,
+    autoPrestigeMultiplier,
   ])
+
+  // keep a ref for debugMode for effects that read it without re-subscribing
+  const debugModeRef = useRef<boolean>(debugMode)
+  useEffect(() => { debugModeRef.current = debugMode }, [debugMode])
 
   // Manual sync helper: save localStorage and optionally push to Firestore only when user requests
   const handleManualSync = async () => {
+    if (debugModeRef.current) {
+      setSyncStatus('DebugMode: 保存はスキップされます')
+      setTimeout(() => setSyncStatus(null), 2000)
+      return
+    }
     const toSave = { rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, autoInfinite, purchaseCounts, lastPrestigeScore, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount }
     // always save to localStorage (already done by other effect, but ensure freshness)
     saveState(toSave)
@@ -693,7 +726,9 @@ function App() {
     // show temporary UI feedback for success/failure
     setSyncStatus(null)
     try {
-      await saveRevolutionState(auth.user!.uid, toSave)
+      // include auto-prestige settings in remote save
+      const remoteSave = { ...toSave, autoPrestigeEnabled, autoPrestigeMultiplier }
+      await saveRevolutionState(auth.user!.uid, remoteSave)
       console.log('Revolution state synced to Firebase')
       setSyncStatus('保存に成功しました')
       setTimeout(() => setSyncStatus(null), 3000)
@@ -707,6 +742,7 @@ function App() {
   // Load Revolution state from Firestore when user signs in
   useEffect(() => {
     if (!isFirebaseEnabled) return
+    if (debugModeRef.current) return // don't load remote state in debug mode
 
     // detect transition from logged-out -> logged-in using prevAuthRef
     const comingFromLoggedOut = prevAuthRef.current == null && auth.user != null
@@ -756,6 +792,8 @@ function App() {
             setPurchaseCounts(arr)
           }
           setLastPrestigeScore(typeof remote.lastPrestigeScore === 'number' ? remote.lastPrestigeScore : 0)
+          setAutoPrestigeEnabled(typeof remote.autoPrestigeEnabled === 'boolean' ? remote.autoPrestigeEnabled : false)
+          setAutoPrestigeMultiplier(typeof remote.autoPrestigeMultiplier === 'number' || typeof remote.autoPrestigeMultiplier === 'string' ? String(remote.autoPrestigeMultiplier) : '2')
         } else {
           // normal behavior: merge remote into local state (preserve unspecified local fields)
           if (Array.isArray(remote.rotValues)) {
@@ -789,6 +827,8 @@ function App() {
             setPurchaseCounts(arr)
           }
           if (typeof remote.lastPrestigeScore === 'number') setLastPrestigeScore(remote.lastPrestigeScore)
+          if (typeof remote.autoPrestigeEnabled === 'boolean') setAutoPrestigeEnabled(remote.autoPrestigeEnabled)
+          if (typeof remote.autoPrestigeMultiplier === 'number' || typeof remote.autoPrestigeMultiplier === 'string') setAutoPrestigeMultiplier(String(remote.autoPrestigeMultiplier))
         }
       } catch (e) {
         console.warn('Failed to load revolution state from Firebase:', e)
@@ -850,7 +890,7 @@ function App() {
     node5: 'rotate',
     node6a: 'boost',
     node6b: 'score',
-    node6c: 'strong',
+    node6c: 'automation',
     node7: 'ultimate',
     node8: 'score',
     node9: 'rotate',
@@ -1011,6 +1051,26 @@ function App() {
       // ignore
     }
   }, [score, prestigePoints, ipUpgrades.node10, promotionLevel])
+  // Auto-prestige (multiplier mode): when node6c purchased and user enabled this feature,
+  // trigger a prestige when predicted prestige after prestige >= currentPrestige * multiplier.
+  useEffect(() => {
+    if ((ipUpgrades.node6c || 0) < 1) return
+    if (!autoPrestigeEnabledRef.current) return
+    try {
+      const gainIfPrestige = computePrestigeGain(score)
+      if (!isFinite(gainIfPrestige) || gainIfPrestige <= 0) return
+      const predictedPointsAfter = (prestigePoints || 0) + gainIfPrestige
+      const mul = autoPrestigeMultiplierRef.current || 2
+      if (isFinite(prestigePoints) && (prestigePoints || 0) > 0) {
+        if (predictedPointsAfter >= (prestigePoints * mul)) doPrestige()
+      } else {
+        // if player currently has 0 prestige, treat multiplier as absolute threshold
+        if (predictedPointsAfter >= mul) doPrestige()
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [score, prestigePoints, ipUpgrades.node6c, autoPrestigeEnabled, autoPrestigeMultiplier])
   // Auto-Infinite: when score reaches Infinity and feature purchased + enabled, perform Infinite
   useEffect(() => {
     if ((ipUpgrades.node15 || 0) < 1) return
@@ -1044,11 +1104,16 @@ function App() {
   useEffect(() => {
     autoInfiniteRef.current = autoInfinite
   }, [autoInfinite])
+  // auto-prestige refs
+  const autoPrestigeEnabledRef = useRef<boolean>(autoPrestigeEnabled)
+  useEffect(() => { autoPrestigeEnabledRef.current = autoPrestigeEnabled }, [autoPrestigeEnabled])
+  const autoPrestigeMultiplierRef = useRef<number>(Number(autoPrestigeMultiplier) || 2)
+  useEffect(() => { autoPrestigeMultiplierRef.current = Number(autoPrestigeMultiplier) || 2 }, [autoPrestigeMultiplier])
   const [selectedSkill, setSelectedSkill] = useState<IPUpgradeType | null>(null)
 
   function getSkillTitle(type: IPUpgradeType) {
     const titles: Record<IPUpgradeType, string> = {
-      node1: 'Score', node2: 'Rotate', node3a: 'Automation', node3b: 'Score Multi', node3c: 'Rotate', node4: 'Boost', node5: 'Rotate+', node6a: 'Mega', node6b: 'Score+', node6c: 'Strong', node7: 'Ultimate', node8: 'Score', node9: 'Rotate', node10: 'Auto Promo', node11: 'Promo+', node12: 'Rotate+', node15: 'Auto Infinity', node13: 'Both', node14: 'Medal Amplifier', node16: 'Challenge', node17a: 'Score x1.2', node17b: 'Rotate x1.2'
+      node1: 'Score', node2: 'Rotate', node3a: 'Automation', node3b: 'Score Multi', node3c: 'Rotate', node4: 'Boost', node5: 'Rotate+', node6a: 'Mega', node6b: 'Score+', node6c: 'Auto Prestige', node7: 'Ultimate', node8: 'Score', node9: 'Rotate', node10: 'Auto Promo', node11: 'Promo+', node12: 'Rotate+', node15: 'Auto Infinity', node13: 'Both', node14: 'Medal Amplifier', node16: 'Challenge', node17a: 'Score x1.2', node17b: 'Rotate x1.2'
     }
     return titles[type]
   }
@@ -1064,7 +1129,8 @@ function App() {
       case 'node5': return `効果: 合計 ×${formatForDisplay(Math.pow(2, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×2）`
       case 'node6a': return `効果: 合計 ×${formatForDisplay(Math.pow(3, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×3）`
       case 'node6b': return `効果: 合計 ×${formatForDisplay(Math.pow(1.4, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.4）`
-      case 'node6c': return `効果: 合計 ×${formatForDisplay(Math.pow(3, ipUpgrades[type]), v => v.toFixed(2))}（プレステージ強度：レベルごとに ×3）`
+      case 'node6c': return `効果: 自動プレステージ（倍率モード）を解放します。レベルは1で、プレステージ強度は付与しません。`
+      
       case 'node7': return `効果: 合計 ×${formatForDisplay(Math.pow(5, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×5）`
       case 'node8': return `スコア：合計 ×${formatForDisplay(Math.pow(1.1, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.1）`
       case 'node9': return `回転速度：合計 ×${formatForDisplay(Math.pow(1.1, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.1）`
@@ -1401,13 +1467,33 @@ function App() {
                       <div style={{ marginBottom: 8, color: '#666' }}>Lv{cur} / {max} {atMax ? <span style={{ color: '#0a0', fontWeight: 700, marginLeft: 8 }}>MAX</span> : null}</div>
                       {!atMax && <div style={{ marginBottom: 12, fontWeight: 700 }}>Cost: {cost} IP</div>}
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          onClick={() => { if (selectedSkill) buyIPUpgrade(selectedSkill) }}
-                          disabled={!selectedSkill || !isSkillUnlocked(selectedSkill) || infinityPoints < cost || atMax}
-                          style={{ flex: 1, padding: '0.6em 0.8em', fontSize: '1rem' }}
-                        >
-                          {atMax ? 'MAX' : 'Upgrade'}
-                        </button>
+                        <div style={{ flex: 1 }}>
+                          {selectedSkill === 'node6c' ? (
+                            <div style={{ marginBottom: 8 }}>
+                              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                <input
+                                  type="text"
+                                  value={autoPrestigeMultiplier}
+                                  onChange={(e) => setAutoPrestigeMultiplier(e.target.value)}
+                                  disabled={(ipUpgrades.node6c || 0) < 1}
+                                  placeholder="倍率 例: 2, 1.5, 2e3"
+                                  style={{ width: 140, padding: '6px 8px' }}
+                                />
+                                <div style={{ color: '#666', fontSize: '0.85rem' }}>現在の倍率={(() => {
+                                  const parsed = Number(autoPrestigeMultiplier)
+                                  return isFinite(parsed) && parsed > 0 ? parsed : '無効'
+                                })()}</div>
+                              </div>
+                            </div>
+                          ) : null}
+                          <button
+                            onClick={() => { if (selectedSkill) buyIPUpgrade(selectedSkill) }}
+                            disabled={!selectedSkill || !isSkillUnlocked(selectedSkill) || infinityPoints < cost || atMax}
+                            style={{ width: '100%', padding: '0.6em 0.8em', fontSize: '1rem' }}
+                          >
+                            {atMax ? 'MAX' : 'Upgrade'}
+                          </button>
+                        </div>
                         <button onClick={() => setSelectedSkill(null)} style={{ padding: '0.6em 0.8em' }}>Close</button>
                       </div>
                     </>
@@ -1938,7 +2024,7 @@ function App() {
                   boxShadow: isSkillUnlocked('node6c') ? '0 6px 12px rgba(0,0,0,0.2)' : 'none',
                   opacity: isSkillUnlocked('node6c') ? 1 : 0.85
                 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 6, color: nodeColors.node6c, fontSize: '1.1rem' }}>Strong</div>
+                  <div style={{ fontWeight: 700, marginBottom: 6, color: nodeColors.node6c, fontSize: '1.1rem' }}>Auto Prestige</div>
                   <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: 8 }}></div>
                   <button
                     onClick={() => setSelectedSkill('node6c')}
@@ -2080,6 +2166,14 @@ function App() {
           >
             Infinity Upgrades
           </button>
+            {debugMode ? (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <button onClick={() => { setInfinityPoints(p => (p || 0) + 1); setHasReachedInfinity(true) }} style={{ padding: '0.2em 0.5em' }}>+1 IP</button>
+                <button onClick={() => { setInfinityPoints(p => (p || 0) + 10); setHasReachedInfinity(true) }} style={{ padding: '0.2em 0.5em' }}>+10 IP</button>
+                <button onClick={() => { setInfinityPoints(100); setHasReachedInfinity(true) }} style={{ padding: '0.2em 0.5em' }}>Set 100</button>
+                <button onClick={() => { setInfinityPoints(p => Math.max(0, (p || 0) - 1)); }} style={{ padding: '0.2em 0.5em' }}>-1 IP</button>
+              </div>
+            ) : null}
           {!isFinite(score) && score === Infinity && (
             <button
               onClick={doInfinite}
@@ -2100,6 +2194,10 @@ function App() {
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
           <input type="checkbox" checked={autoPromo} onChange={(e) => setAutoPromo(e.target.checked)} disabled={(ipUpgrades.node10 || 0) < 1} />
           <small>Auto Promo</small>
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+          <input type="checkbox" checked={autoPrestigeEnabled} onChange={(e) => setAutoPrestigeEnabled(e.target.checked)} disabled={(ipUpgrades.node6c || 0) < 1} />
+          <small>Auto-Prestige</small>
         </label>
         <button onClick={handleManualSync} style={{ padding: '0.4em 0.8em' }}>
           Sync
