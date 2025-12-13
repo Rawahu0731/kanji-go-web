@@ -9,8 +9,8 @@ import { getRarityName as getCharacterRarityName, MAX_CHARACTER_COUNT, CHARACTER
 import '../styles/Shop.css';
 
 function Shop() {
-  const { state, purchaseItem, purchaseWithMedals, pullCollectionPlusGacha, setTheme, setIcon, setCustomIconUrl, addCardToCollection, openCardPack, pullCharacterGacha, addTickets, useTicket } = useGamification();
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'theme' | 'icon' | 'collection' | 'gacha' | 'medal' | 'ticket'>('all');
+  const { state, purchaseItem, purchaseWithMedals, pullCollectionPlusGacha, pullCollectionPlusPlusGacha, setTheme, setIcon, setCustomIconUrl, addCardToCollection, openCardPack, pullCharacterGacha, addTickets, useTicket } = useGamification();
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'theme' | 'icon' | 'collection' | 'gacha' | 'medal' | 'ticket' | 'collection_plus_plus'>('all');
   const [purchaseMessage, setPurchaseMessage] = useState<string>('');
   const [showCustomIconModal, setShowCustomIconModal] = useState(false);
   const [customIconError, setCustomIconError] = useState('');
@@ -22,9 +22,17 @@ function Shop() {
   const [showGachaModal, setShowGachaModal] = useState(false);
   const [pulledCharacters, setPulledCharacters] = useState<Character[]>([]);
 
-  const filteredItems = selectedCategory === 'all' 
-    ? SHOP_ITEMS 
-    : SHOP_ITEMS.filter(item => item.category === selectedCategory);
+  const filteredItems = (() => {
+    if (selectedCategory === 'all') return SHOP_ITEMS;
+    if (selectedCategory === 'collection_plus_plus') {
+      return SHOP_ITEMS.filter(item => item.effect && String(item.effect).startsWith('collection_plus_plus_'));
+    }
+    if (selectedCategory === 'medal') {
+      // コレクション+ タブでは Collection++ のアイテムを除外する
+      return SHOP_ITEMS.filter(item => item.category === 'medal' && !(item.effect && String(item.effect).startsWith('collection_plus_plus_')));
+    }
+    return SHOP_ITEMS.filter(item => item.category === selectedCategory);
+  })();
 
   // 全キャラクターが上限に達しているかチェック
   const areAllCharactersMaxed = () => {
@@ -152,8 +160,14 @@ function Shop() {
       const success = purchaseWithMedals(item.id, item.price, false);
 
       if (success && item.effect) {
-        const count = parseInt(item.effect.replace('collection_plus_', '')) || 1;
-        const cards = pullCollectionPlusGacha(count);
+        let cards = [] as KanjiCard[];
+        if (item.effect.startsWith('collection_plus_plus_')) {
+          const count = parseInt(item.effect.replace('collection_plus_plus_', '')) || 1;
+          cards = pullCollectionPlusPlusGacha(count);
+        } else {
+          const count = parseInt(item.effect.replace('collection_plus_', '')) || 1;
+          cards = pullCollectionPlusGacha(count);
+        }
         // collection+ の値はコンテキスト側で反映される
         setOpenedCards(cards);
         setIsCollectionPlusModal(true);
@@ -305,6 +319,12 @@ function Shop() {
             コレクション+
           </button>
           <button 
+            onClick={() => setSelectedCategory('collection_plus_plus')}
+            className={selectedCategory === 'collection_plus_plus' ? 'active' : ''}
+          >
+            コレクション++
+          </button>
+          <button 
             onClick={() => setSelectedCategory('gacha')}
             className={selectedCategory === 'gacha' ? 'active' : ''}
           >
@@ -324,8 +344,10 @@ function Shop() {
           {filteredItems.map(item => {
             const isPurchased = state.purchasedItems.includes(item.id) || item.price === 0;
             const isMedal = item.category === 'medal';
-            // コレクション+ ガチャに対応するチケットがあるかチェック
-            const isCollectionPlusGacha = item.category === 'medal' && item.effect && item.effect.startsWith('collection_plus_');
+            // Collection++ 用アイテムかどうか
+            const isCollectionPlusPlusGacha = item.category === 'medal' && item.effect && String(item.effect).startsWith('collection_plus_plus_');
+            // コレクション+（従来）のガチャかどうか（++ を除外）
+            const isCollectionPlusGacha = item.category === 'medal' && item.effect && String(item.effect).startsWith('collection_plus_') && !isCollectionPlusPlusGacha;
             const collectionPlusPulls = isCollectionPlusGacha ? (parseInt(String(item.effect).replace('collection_plus_', '')) || 1) : 0;
             const ticketCount = (state.tickets?.ticket_collection_plus || 0) + (state.tickets?.ticket_collection_plus_3 || 0);
             const hasCollectionPlusTicket = isCollectionPlusGacha && ticketCount > 0;

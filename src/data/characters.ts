@@ -111,6 +111,14 @@ export const CHARACTERS: Record<string, Character> = {
     description: 'XPとコインを12%増加',
     effect: { type: 'both_boost', value: 1.12 }
   },
+  bear: {
+    id: 'bear',
+    name: '熊',
+    icon: '🐻',
+    rarity: 'ultra',
+    description: 'XPとコインを1200%増加（13倍）',
+    effect: { type: 'both_boost', value: 13.0 }
+  },
   
   // エピック
   wizard: {

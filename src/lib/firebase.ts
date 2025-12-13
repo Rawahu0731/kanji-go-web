@@ -5,7 +5,7 @@ import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, g
 import { getStorage, ref as storageRef, getDownloadURL } from 'firebase/storage';
 import type { Firestore } from 'firebase/firestore';
 import type { Auth } from 'firebase/auth';
-import type { GamificationState } from '../contexts/GamificationContext';
+import type { GamificationState } from '../contexts/gamification/types';
 
 // Firebase設定（環境変数から読み込み）
 // 実際に使う際は .env ファイルに以下を追加してください:

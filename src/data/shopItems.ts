@@ -287,6 +287,25 @@ export const SHOP_ITEMS: ShopItem[] = [
     effect: 'collection_plus_10'
   }
   ,
+  // コレクション++ 用メダルガチャ
+  {
+    id: 'collection_plus_plus_gacha_single',
+    name: 'コレクション++ 単発',
+    description: 'メダルで引くコレクション++ガチャ。出た漢字の+値が増えます（最大+100）。',
+    price: 100000,
+    category: 'medal',
+    icon: '🏆',
+    effect: 'collection_plus_plus_1'
+  },
+  {
+    id: 'collection_plus_plus_gacha_11',
+    name: 'コレクション++ 11連',
+    description: 'メダルで引く11連コレクション++ガチャ。11回分のお得価格（1000000メダル）。',
+    price: 1000000,
+    category: 'medal',
+    icon: '🏆🏆',
+    effect: 'collection_plus_plus_11'
+  },
   // チケット類（配布用・使用するとガチャを引く）
   {
     id: 'ticket_collection_plus',

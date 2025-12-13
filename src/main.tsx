@@ -10,6 +10,7 @@ import Shop from './pages/Shop.tsx'
 import Profile from './pages/Profile.tsx'
 import CardCollection from './pages/CardCollection.tsx'
 import CollectionPlus from './pages/CollectionPlus.tsx'
+import CollectionPlusPlus from './pages/CollectionPlusPlus.tsx'
 import Characters from './pages/Characters.tsx'
 import Ranking from './pages/Ranking.tsx'
 import Terms from './pages/Terms.tsx'
@@ -45,6 +46,7 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/collection" element={<CardCollection />} />
                 <Route path="/collection-plus" element={<CollectionPlus />} />
+                <Route path="/collection-plus-plus" element={<CollectionPlusPlus />} />
                 <Route path="/characters" element={<Characters />} />
                 <Route path="/ranking" element={<Ranking />} />
                 <Route path="/terms" element={<Terms />} />
