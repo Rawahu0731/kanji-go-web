@@ -110,6 +110,18 @@ function App() {
     if (s && (typeof s.autoPrestigeMultiplier === 'number' || typeof s.autoPrestigeMultiplier === 'string')) return String(s.autoPrestigeMultiplier)
     return '2'
   })
+  // minimum time (seconds) between auto-prestiges; stored as string for input fidelity
+  const [autoPrestigeMinTime, setAutoPrestigeMinTime] = useState<string>(() => {
+    const s = _saved
+    if (s && (typeof s.autoPrestigeMinTime === 'number' || typeof s.autoPrestigeMinTime === 'string')) return String(s.autoPrestigeMinTime)
+    return '600' // default 600s (10 minutes)
+  })
+  // Auto-promotion: optional max promotion level (user sets in node10 detail). Stored as string for input fidelity.
+  const [autoPromoMaxLevel, setAutoPromoMaxLevel] = useState<string>(() => {
+    const s = _saved
+    if (s && (typeof s.autoPromoMaxLevel === 'number' || typeof s.autoPromoMaxLevel === 'string')) return String(s.autoPromoMaxLevel)
+    return ''
+  })
   // Debug mode: enabled when URL contains "DebugMode" (no local/Firebase save in this mode)
   const [debugMode] = useState<boolean>(() => {
     try {
@@ -215,6 +227,8 @@ function App() {
   })
   // control visibility of the IP upgrades shop panel
   const [showIpShop, setShowIpShop] = useState<boolean>(false)
+  // control visibility of the Automation panel (top-of-screen)
+  const [showAutomationPanel, setShowAutomationPanel] = useState<boolean>(false)
   // control visibility of the Challenge full-screen panel
   const [showChallengePanel, setShowChallengePanel] = useState<boolean>(false)
   // manual sync status message (一時表示)
@@ -234,6 +248,11 @@ function App() {
   const [lastPrestigeScore, setLastPrestigeScore] = useState<number>(() => {
     const s = loadSavedState()
     return s && typeof s.lastPrestigeScore === 'number' ? s.lastPrestigeScore : 0
+  })
+  // timestamp (ms since epoch) of last prestige; used by auto-prestige cooldown
+  const [lastPrestigeAt, setLastPrestigeAt] = useState<number | null>(() => {
+    const s = loadSavedState()
+    return s && typeof s.lastPrestigeAt === 'number' ? s.lastPrestigeAt : null
   })
   const prestigeThreshold = 1000000
   // Promotion: new reinforcement that increases per-rotation gain ("multi gain").
@@ -334,6 +353,10 @@ function App() {
     // eslint-disable-next-line no-console
     console.log('doPrestige debug', { gain, deltaStrength, prestigePointsBefore, prestigePointsAfter, prestigeStrengthBefore, prestigeStrengthAfter, displayedMulAfter, ipStrengthBoost })
     setPrestigeStrength((s) => s + (Number.isFinite(deltaStrength) ? deltaStrength : 0))
+    // record timestamp of this prestige for cooldown checks
+    const now = Date.now()
+    setLastPrestigeAt(now)
+    lastPrestigeAtRef.current = now
 
     // reset gameplay state
     setScore(0)
@@ -678,7 +701,7 @@ function App() {
   // persist state to localStorage whenever important pieces change
   useEffect(() => {
     if (debugModeRef.current) return
-    saveState({ rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, autoInfinite, autoPrestigeEnabled, autoPrestigeMultiplier, purchaseCounts, lastPrestigeScore, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount })
+    saveState({ rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, autoInfinite, autoPrestigeEnabled, autoPrestigeMultiplier, autoPrestigeMinTime, autoPromoMaxLevel, purchaseCounts, lastPrestigeScore, lastPrestigeAt, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount })
   }, [
     JSON.stringify(rotValues),
     score,
@@ -697,11 +720,17 @@ function App() {
     hasReachedInfinity,
     autoPrestigeEnabled,
     autoPrestigeMultiplier,
+    autoPrestigeMinTime,
   ])
 
   // keep a ref for debugMode for effects that read it without re-subscribing
   const debugModeRef = useRef<boolean>(debugMode)
   useEffect(() => { debugModeRef.current = debugMode }, [debugMode])
+  // refs for auto-prestige min-time and lastPrestigeAt
+  const autoPrestigeMinTimeRef = useRef<number>(Number(autoPrestigeMinTime) || 600)
+  useEffect(() => { autoPrestigeMinTimeRef.current = Number(autoPrestigeMinTime) || 0 }, [autoPrestigeMinTime])
+  const lastPrestigeAtRef = useRef<number | null>(lastPrestigeAt)
+  useEffect(() => { lastPrestigeAtRef.current = lastPrestigeAt }, [lastPrestigeAt])
 
   // Manual sync helper: save localStorage and optionally push to Firestore only when user requests
   const handleManualSync = async () => {
@@ -710,7 +739,7 @@ function App() {
       setTimeout(() => setSyncStatus(null), 2000)
       return
     }
-    const toSave = { rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, autoInfinite, purchaseCounts, lastPrestigeScore, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount }
+    const toSave = { rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, autoInfinite, purchaseCounts, lastPrestigeScore, lastPrestigeAt, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount }
     // always save to localStorage (already done by other effect, but ensure freshness)
     saveState(toSave)
 
@@ -727,7 +756,7 @@ function App() {
     setSyncStatus(null)
     try {
       // include auto-prestige settings in remote save
-      const remoteSave = { ...toSave, autoPrestigeEnabled, autoPrestigeMultiplier }
+      const remoteSave = { ...toSave, autoPrestigeEnabled, autoPrestigeMultiplier, autoPrestigeMinTime, autoPromoMaxLevel }
       await saveRevolutionState(auth.user!.uid, remoteSave)
       console.log('Revolution state synced to Firebase')
       setSyncStatus('保存に成功しました')
@@ -792,8 +821,11 @@ function App() {
             setPurchaseCounts(arr)
           }
           setLastPrestigeScore(typeof remote.lastPrestigeScore === 'number' ? remote.lastPrestigeScore : 0)
+          setLastPrestigeAt(typeof remote.lastPrestigeAt === 'number' ? remote.lastPrestigeAt : null)
           setAutoPrestigeEnabled(typeof remote.autoPrestigeEnabled === 'boolean' ? remote.autoPrestigeEnabled : false)
           setAutoPrestigeMultiplier(typeof remote.autoPrestigeMultiplier === 'number' || typeof remote.autoPrestigeMultiplier === 'string' ? String(remote.autoPrestigeMultiplier) : '2')
+          setAutoPrestigeMinTime(typeof remote.autoPrestigeMinTime === 'number' || typeof remote.autoPrestigeMinTime === 'string' ? String(remote.autoPrestigeMinTime) : '600')
+          setAutoPromoMaxLevel(typeof remote.autoPromoMaxLevel === 'number' || typeof remote.autoPromoMaxLevel === 'string' ? String(remote.autoPromoMaxLevel) : '')
         } else {
           // normal behavior: merge remote into local state (preserve unspecified local fields)
           if (Array.isArray(remote.rotValues)) {
@@ -827,8 +859,11 @@ function App() {
             setPurchaseCounts(arr)
           }
           if (typeof remote.lastPrestigeScore === 'number') setLastPrestigeScore(remote.lastPrestigeScore)
+          if (typeof remote.lastPrestigeAt === 'number') setLastPrestigeAt(remote.lastPrestigeAt)
           if (typeof remote.autoPrestigeEnabled === 'boolean') setAutoPrestigeEnabled(remote.autoPrestigeEnabled)
           if (typeof remote.autoPrestigeMultiplier === 'number' || typeof remote.autoPrestigeMultiplier === 'string') setAutoPrestigeMultiplier(String(remote.autoPrestigeMultiplier))
+          if (typeof remote.autoPrestigeMinTime === 'number' || typeof remote.autoPrestigeMinTime === 'string') setAutoPrestigeMinTime(String(remote.autoPrestigeMinTime))
+          if (typeof remote.autoPromoMaxLevel === 'number' || typeof remote.autoPromoMaxLevel === 'string') setAutoPromoMaxLevel(String(remote.autoPromoMaxLevel))
         }
       } catch (e) {
         console.warn('Failed to load revolution state from Firebase:', e)
@@ -1024,12 +1059,18 @@ function App() {
       const nextReq = PROMO_THRESHOLD * ((promotionLevelRef.current || promotionLevel || 0) + 1)
       // only auto-run promotion if user enabled auto-promotion
       if (autoPromoRef.current && isFinite(prestigePoints) && prestigePoints >= nextReq) {
+        // respect user-set max promotion level if configured
+        const max = autoPromoMaxLevelRef.current
+        const curPromo = promotionLevelRef.current || promotionLevel || 0
+        if (max != null && isFinite(max) && curPromo >= max) {
+          return
+        }
         doPromotion()
       }
     } catch (e) {
       // ignore errors from calling doPromotion unexpectedly
     }
-  }, [prestigePoints, ipUpgrades.node10, promotionLevel])
+  }, [prestigePoints, ipUpgrades.node10, promotionLevel, autoPromoMaxLevel])
 
   // Auto-prestige trigger: when score changes, if autoPromo is enabled and node10 purchased,
   // check whether performing a Prestige now would make Promotion available. If so, automatically
@@ -1061,11 +1102,15 @@ function App() {
       if (!isFinite(gainIfPrestige) || gainIfPrestige <= 0) return
       const predictedPointsAfter = (prestigePoints || 0) + gainIfPrestige
       const mul = autoPrestigeMultiplierRef.current || 2
+      const minSec = Number(autoPrestigeMinTimeRef.current) || 0
+      const now = Date.now()
+      const last = lastPrestigeAtRef.current
+      const cooldownPassed = !last || (now - last) >= (minSec * 1000)
       if (isFinite(prestigePoints) && (prestigePoints || 0) > 0) {
-        if (predictedPointsAfter >= (prestigePoints * mul)) doPrestige()
+        if (predictedPointsAfter >= (prestigePoints * mul) && cooldownPassed) doPrestige()
       } else {
         // if player currently has 0 prestige, treat multiplier as absolute threshold
-        if (predictedPointsAfter >= mul) doPrestige()
+        if (predictedPointsAfter >= mul && cooldownPassed) doPrestige()
       }
     } catch (e) {
       // ignore
@@ -1109,6 +1154,8 @@ function App() {
   useEffect(() => { autoPrestigeEnabledRef.current = autoPrestigeEnabled }, [autoPrestigeEnabled])
   const autoPrestigeMultiplierRef = useRef<number>(Number(autoPrestigeMultiplier) || 2)
   useEffect(() => { autoPrestigeMultiplierRef.current = Number(autoPrestigeMultiplier) || 2 }, [autoPrestigeMultiplier])
+  const autoPromoMaxLevelRef = useRef<number | null>(autoPromoMaxLevel !== '' ? Number(autoPromoMaxLevel) : null)
+  useEffect(() => { const p = Number(autoPromoMaxLevel); autoPromoMaxLevelRef.current = isFinite(p) ? p : null }, [autoPromoMaxLevel])
   const [selectedSkill, setSelectedSkill] = useState<IPUpgradeType | null>(null)
 
   function getSkillTitle(type: IPUpgradeType) {
@@ -1232,6 +1279,10 @@ function App() {
 
     const ctxTrails = trails.map((t) => t!.getContext('2d')!)
     const ctxOverlay = overlay.getContext('2d')!
+
+    // reset loop tracking arrays to match numberOfRings when canvasSize/ring count changes
+    lastPosRef.current = Array(numberOfRings).fill(null)
+    lastWholeRef.current = Array(numberOfRings).fill(0)
 
     const cx = w / 2
     const cy = h / 2
@@ -1402,7 +1453,7 @@ function App() {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
-  }, [])
+  }, [canvasSize, numberOfRings])
 
   // predicted multiplier if the player prestiges right now
   const predictedGainNow = computePrestigeGain(score)
@@ -1427,29 +1478,17 @@ function App() {
           overflow: 'auto',
           padding: '20px'
         }}>
-          <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
-              <h2 style={{ margin: 0, color: '#90c', fontSize: '2rem' }}>∞ Infinity Skill Tree</h2>
-              <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  {hasReachedInfinity ? (
-                    <div style={{ color: '#c0f', fontWeight: 700, fontSize: '1.5rem' }}>IP: {formatForDisplay(infinityPoints, v => v.toLocaleString())}</div>
-                  ) : null}
-                  {/* Auto-Infinite toggle: shown only after node15 unlocked */}
-                  {isSkillUnlocked('node15') ? (
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#444' }}>
-                      <input type="checkbox" checked={autoInfinite} onChange={(e) => setAutoInfinite(e.target.checked)} disabled={(ipUpgrades.node15 || 0) < 1} />
-                      <span style={{ fontSize: '0.95rem' }}>{(ipUpgrades.node15 || 0) >= 1 ? 'Auto∞' : 'Auto∞ (購入で有効)'}</span>
-                    </label>
-                  ) : null}
-                </div>
-                {isSkillUnlocked('node16') ? (
-                  <button onClick={() => { setShowIpShop(false); setShowChallengePanel(true) }} style={{ padding: '0.6em 1.2em', fontSize: '1.1rem', marginRight: 8 }}>チャレンジ</button>
-                ) : null}
-                <button onClick={() => setShowIpShop(false)} style={{ padding: '0.6em 1.2em', fontSize: '1.1rem' }}>Close</button>
-              </div>
-            </div>
-            
+          {/* Fixed top-left title and top-right controls: always visible while IP shop open */}
+          <div style={{ position: 'fixed', top: 12, left: 16, zIndex: 10002 }}>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#90c' }}>∞ Infinity Skill Tree</div>
+          </div>
+          <div style={{ position: 'fixed', top: 12, right: 16, zIndex: 10002, display: 'flex', gap: 12, alignItems: 'center' }}>
+            {hasReachedInfinity ? (
+              <div style={{ color: '#c0f', fontWeight: 700, fontSize: '1rem' }}>IP: {formatForDisplay(infinityPoints, v => v.toLocaleString())}</div>
+            ) : null}
+            <button onClick={() => setShowIpShop(false)} style={{ padding: '0.6em 1.2em', fontSize: '1.1rem' }}>Close</button>
+          </div>
+          <div style={{ maxWidth: '1600px', margin: '0 auto', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', boxSizing: 'border-box' }}>
             {selectedSkill && (
               <div style={{ position: 'fixed', right: 40, bottom: 40, width: 320, maxHeight: '50vh', overflowY: 'auto', background: 'white', padding: 12, borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 10001 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -1470,19 +1509,55 @@ function App() {
                         <div style={{ flex: 1 }}>
                           {selectedSkill === 'node6c' ? (
                             <div style={{ marginBottom: 8 }}>
-                              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                <input
-                                  type="text"
-                                  value={autoPrestigeMultiplier}
-                                  onChange={(e) => setAutoPrestigeMultiplier(e.target.value)}
-                                  disabled={(ipUpgrades.node6c || 0) < 1}
-                                  placeholder="倍率 例: 2, 1.5, 2e3"
-                                  style={{ width: 140, padding: '6px 8px' }}
-                                />
-                                <div style={{ color: '#666', fontSize: '0.85rem' }}>現在の倍率={(() => {
-                                  const parsed = Number(autoPrestigeMultiplier)
-                                  return isFinite(parsed) && parsed > 0 ? parsed : '無効'
-                                })()}</div>
+                              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 6, flexWrap: 'wrap' }}>
+                                <div style={{ minWidth: 220, flex: '1 1 220px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                                  <input
+                                    type="text"
+                                    value={autoPrestigeMultiplier}
+                                    onChange={(e) => setAutoPrestigeMultiplier(e.target.value)}
+                                    disabled={(ipUpgrades.node6c || 0) < 1}
+                                    placeholder="倍率 例: 2, 1.5, 2e3"
+                                    style={{ width: '100%', padding: '6px 8px' }}
+                                  />
+                                  <div style={{ color: '#666', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>倍率={(() => {
+                                    const parsed = Number(autoPrestigeMultiplier)
+                                    return isFinite(parsed) && parsed > 0 ? parsed : '無効'
+                                  })()}</div>
+                                </div>
+                                <div style={{ minWidth: 160, flex: '1 1 160px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                                  <input
+                                    type="text"
+                                    value={autoPrestigeMinTime}
+                                    onChange={(e) => setAutoPrestigeMinTime(e.target.value)}
+                                    disabled={(ipUpgrades.node6c || 0) < 1}
+                                    placeholder="最小時間(秒) 例:600"
+                                    style={{ width: '100%', padding: '6px 8px' }}
+                                  />
+                                  <div style={{ color: '#666', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>最小時間={(() => {
+                                    const parsed = Number(autoPrestigeMinTime)
+                                    return isFinite(parsed) && parsed >= 0 ? `${parsed}s` : '無効'
+                                  })()}</div>
+                                </div>
+                              </div>
+                            </div>
+                          ) : null}
+                          {selectedSkill === 'node10' ? (
+                            <div style={{ marginBottom: 8 }}>
+                              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 6, flexWrap: 'wrap' }}>
+                                <div style={{ minWidth: 220, flex: '1 1 220px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                                  <input
+                                    type="text"
+                                    value={autoPromoMaxLevel}
+                                    onChange={(e) => setAutoPromoMaxLevel(e.target.value)}
+                                    disabled={(ipUpgrades.node10 || 0) < 1}
+                                    placeholder="最大Promotionレベル（空=無制限）例:2"
+                                    style={{ width: '100%', padding: '6px 8px' }}
+                                  />
+                                  <div style={{ color: '#666', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>設定={(() => {
+                                    const parsed = Number(autoPromoMaxLevel)
+                                    return isFinite(parsed) && parsed >= 0 ? `Max ${parsed}` : '無制限'
+                                  })()}</div>
+                                </div>
                               </div>
                             </div>
                           ) : null}
@@ -2136,6 +2211,57 @@ function App() {
       {/* Main Game Screen - hidden when IP shop is open */}
       {!showIpShop && (
       <>
+      {/* Top fixed Automation button (above ring numbers) */}
+      <div style={{ position: 'fixed', top: 8, left: 0, right: 0, zIndex: 10001, padding: '6px 12px', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button onClick={() => setShowAutomationPanel(true)} style={{ padding: '0.5em 0.9em', fontSize: '0.95rem' }}>Automation</button>
+            {hasReachedInfinity ? (
+              <>
+                <button onClick={() => setShowIpShop(true)} style={{ padding: '0.4em 0.8em' }}>Infinity Upgrades</button>
+              </>
+            ) : null}
+            <button onClick={handleManualSync} style={{ padding: '0.4em 0.8em' }}>Sync</button>
+            {syncStatus ? (
+              <span style={{ display: 'inline-block', whiteSpace: 'nowrap', marginLeft: 8, padding: '4px 8px', borderRadius: 6, background: syncStatus.includes('成功') ? 'rgba(46,125,50,0.08)' : 'rgba(198,40,40,0.06)', color: syncStatus.includes('成功') ? '#2e7d32' : '#c62828', fontWeight: 700 }}>{syncStatus}</span>
+            ) : null}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            {hasReachedInfinity ? (
+              <div style={{ color: '#c0f', fontWeight: 800, fontSize: '1.25rem', padding: '4px 8px', borderRadius: 6, background: 'rgba(192,15,255,0.06)' }}>IP: {formatForDisplay(infinityPoints, v => v.toLocaleString())}</div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      {/* Automation panel: toggles for Auto-related features (appears under top button) */}
+      {showAutomationPanel && (
+        <div style={{ position: 'fixed', top: 48, left: '50%', transform: 'translateX(-50%)', zIndex: 10002, background: 'white', padding: 12, borderRadius: 8, boxShadow: '0 8px 20px rgba(0,0,0,0.2)', minWidth: 320 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ fontWeight: 800 }}>Automation</div>
+            <button onClick={() => setShowAutomationPanel(false)} style={{ padding: '0.2em 0.6em' }}>×</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="checkbox" checked={autoBuy} onChange={(e) => setAutoBuy(e.target.checked)} disabled={(ipUpgrades.node3a || 0) < 1} />
+              <small>Auto (購入自動化)</small>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="checkbox" checked={autoPromo} onChange={(e) => setAutoPromo(e.target.checked)} disabled={(ipUpgrades.node10 || 0) < 1} />
+              <small>Auto Promo</small>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="checkbox" checked={autoPrestigeEnabled} onChange={(e) => setAutoPrestigeEnabled(e.target.checked)} disabled={(ipUpgrades.node6c || 0) < 1} />
+              <small>Auto-Prestige</small>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="checkbox" checked={autoInfinite} onChange={(e) => setAutoInfinite(e.target.checked)} disabled={(ipUpgrades.node15 || 0) < 1} />
+              <small>Auto-∞</small>
+            </label>
+          </div>
+        </div>
+      )}
+      {/* spacer to avoid overlapping the top Automation button/panel with the top info row */}
+      <div style={{ height: 72 }} />
       {/* Top info row: ring values, score, prestige summary */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, fontSize: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
         <div className="color-numbers" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -2159,13 +2285,6 @@ function App() {
       {/* Infinity row: appears when player has reached Infinity before, or when score is currently Infinity */}
       {(hasReachedInfinity || (!isFinite(score) && score === Infinity)) && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-          <div style={{ color: '#c0f', fontWeight: 700 }}>IP: {formatForDisplay(infinityPoints, v => v.toLocaleString())}</div>
-          <button
-            onClick={() => setShowIpShop(true)}
-            style={{ padding: '0.4em 0.8em' }}
-          >
-            Infinity Upgrades
-          </button>
             {debugMode ? (
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <button onClick={() => { setInfinityPoints(p => (p || 0) + 1); setHasReachedInfinity(true) }} style={{ padding: '0.2em 0.5em' }}>+1 IP</button>
@@ -2187,24 +2306,8 @@ function App() {
 
       {/* Controls row: from Auto onwards (wrapped to new line) */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-          <input type="checkbox" checked={autoBuy} onChange={(e) => setAutoBuy(e.target.checked)} disabled={(ipUpgrades.node3a || 0) < 1} />
-          <small>Auto</small>
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-          <input type="checkbox" checked={autoPromo} onChange={(e) => setAutoPromo(e.target.checked)} disabled={(ipUpgrades.node10 || 0) < 1} />
-          <small>Auto Promo</small>
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-          <input type="checkbox" checked={autoPrestigeEnabled} onChange={(e) => setAutoPrestigeEnabled(e.target.checked)} disabled={(ipUpgrades.node6c || 0) < 1} />
-          <small>Auto-Prestige</small>
-        </label>
-        <button onClick={handleManualSync} style={{ padding: '0.4em 0.8em' }}>
-          Sync
-        </button>
-        {syncStatus && (
-          <span style={{ color: syncStatus.includes('成功') ? '#2e7d32' : '#c62828', fontWeight: 700 }}>{syncStatus}</span>
-        )}
+        {/* Automation toggles moved to top Automation panel */}
+        {/* Sync moved to top fixed area */}
 
         {/* Prestige / Promotion / Infinite buttons (stay in controls row) */}
         {score >= getNextPrestigeThreshold() && (
