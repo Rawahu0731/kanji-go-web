@@ -1078,6 +1078,8 @@ function App() {
   useEffect(() => {
     if ((ipUpgrades.node10 || 0) < 1) return
     if (!autoPromoRef.current) return
+    // Respect global Auto-Prestige setting: if disabled, don't auto-prestige
+    if (!autoPrestigeEnabledRef.current) return
     try {
       const gainIfPrestige = computePrestigeGain(score)
       if (!isFinite(gainIfPrestige) || gainIfPrestige <= 0) return
