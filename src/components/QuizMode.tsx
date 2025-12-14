@@ -72,14 +72,21 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
     
     // 最初の5問の画像を事前読み込み（パフォーマンス向上）
     if (selectedLevel !== 'extra') {
-      requestIdleCallback(() => {
+      const preloadImages = () => {
         shuffled.slice(0, 5).forEach(item => {
           if (item.imageUrl) {
             const img = new Image();
             img.src = item.imageUrl;
           }
         });
-      }, { timeout: 1000 });
+      };
+
+      if (typeof (window as any).requestIdleCallback === 'function') {
+        (window as any).requestIdleCallback(preloadImages, { timeout: 1000 });
+      } else {
+        // フォールバック: idle callback が無ければ短い遅延で実行
+        setTimeout(preloadImages, 200);
+      }
     }
   }, [items, selectedLevel]);
 
