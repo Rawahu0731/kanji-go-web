@@ -5,7 +5,7 @@ import { SHOP_ITEMS } from '../data/shopItems';
 import type { ShopItem } from '../data/shopItems';
 import type { KanjiCard } from '../data/cardCollection';
 import type { Character } from '../data/characters';
-import { getRarityName as getCharacterRarityName, MAX_CHARACTER_COUNT, CHARACTERS } from '../data/characters';
+import { getRarityName as getCharacterRarityName, MAX_CHARACTER_COUNT, CHARACTERS, GACHA_RATES, RARITY_ORDER } from '../data/characters';
 import '../styles/Shop.css';
 
 function Shop() {
@@ -21,6 +21,9 @@ function Shop() {
   const [previousOwnedKanji, setPreviousOwnedKanji] = useState<Set<string>>(new Set());
   const [showGachaModal, setShowGachaModal] = useState(false);
   const [pulledCharacters, setPulledCharacters] = useState<Character[]>([]);
+  const [showProbModal, setShowProbModal] = useState(false);
+  const [probabilities, setProbabilities] = useState<Record<string, number> | null>(null);
+  const [probNote, setProbNote] = useState<string>('');
 
   const filteredItems = (() => {
     if (selectedCategory === 'all') return SHOP_ITEMS;
@@ -453,6 +456,7 @@ function Shop() {
                       </button>
                     </div>
                   ) : (
+                    <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
                     <button
                       onClick={() => handlePurchase(item)}
                       disabled={(!isFree && !isPurchased && !isMedal && state.coins < item.price) || (!isFree && isMedal && state.medals < item.price) || isAlreadyOwned || isGachaDisabled}
@@ -466,6 +470,89 @@ function Shop() {
                               (isPurchased || isFree ? '適用' : '購入')
                       }
                     </button>
+                    {isGacha && (
+                      <button
+                        onClick={() => {
+                          // 確率を計算してモーダル表示
+                          const compute = () => {
+                            // 利用可能なキャラクター（上限に達したものを除外）
+                            const maxed = new Set<string>(state.characters.filter(c => c.count >= MAX_CHARACTER_COUNT).map(c => c.id));
+                            const availablePool: Record<string, Character> = {};
+                            for (const [id, ch] of Object.entries(CHARACTERS)) {
+                              if (!maxed.has(id) && (ch.unlockDate ? new Date(ch.unlockDate) <= new Date(new Date().setHours(0,0,0,0)) : true)) {
+                                availablePool[id] = ch;
+                              }
+                            }
+
+                            const totalRate = Object.values(GACHA_RATES).reduce((a, b) => a + b, 0);
+                            const baseProb: Record<string, number> = {};
+                            for (const [r, rate] of Object.entries(GACHA_RATES)) baseProb[r] = (rate as number) / totalRate;
+
+                            // キャラクターの数をレア度ごとに算出
+                            const countsByRarity: Record<string, number> = {};
+                            let totalAvailable = 0;
+                            for (const ch of Object.values(availablePool)) {
+                              countsByRarity[ch.rarity] = (countsByRarity[ch.rarity] || 0) + 1;
+                              totalAvailable++;
+                            }
+
+                            // ベースをコピー
+                            const finalProb: Record<string, number> = {};
+                            for (const r of Object.keys(baseProb)) finalProb[r] = 0;
+
+                            // 欠損しているレア度の質量はフォールバックされる
+                            let fallbackMass = 0;
+                            for (const r of Object.keys(baseProb)) {
+                              const availableOfR = Object.values(availablePool).filter(c => c.rarity === r).length;
+                              if (availableOfR > 0) {
+                                finalProb[r] += baseProb[r];
+                              } else {
+                                fallbackMass += baseProb[r];
+                              }
+                            }
+
+                            if (fallbackMass > 0 && totalAvailable > 0) {
+                              for (const r of Object.keys(finalProb)) {
+                                const cnt = countsByRarity[r] || 0;
+                                finalProb[r] += fallbackMass * (cnt / totalAvailable);
+                              }
+                            }
+
+                            // パーセンテージ化
+                            const asPct: Record<string, number> = {};
+                            for (const [r, v] of Object.entries(finalProb)) {
+                              asPct[r] = Math.round((v || 0) * 10000) / 100; // 小数2桁
+                            }
+
+                            // パック保証の注釈
+                            let note = '';
+                            const count = parseInt(String(item.effect).replace('character_gacha_', '')) || 1;
+                            const guaranteed = item.rarity as unknown as string | undefined;
+                            if (guaranteed && count > 1) {
+                              // 保証対象のランクが利用可能か
+                              const availableGuaranteed = Object.values(availablePool).some(c => RARITY_ORDER[c.rarity] >= (RARITY_ORDER as any)[guaranteed]);
+                              if (availableGuaranteed) {
+                                note = `注意: ${count}連ガチャは少なくとも1体が${getCharacterRarityName(guaranteed as any)}以上に保証されます`;
+                              } else {
+                                note = '注意: 保証対象のランクのキャラクターは現在利用できません';
+                              }
+                            }
+
+                            return { asPct, note };
+                          };
+
+                          const { asPct, note } = compute();
+                          setProbabilities(asPct);
+                          setProbNote(note);
+                          setShowProbModal(true);
+                        }}
+                        className="purchase-button"
+                        style={{ marginLeft: '0.5rem', background: 'linear-gradient(135deg,#9dd3ff 0%,#7aa2ff 100%)' }}
+                      >
+                        確率
+                      </button>
+                    )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -762,6 +849,46 @@ function Shop() {
                     border: 'none',
                     fontWeight: '700',
                     fontSize: '1rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ガチャ確率モーダル */}
+      {showProbModal && probabilities && (
+        <div className="modal-overlay" onClick={() => setShowProbModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>ガチャ排出率</h2>
+              <button className="modal-close" onClick={() => setShowProbModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {Object.entries(probabilities).sort((a,b)=> (RARITY_ORDER as any)[b[0]] - (RARITY_ORDER as any)[a[0]]).map(([rarity, pct]) => (
+                  <div key={rarity} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontWeight: 700 }}>{getCharacterRarityName(rarity as any)}</div>
+                    <div style={{ color: '#666' }}>{pct}%</div>
+                  </div>
+                ))}
+              </div>
+              {probNote && (
+                <div style={{ marginTop: '1rem', color: '#a0a0a0', fontSize: '0.9rem' }}>{probNote}</div>
+              )}
+              <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
+                <button
+                  onClick={() => setShowProbModal(false)}
+                  style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontWeight: 700,
                     cursor: 'pointer'
                   }}
                 >

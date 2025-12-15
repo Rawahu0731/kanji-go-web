@@ -727,8 +727,9 @@ function App() {
   const debugModeRef = useRef<boolean>(debugMode)
   useEffect(() => { debugModeRef.current = debugMode }, [debugMode])
   // refs for auto-prestige min-time and lastPrestigeAt
+  // default to 600s (10 minutes) unless user config overrides
   const autoPrestigeMinTimeRef = useRef<number>(Number(autoPrestigeMinTime) || 600)
-  useEffect(() => { autoPrestigeMinTimeRef.current = Number(autoPrestigeMinTime) || 0 }, [autoPrestigeMinTime])
+  useEffect(() => { autoPrestigeMinTimeRef.current = Number(autoPrestigeMinTime) || 600 }, [autoPrestigeMinTime])
   const lastPrestigeAtRef = useRef<number | null>(lastPrestigeAt)
   useEffect(() => { lastPrestigeAtRef.current = lastPrestigeAt }, [lastPrestigeAt])
 
@@ -1055,31 +1056,30 @@ function App() {
   // when the player has enough prestige points for the next promotion level.
   useEffect(() => {
     if ((ipUpgrades.node10 || 0) < 1) return
+    // only auto-run promotion if user enabled auto-promotion (immediate on toggle)
+    if (!autoPromo) return
     try {
       const nextReq = PROMO_THRESHOLD * ((promotionLevelRef.current || promotionLevel || 0) + 1)
-      // only auto-run promotion if user enabled auto-promotion
-      if (autoPromoRef.current && isFinite(prestigePoints) && prestigePoints >= nextReq) {
+      if (isFinite(prestigePoints) && prestigePoints >= nextReq) {
         // respect user-set max promotion level if configured
         const max = autoPromoMaxLevelRef.current
         const curPromo = promotionLevelRef.current || promotionLevel || 0
-        if (max != null && isFinite(max) && curPromo >= max) {
-          return
-        }
+        if (max != null && isFinite(max) && curPromo >= max) return
         doPromotion()
       }
     } catch (e) {
       // ignore errors from calling doPromotion unexpectedly
     }
-  }, [prestigePoints, ipUpgrades.node10, promotionLevel, autoPromoMaxLevel])
+  }, [prestigePoints, ipUpgrades.node10, promotionLevel, autoPromoMaxLevel, autoPromo])
 
   // Auto-prestige trigger: when score changes, if autoPromo is enabled and node10 purchased,
   // check whether performing a Prestige now would make Promotion available. If so, automatically
   // call doPrestige() so that the Promotion effect (handled by the above effect) can run immediately.
   useEffect(() => {
     if ((ipUpgrades.node10 || 0) < 1) return
-    if (!autoPromoRef.current) return
+    if (!autoPromo) return
     // Respect global Auto-Prestige setting: if disabled, don't auto-prestige
-    if (!autoPrestigeEnabledRef.current) return
+    if (!autoPrestigeEnabled) return
     try {
       const gainIfPrestige = computePrestigeGain(score)
       if (!isFinite(gainIfPrestige) || gainIfPrestige <= 0) return
@@ -1093,18 +1093,18 @@ function App() {
     } catch (e) {
       // ignore
     }
-  }, [score, prestigePoints, ipUpgrades.node10, promotionLevel])
+  }, [score, prestigePoints, ipUpgrades.node10, promotionLevel, autoPromo, autoPrestigeEnabled])
   // Auto-prestige (multiplier mode): when node6c purchased and user enabled this feature,
   // trigger a prestige when predicted prestige after prestige >= currentPrestige * multiplier.
   useEffect(() => {
     if ((ipUpgrades.node6c || 0) < 1) return
-    if (!autoPrestigeEnabledRef.current) return
+    if (!autoPrestigeEnabled) return
     try {
       const gainIfPrestige = computePrestigeGain(score)
       if (!isFinite(gainIfPrestige) || gainIfPrestige <= 0) return
       const predictedPointsAfter = (prestigePoints || 0) + gainIfPrestige
-      const mul = autoPrestigeMultiplierRef.current || 2
-      const minSec = Number(autoPrestigeMinTimeRef.current) || 0
+      const mul = Number(autoPrestigeMultiplier) || 2
+      const minSec = Number(autoPrestigeMinTime) || 600
       const now = Date.now()
       const last = lastPrestigeAtRef.current
       const cooldownPassed = !last || (now - last) >= (minSec * 1000)
@@ -1117,11 +1117,11 @@ function App() {
     } catch (e) {
       // ignore
     }
-  }, [score, prestigePoints, ipUpgrades.node6c, autoPrestigeEnabled, autoPrestigeMultiplier])
+  }, [score, prestigePoints, ipUpgrades.node6c, autoPrestigeEnabled, autoPrestigeMultiplier, autoPrestigeMinTime])
   // Auto-Infinite: when score reaches Infinity and feature purchased + enabled, perform Infinite
   useEffect(() => {
     if ((ipUpgrades.node15 || 0) < 1) return
-    if (!autoInfiniteRef.current) return
+    if (!autoInfinite) return
     try {
       if (score === Infinity) {
         doInfinite()
@@ -1188,7 +1188,13 @@ function App() {
       case 'node12': return `回転速度：合計 ×${formatForDisplay(Math.pow(1.15, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.15）`
       case 'node13': return `効果: 両方の倍率を強化：合計 ×${formatForDisplay(Math.pow(2, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×2）`
       case 'node15': return `効果: 自動Infiniteを解放：スコアが Infinity に到達したとき自動で Infinite を実行します（ON/OFF）`
-      case 'node14': return `効果: メダル獲得倍率を増加`
+      case 'node14': {
+        // Medal amplifier: when purchased, multiplier = floor(sqrt(infinityPoints)) (minimum 1)
+        const owned = (ipUpgrades.node14 || 0) >= 1
+        const ip = Number(infinityPoints || 0)
+        const mul = owned && isFinite(ip) && ip >= 0 ? Math.max(1, Math.floor(Math.sqrt(ip))) : 1
+        return `効果: メダル獲得倍率を増加（現在 ×${mul}）`
+      }
       case 'node16': return `チャレンジ！！`
       case 'node17a': return `効果: スコア ×${formatForDisplay(Math.pow(1.2, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.2、上限なし）`
       case 'node17b': return `効果: 回転速度 ×${formatForDisplay(Math.pow(1.2, ipUpgrades[type]), v => v.toFixed(2))}（レベルごとに ×1.2、上限なし）`
