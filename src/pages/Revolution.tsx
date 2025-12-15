@@ -1513,6 +1513,14 @@ function App() {
             {hasReachedInfinity ? (
               <div style={{ color: '#c0f', fontWeight: 700, fontSize: '1rem' }}>IP: {formatForDisplay(infinityPoints, v => v.toLocaleString())}</div>
             ) : null}
+            {(ipUpgrades.node16 || 0) >= 1 && (
+              <button 
+                onClick={() => setShowChallengePanel(true)} 
+                style={{ padding: '0.6em 1.2em', fontSize: '1.1rem' }}
+              >
+                Challenge
+              </button>
+            )}
             <button onClick={() => setShowIpShop(false)} style={{ padding: '0.6em 1.2em', fontSize: '1.1rem' }}>Close</button>
           </div>
           <div style={{ maxWidth: '1600px', margin: '0 auto', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', boxSizing: 'border-box' }}>
