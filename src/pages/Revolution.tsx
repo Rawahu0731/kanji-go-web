@@ -1356,7 +1356,18 @@ function App() {
         // apply per-ring multiplier: only the red ring (index 0) is active initially
         const baseMult = i === 0 ? 1 : 0
         const multiplier = baseMult + (speedLevelsRef.current[i] || 0) * 0.125
-        const angVel = (linearSpeed * multiplier) / radius // radians per second
+        // apply IP rotation speed boosts to actual visual rotation speed
+        const n2 = Math.pow(1.5, ipUpgradesRef.current.node2 || 0)
+        const n5 = Math.pow(2.5, ipUpgradesRef.current.node5 || 0)
+        const n7 = Math.pow(10, ipUpgradesRef.current.node7 || 0)
+        const n4 = Math.pow(1.3, ipUpgradesRef.current.node4 || 0)
+        const n3c = Math.pow(1.5, ipUpgradesRef.current.node3c || 0)
+        const n9 = Math.pow(3, ipUpgradesRef.current.node9 || 0)
+        const n12 = Math.pow(4, ipUpgradesRef.current.node12 || 0)
+        const n13 = Math.pow(5, ipUpgradesRef.current.node13 || 0)
+        const n17b = Math.pow(1.2, ipUpgradesRef.current.node17b || 0)
+        const ipRotationBoost = n2 * n5 * n7 * n4 * n3c * n9 * n12 * n13 * n17b
+        const angVel = (linearSpeed * multiplier * ipRotationBoost) / radius // radians per second
         // start from up (-90deg) and rotate clockwise (increasing angle)
         const angle = -Math.PI / 2 + angVel * elapsed
         const x = cx + Math.cos(angle) * radius
@@ -1416,15 +1427,15 @@ function App() {
           const promotionMultiplier = Math.pow(PROMO_MULT_PER_LEVEL, promotionLevelVal) * promoNode11
           // apply IP rotation speed boost from ref
           const n2 = Math.pow(1.5, ipUpgradesRef.current.node2 || 0)
-          const n5 = Math.pow(2, ipUpgradesRef.current.node5 || 0)
-          const n7 = Math.pow(5, ipUpgradesRef.current.node7 || 0)
-          const n4 = Math.pow(1.25, ipUpgradesRef.current.node4 || 0)
+          const n5 = Math.pow(2.5, ipUpgradesRef.current.node5 || 0)
+          const n7 = Math.pow(10, ipUpgradesRef.current.node7 || 0)
+          const n4 = Math.pow(1.3, ipUpgradesRef.current.node4 || 0)
           const n3c = Math.pow(1.5, ipUpgradesRef.current.node3c || 0)
-          const n9 = Math.pow(1.1, ipUpgradesRef.current.node9 || 0)
-          const n12 = Math.pow(1.15, ipUpgradesRef.current.node12 || 0)
-          const n13 = Math.pow(2, ipUpgradesRef.current.node13 || 0)
+          const n9 = Math.pow(3, ipUpgradesRef.current.node9 || 0)
+          const n12 = Math.pow(4, ipUpgradesRef.current.node12 || 0)
+          const n13 = Math.pow(5, ipUpgradesRef.current.node13 || 0)
           const n17b = Math.pow(1.2, ipUpgradesRef.current.node17b || 0)
-          // include node3c as a small per-level rotation speed boost (×1.1 per level)
+          // rotation speed boost now scales much better in late game
           const ipRotationBoost = n2 * n5 * n7 * n4 * n3c * n9 * n12 * n13 * n17b
           const n3b = Math.pow(1.5, ipUpgradesRef.current.node3b || 0)
           const inc = 0.01 * prestigeMultiplier * promotionMultiplier * ipRotationBoost * n3b * n4
