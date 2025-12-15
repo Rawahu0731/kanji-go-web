@@ -1122,13 +1122,16 @@ function App() {
   useEffect(() => {
     if ((ipUpgrades.node15 || 0) < 1) return
     if (!autoInfinite) return
-    try {
-      if (score === Infinity) {
+    if (score !== Infinity) return
+    
+    // Use a small timeout to ensure state is stable before auto-triggering
+    const timer = setTimeout(() => {
+      if (score === Infinity && autoInfiniteRef.current && (ipUpgrades.node15 || 0) >= 1) {
         doInfinite()
       }
-    } catch (e) {
-      // ignore
-    }
+    }, 100)
+    
+    return () => clearTimeout(timer)
   }, [score, ipUpgrades.node15, autoInfinite])
   // unlock auto-buy when node3a is purchased
   useEffect(() => {
