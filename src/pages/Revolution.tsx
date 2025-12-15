@@ -147,6 +147,20 @@ function App() {
     return s && typeof s.infinityReachCount === 'number' ? s.infinityReachCount : 0
   })
 
+  // Challenge system: 9 challenges that can be solved
+  const [challengesCompleted, setChallengesCompleted] = useState<boolean[]>(() => {
+    const s = _saved
+    if (s && Array.isArray(s.challengesCompleted) && s.challengesCompleted.length === 9) {
+      return s.challengesCompleted
+    }
+    return Array(9).fill(false)
+  })
+
+  // Track current challenge being attempted (null if none selected)
+  const [currentChallenge, setCurrentChallenge] = useState<number | null>(null)
+
+  // Track user's answer input for current challenge
+  const [challengeAnswer, setChallengeAnswer] = useState<string>('')
 
   // IP upgrades: horizontal skill tree that unlocks from left to right
   const [ipUpgrades, setIpUpgrades] = useState<{
@@ -580,8 +594,10 @@ function App() {
     pauseLoopRef.current = true
     resetRef.current = true
 
-    // increment infinity points (update both state and ref synchronously)
-    const newIP = (infinityPoints || 0) + 1
+    // increment infinity points with challenge bonus (update both state and ref synchronously)
+    const challengeMultiplier = getChallengeIPMultiplier()
+    const ipGain = 1 * challengeMultiplier
+    const newIP = (infinityPoints || 0) + ipGain
     setInfinityPoints(newIP)
     // mark that the player has reached Infinity at least once
     setHasReachedInfinity(true)
@@ -631,6 +647,98 @@ function App() {
       resetRef.current = false
       if (prevAuto) setAutoBuy(true)
     })
+  }
+
+  // Challenge definitions: 9 image-based challenges
+  // Image files are stored in public/nazo/
+  // Answer is the filename (without extension)
+  const challenges = [
+    {
+      id: 1,
+      title: 'チャレンジ1',
+      image: '/nazo/樹.png',
+      answer: '樹'
+    },
+    {
+      id: 2,
+      title: 'チャレンジ2',
+      image: '/nazo/凸.png',
+      answer: '凸'
+    },
+    {
+      id: 3,
+      title: 'チャレンジ3',
+      image: '/nazo/味.png',
+      answer: '味'
+    },
+    {
+      id: 4,
+      title: 'チャレンジ4',
+      image: '/nazo/壽.png',
+      answer: '壽'
+    },
+    {
+      id: 5,
+      title: 'チャレンジ5',
+      image: '/nazo/子.png',
+      answer: '子'
+    },
+    {
+      id: 6,
+      title: 'チャレンジ6',
+      image: '/nazo/心太.png',
+      answer: '心太'
+    },
+    {
+      id: 7,
+      title: 'チャレンジ7',
+      image: '/nazo/熟語.png',
+      answer: '熟語'
+    },
+    {
+      id: 8,
+      title: 'チャレンジ8',
+      image: '/nazo/閑話休題.png',
+      answer: '閑話休題'
+    },
+    {
+      id: 9,
+      title: 'チャレンジ9',
+      image: '/nazo/高騰.png',
+      answer: '高騰'
+    }
+  ]
+
+  // Check if a challenge answer is correct
+  function checkChallengeAnswer(challengeId: number, answer: string): boolean {
+    const challenge = challenges.find(c => c.id === challengeId)
+    if (!challenge) return false
+    // Case-insensitive comparison, trim whitespace
+    return answer.trim().toLowerCase() === challenge.answer.toLowerCase()
+  }
+
+  // Submit challenge answer
+  function submitChallengeAnswer() {
+    if (currentChallenge === null) return
+    if (checkChallengeAnswer(currentChallenge, challengeAnswer)) {
+      // Correct answer!
+      const newCompleted = [...challengesCompleted]
+      newCompleted[currentChallenge - 1] = true
+      setChallengesCompleted(newCompleted)
+      // Reset challenge state
+      setCurrentChallenge(null)
+      setChallengeAnswer('')
+      alert('正解！チャレンジクリア！')
+    } else {
+      alert('不正解です。')
+      setChallengeAnswer('')
+    }
+  }
+
+  // Calculate IP multiplier from completed challenges
+  function getChallengeIPMultiplier(): number {
+    const completedCount = challengesCompleted.filter(c => c).length
+    return completedCount + 1 // n challenges cleared = (n+1)x multiplier (so 0 cleared = 1x)
   }
 
   // Debug helper: force the player to reach Infinity (bypasses score check).
@@ -702,7 +810,7 @@ function App() {
   // persist state to localStorage whenever important pieces change
   useEffect(() => {
     if (debugModeRef.current) return
-    saveState({ rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, autoInfinite, autoPrestigeEnabled, autoPrestigeMultiplier, autoPrestigeMinTime, autoPromoMaxLevel, purchaseCounts, lastPrestigeScore, lastPrestigeAt, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount })
+    saveState({ rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, autoInfinite, autoPrestigeEnabled, autoPrestigeMultiplier, autoPrestigeMinTime, autoPromoMaxLevel, purchaseCounts, lastPrestigeScore, lastPrestigeAt, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount, challengesCompleted })
   }, [
     JSON.stringify(rotValues),
     score,
@@ -722,6 +830,8 @@ function App() {
     autoPrestigeEnabled,
     autoPrestigeMultiplier,
     autoPrestigeMinTime,
+    autoPromoMaxLevel,
+    JSON.stringify(challengesCompleted),
   ])
 
   // keep a ref for debugMode for effects that read it without re-subscribing
@@ -741,7 +851,7 @@ function App() {
       setTimeout(() => setSyncStatus(null), 2000)
       return
     }
-    const toSave = { rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, autoInfinite, purchaseCounts, lastPrestigeScore, lastPrestigeAt, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount }
+    const toSave = { rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, autoInfinite, purchaseCounts, lastPrestigeScore, lastPrestigeAt, infinityPoints, ipUpgrades, hasReachedInfinity, infinityReachCount, challengesCompleted }
     // always save to localStorage (already done by other effect, but ensure freshness)
     saveState(toSave)
 
@@ -1492,6 +1602,191 @@ function App() {
   return (
     <>
       {/* Debug button removed */}
+      
+      {/* Challenge Panel - rendered first to be on top when opened from IP Shop */}
+      {showChallengePanel && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          width: '100vw', 
+          height: '100vh', 
+          background: 'linear-gradient(135deg, #fff8e1, #ffe0b2)', 
+          zIndex: 10003,
+          overflow: 'auto',
+          padding: '20px'
+        }}>
+          <div style={{ position: 'fixed', top: 12, left: 16, zIndex: 10005 }}>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f57c00' }}>🎯 Challenges</div>
+          </div>
+          <div style={{ position: 'fixed', top: 12, right: 16, zIndex: 10005, display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div style={{ color: '#f57c00', fontWeight: 700, fontSize: '1rem' }}>
+              Cleared: {challengesCompleted.filter(c => c).length}/9 
+              (IP Bonus: ×{getChallengeIPMultiplier()})
+            </div>
+            <button onClick={() => setShowChallengePanel(false)} style={{ padding: '0.6em 1.2em', fontSize: '1.1rem' }}>Close</button>
+          </div>
+          
+          <div style={{ maxWidth: '900px', margin: '80px auto 40px', padding: '20px' }}>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+              gap: '20px' 
+            }}>
+              {challenges.map((challenge, idx) => {
+                const isCompleted = challengesCompleted[idx]
+                const isActive = currentChallenge === challenge.id
+                return (
+                  <div 
+                    key={challenge.id}
+                    style={{ 
+                      background: isCompleted ? 'linear-gradient(135deg, #81c784, #66bb6a)' : (isActive ? 'linear-gradient(135deg, #fff59d, #ffee58)' : 'white'),
+                      border: isActive ? '3px solid #f57c00' : '2px solid #ddd',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div style={{ fontWeight: 800, fontSize: '1.2rem', color: isCompleted ? 'white' : '#333' }}>
+                        {challenge.title}
+                      </div>
+                      {isCompleted && <span style={{ fontSize: '1.5rem' }}>✓</span>}
+                    </div>
+                    
+                    <div style={{ 
+                      marginBottom: '12px',
+                      textAlign: 'center'
+                    }}>
+                      <img 
+                        src={challenge.image} 
+                        alt={`チャレンジ${challenge.id}`} 
+                        style={{ 
+                          maxWidth: '100%', 
+                          maxHeight: '300px', 
+                          borderRadius: '8px',
+                          opacity: isCompleted ? 0.6 : 1
+                        }} 
+                      />
+                    </div>
+                    
+                    {!isCompleted && (
+                      <>
+                        {isActive ? (
+                          <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+                            <input 
+                              type="text"
+                              value={challengeAnswer}
+                              onChange={(e) => setChallengeAnswer(e.target.value)}
+                              placeholder="答えを入力..."
+                              style={{ 
+                                padding: '8px 12px',
+                                fontSize: '1rem',
+                                border: '2px solid #f57c00',
+                                borderRadius: '6px',
+                                width: '100%',
+                                boxSizing: 'border-box'
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') submitChallengeAnswer()
+                              }}
+                            />
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button 
+                                onClick={submitChallengeAnswer}
+                                style={{ 
+                                  flex: 1,
+                                  padding: '8px 16px',
+                                  fontSize: '1rem',
+                                  background: '#4caf50',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                送信
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setCurrentChallenge(null)
+                                  setChallengeAnswer('')
+                                }}
+                                style={{ 
+                                  padding: '8px 16px',
+                                  fontSize: '1rem',
+                                  background: '#999',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                キャンセル
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => setCurrentChallenge(challenge.id)}
+                            style={{ 
+                              width: '100%',
+                              padding: '8px 16px',
+                              fontSize: '1rem',
+                              background: '#ff9800',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontWeight: 600,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            挑戦する
+                          </button>
+                        )}
+                      </>
+                    )}
+                    
+                    {isCompleted && (
+                      <div style={{ 
+                        textAlign: 'center', 
+                        color: 'white', 
+                        fontWeight: 700,
+                        fontSize: '1.1rem',
+                        padding: '8px'
+                      }}>
+                        クリア済み！
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            
+            <div style={{ 
+              marginTop: '40px',
+              padding: '20px',
+              background: 'rgba(255,255,255,0.9)',
+              borderRadius: '12px',
+              border: '2px solid #f57c00'
+            }}>
+              <h3 style={{ color: '#f57c00', marginTop: 0 }}>チャレンジについて</h3>
+              <p style={{ color: '#555', marginBottom: '8px' }}>
+                各チャレンジは謎解き問題です。正解すると次のチャレンジに挑戦できます。
+              </p>
+              <p style={{ color: '#555', marginBottom: '8px' }}>
+                <strong>報酬:</strong> チャレンジをn個クリアすると、Infinityで獲得するIPが<strong>(n+1)倍</strong>になります。
+              </p>
+              <p style={{ color: '#555', margin: 0 }}>
+                現在のIPボーナス: <strong>×{getChallengeIPMultiplier()}</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Infinity Upgrades Full Screen Overlay */}
       {showIpShop && (
         <div style={{ 
@@ -2227,22 +2522,6 @@ function App() {
         </div>
       )}
 
-      {/* Challenge full-screen panel (covers entire viewport) */}
-      {showChallengePanel && (
-        <div className="challenge-panel" onClick={() => setShowChallengePanel(false)}>
-          <div className="challenge-panel__content" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800 }}>チャレンジ</div>
-              <div>
-                <button style={{ marginRight: 8 }} onClick={() => { setShowChallengePanel(false); setShowIpShop(true) }}>戻る</button>
-                <button onClick={() => setShowChallengePanel(false)}>閉じる</button>
-              </div>
-            </div>
-            <div style={{ fontSize: '1.1rem', color: '#444' }}>準備中です</div>
-          </div>
-        </div>
-      )}
-
       {/* Main Game Screen - hidden when IP shop is open */}
       {!showIpShop && (
       <>
@@ -2295,6 +2574,7 @@ function App() {
           </div>
         </div>
       )}
+
       {/* spacer to avoid overlapping the top Automation button/panel with the top info row */}
       <div style={{ height: 72 }} />
       {/* Top info row: ring values, score, prestige summary */}
@@ -2333,7 +2613,7 @@ function App() {
               onClick={doInfinite}
               style={{ padding: '0.4em 1em', fontSize: '1rem', background: 'linear-gradient(135deg, #c0f, #f0c)', color: 'white', fontWeight: 700, border: '2px solid #90c' }}
             >
-              Infinite +1 IP
+              Infinite +{getChallengeIPMultiplier()} IP
             </button>
           )}
         </div>

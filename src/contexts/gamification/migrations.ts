@@ -1,5 +1,7 @@
 import type { GamificationState } from './types';
 import { CURRENT_VERSION } from './utils';
+import { clampXp } from './utils';
+import { fromNumber } from '../../utils/bigNumber';
 
 // データマイグレーション関数
 export function migrateData(data: any): GamificationState {
@@ -98,8 +100,9 @@ export function migrateData(data: any): GamificationState {
     // レベルとXPを正しく設定（xpとtotalXpは常に一致）
     console.log(`レベルを ${data.level} から ${newLevel} に修正しました (累積XP: ${totalXp})`);
     data.level = newLevel;
-    data.xp = totalXp;
-    data.totalXp = totalXp;
+    // クランプして安全な範囲に収める
+    data.xp = clampXp(totalXp);
+    data.totalXp = clampXp(totalXp);
     
     data.version = 7;
   }
@@ -151,6 +154,14 @@ export function migrateData(data: any): GamificationState {
   // バージョン番号を最新に更新
   if (!data.apologyCompensationClaimedVersion && !data.apologyCompensationAvailable) {
     data.apologyCompensationAvailable = true;
+  }
+
+  // xp と totalXp を BigNumber に変換（既に BigNumber の場合はそのまま）
+  if (typeof data.xp === 'number') {
+    data.xp = fromNumber(data.xp);
+  }
+  if (typeof data.totalXp === 'number') {
+    data.totalXp = fromNumber(data.totalXp);
   }
 
   data.version = CURRENT_VERSION;

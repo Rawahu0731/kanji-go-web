@@ -3,6 +3,7 @@ import { useGamification } from '../contexts/GamificationContext';
 import { BADGES } from '../data/badges';
 import { useState } from 'react';
 import '../styles/Profile.css';
+import * as BN from '../utils/bigNumber';
 
 function Profile() {
   const { state, isMedalSystemEnabled, getTotalXpForNextLevel, getLevelProgress, setUsername } = useGamification();
@@ -108,7 +109,7 @@ function Profile() {
               <div className="xp-bar" style={{ width: `${getLevelProgress()}%` }}></div>
             </div>
             <div className="xp-text">
-              {state.totalXp.toLocaleString()} / {getTotalXpForNextLevel().toLocaleString()} XP
+              {BN.toString(BN.ensureBigNumber(state.totalXp))} / {BN.toString(BN.fromNumber(getTotalXpForNextLevel()))} XP
             </div>
           </div>
         </div>

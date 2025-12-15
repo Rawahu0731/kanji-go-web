@@ -8,6 +8,7 @@ import AuthButton from './components/AuthButton'
 import './App.css'
 import { type Item, type Level, type Mode } from './types/kanji'
 import { loadKanjiData } from './utils/dataLoader'
+import * as BN from './utils/bigNumber'
 
 const QuizMode = lazy(() => import('./components/QuizMode'));
 const ListMode = lazy(() => import('./components/ListMode'));
@@ -281,7 +282,7 @@ function App() {
               ></div>
             </div>
             <span className="xp-text">
-              {gamificationState.totalXp.toLocaleString()} / {getTotalXpForNextLevel().toLocaleString()} XP
+              {BN.toString(BN.ensureBigNumber(gamificationState.totalXp))} / {BN.toString(BN.fromNumber(getTotalXpForNextLevel()))} XP
             </span>
           </div>
           <div className="stat-item">

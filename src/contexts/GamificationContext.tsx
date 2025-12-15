@@ -13,6 +13,8 @@ import { SKILLS } from '../data/skillTree';
 import { saveUserData, loadUserData, isFirebaseEnabled, getStorageDownloadUrl } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 import { computeNewBadges } from '../utils/badgeUtils';
+import * as BN from '../utils/bigNumber';
+import { toNumber } from '../utils/bigNumber';
 
 // 分離したモジュールからインポート
 import type { GamificationState, GamificationContextType } from './gamification/types';
@@ -22,6 +24,7 @@ import {
   INITIAL_STATE, 
   isMedalSystemEnabled,
   getXpForLevel,
+  getXpForLevelBN,
   mergeCardCollections,
   mergeCharacters,
   rarityRank
@@ -42,6 +45,15 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const prevAuthRef = useRef<typeof auth.user | null>(auth.user || null);
   const saveTimerRef = useRef<number | null>(null);
   const localLoadedRef = useRef(false);
+
+  // requestIdleCallback の安全なラッパー
+  const idleCallback = (fn: () => void, options?: any) => {
+    if (typeof (window as any).requestIdleCallback === 'function') {
+      (window as any).requestIdleCallback(fn, options);
+    } else {
+      window.setTimeout(fn, options && options.timeout ? options.timeout : 0);
+    }
+  };
 
   // URLパラメータの変化を監視してメダルシステムの有効状態を更新
   useEffect(() => {
@@ -212,7 +224,10 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       const merged: GamificationState = {
         ...migratedRemote,
         ...state,
-        totalXp: Math.max(state.totalXp || 0, migratedRemote.totalXp || 0),
+        totalXp: Math.max(
+          (typeof state.totalXp === 'number' ? state.totalXp : toNumber(state.totalXp)) || 0,
+          (typeof migratedRemote.totalXp === 'number' ? migratedRemote.totalXp : toNumber(migratedRemote.totalXp)) || 0
+        ),
         xp: state.xp,
         level: Math.max(state.level, migratedRemote.level),
         coins: state.coins,
@@ -341,22 +356,35 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       // (Challenge 機能削除)
       
       const boostedAmount = Math.floor(amount * multiplier);
+      
+      // BigNumberとして処理
+      const prevXpBN = BN.ensureBigNumber(prev.xp);
+      const prevTotalXpBN = BN.ensureBigNumber(prev.totalXp);
+      const boostedBN = BN.fromNumber(boostedAmount);
+      
       // 累計XP(totalXp)は常に加算する
-      const newTotalXp = prev.totalXp + boostedAmount;
+      const newTotalXp = BN.add(prevTotalXpBN, boostedBN);
       // 現在のXP(xp)も加算するが、レベルアップ時に消費しない（差し引かない）
-      const newXp = prev.xp + boostedAmount;
+      const newXp = BN.add(prevXpBN, boostedBN);
       
-      // 累積XPから適正レベルを計算
-      let newLevel = 1;
-      let accumulatedXp = 0;
+      // 現在レベル内の進捗を計算（BigNumberで）
+      let accumulatedXpBN = BN.fromNumber(0);
+      for (let i = 2; i <= prev.level; i++) {
+        accumulatedXpBN = BN.add(accumulatedXpBN, getXpForLevelBN(i));
+      }
+      const currentProgressBN = BN.subtract(prevTotalXpBN, accumulatedXpBN);
       
-      // totalXpからレベルを逆算
+      // 現在の進捗 + 獲得XP でレベルアップ判定（BigNumberで）
+      let newLevel = prev.level;
+      let progressXpBN = BN.add(currentProgressBN, boostedBN);
+
+      // progressXpBN を消費して複数レベルアップ判定を行う
       while (true) {
-        const nextLevelXp = getXpForLevel(newLevel + 1);
-        if (accumulatedXp + nextLevelXp > newTotalXp) {
+        const nextLevelXpBN = getXpForLevelBN(newLevel + 1);
+        if (BN.compare(progressXpBN, nextLevelXpBN) < 0) {
           break;
         }
-        accumulatedXp += nextLevelXp;
+        progressXpBN = BN.subtract(progressXpBN, nextLevelXpBN);
         newLevel++;
       }
 
@@ -408,10 +436,18 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
 
       // 通知を非同期化
       if (badgesToNotify.length > 0 || newLevel > prev.level) {
-        requestIdleCallback(() => {
+        idleCallback(() => {
           badgesToNotify.forEach(badge => showBadgeNotification(badge));
           if (newLevel > prev.level) showLevelUpNotification(newLevel);
         });
+      }
+
+      // デバッグログ: 現在の進捗・獲得XP・進捗後・次レベル必要XP・レベルアップ有無を出力
+      try {
+        const nextReq = getXpForLevel(newLevel + 1);
+        console.log('[Gamification] addXp -> prevLevel:', prev.level, 'currentProgress:', BN.toString(currentProgressBN), 'gained:', boostedAmount, 'progressAfter:', BN.toString(progressXpBN), 'nextReq:', nextReq, 'newLevel:', newLevel, 'levelUp:', newLevel > prev.level);
+      } catch (e) {
+        console.log('[Gamification] addXp -> logging failed', e);
       }
 
       return { ...prev, xp: newXp, level: newLevel, totalXp: newTotalXp, unlockedBadges: newBadges };
@@ -461,23 +497,31 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
 
   const setXp = (amount: number) => {
     setState(prev => {
-      // xpとtotalXpは常に一致
-      const newXp = amount;
-      const newTotalXp = amount;
+      // BigNumberに変換
+      const amountBN = BN.fromNumber(amount);
+      
       let newLevel = 1;
       let accumulatedXp = 0;
       
       // totalXpからレベルを逆算
       while (true) {
         const nextLevelXp = getXpForLevel(newLevel + 1);
-        if (accumulatedXp + nextLevelXp > newTotalXp) {
+        if (accumulatedXp + nextLevelXp > amount) {
           break;
         }
         accumulatedXp += nextLevelXp;
         newLevel++;
       }
 
-      return { ...prev, xp: newXp, level: newLevel, totalXp: newTotalXp };
+      // デバッグログ
+      try {
+        const nextThreshold = accumulatedXp + getXpForLevel(newLevel + 1);
+        console.log('[Gamification] setXp -> amount:', amount, 'level:', newLevel, 'nextThreshold:', nextThreshold);
+      } catch (e) {
+        console.log('[Gamification] setXp -> logging failed', e);
+      }
+
+      return { ...prev, xp: amountBN, level: newLevel, totalXp: amountBN };
     });
   };
 
@@ -677,7 +721,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       
       // 通知を非同期化
       if (badgesToNotify.length > 0) {
-        requestIdleCallback(() => {
+        idleCallback(() => {
           badgesToNotify.forEach(badge => showBadgeNotification(badge));
         }, { timeout: 2000 });
       }
@@ -717,29 +761,42 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       coinMultiplier *= (1 + collectionBonus);
       const boostedCoins = Math.floor(coins * coinMultiplier);
       
-      // 累計XP更新とレベル計算（超高速化：大半のケースでレベルアップしないことを想定）
-      const newTotalXp = prev.totalXp + boostedXp;
-      const newXp = prev.xp + boostedXp;
+      // BigNumberとして処理
+      const prevXpBN = BN.ensureBigNumber(prev.xp);
+      const prevTotalXpBN = BN.ensureBigNumber(prev.totalXp);
+      const boostedXpBN = BN.fromNumber(boostedXp);
       
-      // 現在のレベルから始めて、レベルアップの必要性をチェック
-      let newLevel = prev.level;
+      // 累計XP更新とレベル計算
+      const newTotalXp = BN.add(prevTotalXpBN, boostedXpBN);
+      const newXp = BN.add(prevXpBN, boostedXpBN);
       
-      // 早期リターン：小さなXP増加ではレベルアップしないケースが大半
-      // まず次のレベルまでのXPをチェック
-      let accumulatedXp = 0;
+      // 現在レベル内の進捗を計算（BigNumberで）
+      let accumulatedXpBN = BN.fromNumber(0);
       for (let i = 2; i <= prev.level; i++) {
-        accumulatedXp += getXpForLevel(i);
+        accumulatedXpBN = BN.add(accumulatedXpBN, getXpForLevelBN(i));
       }
+      const currentProgressBN = BN.subtract(prevTotalXpBN, accumulatedXpBN);
       
-      const nextLevelThreshold = accumulatedXp + getXpForLevel(newLevel + 1);
+      // 現在の進捗 + 獲得XP でレベルアップ判定（BigNumberで）
+      let newLevel = prev.level;
+      let progressXpBN = BN.add(currentProgressBN, boostedXpBN);
       
-      // レベルアップが必要な場合のみループ（ほとんどの場合はスキップ）
-      if (newTotalXp >= nextLevelThreshold) {
-        while (newTotalXp >= accumulatedXp + getXpForLevel(newLevel + 1) && newLevel < 10000) {
-          accumulatedXp += getXpForLevel(newLevel + 1);
-          newLevel++;
+      console.log('[DEBUG] Level-up check START - level:', newLevel, 'progressXp:', BN.toString(progressXpBN));
+
+      // progressXpBN を消費して複数レベルアップ判定を行う
+      while (true) {
+        const nextLevelXpBN = getXpForLevelBN(newLevel + 1);
+        const compareResult = BN.compare(progressXpBN, nextLevelXpBN);
+        console.log('[DEBUG] Checking level', newLevel, '-> next:', BN.toString(nextLevelXpBN), 'progress:', BN.toString(progressXpBN), 'compare:', compareResult);
+        if (compareResult < 0) {
+          break;
         }
+        progressXpBN = BN.subtract(progressXpBN, nextLevelXpBN);
+        newLevel++;
+        console.log('[DEBUG] LEVEL UP to', newLevel, 'remaining:', BN.toString(progressXpBN));
       }
+      
+      console.log('[DEBUG] Level-up check END - finalLevel:', newLevel);
       
       // コイン・メダル更新
       const newCoins = prev.coins + boostedCoins;
@@ -803,6 +860,14 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         setTimeout(() => showLevelUpNotification(newLevel), 0);
       }
       
+      // デバッグログ: 現在の進捗・獲得XP・進捗後・次レベル必要XP・レベルアップ有無を出力
+      try {
+        const nextReq = getXpForLevelBN(prev.level + 1);
+        console.log('[Gamification] addQuizRewards -> prevLevel:', prev.level, 'currentProgress:', BN.toString(currentProgressBN), 'gained:', BN.toString(boostedXpBN), 'progressAfter:', BN.toString(progressXpBN), 'nextReq:', BN.toString(nextReq), 'newLevel:', newLevel, 'levelUp:', newLevel > prev.level);
+      } catch (e) {
+        console.log('[Gamification] addQuizRewards -> logging failed', e);
+      }
+
       const newState = {
         ...prev,
         xp: newXp,
@@ -867,7 +932,9 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     const nextLevelXp = getTotalXpForNextLevel();
     const totalXpNeeded = nextLevelXp - currentLevelXp;
     // レベル進捗は累計XPを基準に計算する（レベルアップで現在XPを消費しないため）
-    const currentProgress = state.totalXp - currentLevelXp;
+    const totalXpBN = BN.ensureBigNumber(state.totalXp);
+    const totalXpNum = BN.toNumber(totalXpBN);
+    const currentProgress = totalXpNum - currentLevelXp;
     return (currentProgress / totalXpNeeded) * 100;
   };
 

@@ -1,6 +1,8 @@
 import type { GamificationState } from './types';
 import type { KanjiCard, CardRarity } from '../../data/cardCollection';
 import type { OwnedCharacter } from '../../data/characters';
+import { fromNumber, add } from '../../utils/bigNumber';
+import type { BigNumber } from '../../utils/bigNumber';
 
 export const STORAGE_KEY = 'kanji_gamification';
 export const CURRENT_VERSION = 8; // データバージョン（バージョン8：カードcountリセット）
@@ -32,11 +34,11 @@ export const isMedalSystemEnabled = (): boolean => {
 
 export const INITIAL_STATE: GamificationState = {
   version: CURRENT_VERSION,
-  xp: 0,
+  xp: fromNumber(0),
   level: 1,
   coins: 0,
   medals: 0,
-  totalXp: 0,
+  totalXp: fromNumber(0),
   unlockedBadges: [],
   purchasedItems: [],
   cardCollection: [],
@@ -63,7 +65,16 @@ export const INITIAL_STATE: GamificationState = {
   tickets: {}
 };
 
-// レベルアップに必要なXPを計算(2次関数的に増加: level^2)
+// 安全なXPの最大値（JSの安全整数を超えると比較や加算が不安定になるためクランプする）
+export const MAX_SAFE_XP = Number.MAX_SAFE_INTEGER || 9007199254740991;
+
+export function clampXp(value: number): number {
+  if (!isFinite(value) || value > MAX_SAFE_XP) return MAX_SAFE_XP;
+  if (value < 0) return 0;
+  return Math.floor(value);
+}
+
+// レベルアップに必要なXPを計算(2次関数的に増加: level^2) - BigNumberを返す
 export function getXpForLevel(level: number): number {
   // 序盤(レベル10まで)は2次関数、それ以降は緩やかに
   if (level <= 10) {
@@ -71,9 +82,59 @@ export function getXpForLevel(level: number): number {
   } else {
     // レベル10以降は1.6次関数で緩やかに
     const base = 100 * 10 * 10; // レベル10までの基準値
-    const additional = Math.floor(120 * Math.pow(level - 10, 1.6));
+    const levelDiff = level - 10;
+    
+    // 指数計算: levelDiff^1.6 = levelDiff * levelDiff^0.6
+    // 0.6乗を計算してから掛け算
+    const power06 = Math.pow(levelDiff, 0.6);
+    
+    // Infinityチェック
+    if (!isFinite(power06)) {
+      return MAX_SAFE_XP;
+    }
+    
+    // levelDiff * power06 = levelDiff^1.6
+    const power16 = levelDiff * power06;
+    
+    if (!isFinite(power16) || power16 > Number.MAX_SAFE_INTEGER / 120) {
+      return MAX_SAFE_XP;
+    }
+    
+    const additional = Math.floor(120 * power16);
     return base + additional;
   }
+}
+
+// レベルアップに必要なXPをBigNumberで計算
+export function getXpForLevelBN(level: number): BigNumber {
+  if (level <= 10) {
+    return fromNumber(Math.floor(100 * level * level));
+  }
+  
+  // レベル10以降: 100*100 + 120*(level-10)^1.6
+  const base = fromNumber(10000);
+  const levelDiff = level - 10;
+  
+  // (level-10)^1.6 を対数で計算: e^(1.6 * ln(level-10))
+  const logValue = 1.6 * Math.log(levelDiff);
+  
+  // e^logValue を仮数と指数に分解
+  // e^logValue = 10^(logValue / ln(10))
+  const log10Value = logValue / Math.LN10;
+  const exponent = Math.floor(log10Value);
+  const mantissa = Math.pow(10, log10Value - exponent);
+  
+  // 120 * (level-10)^1.6 = 120 * mantissa * 10^exponent
+  const coeff = 120 * mantissa;
+  const coeffBN = fromNumber(coeff);
+  
+  // 指数を調整
+  const powerBN: BigNumber = {
+    mantissa: coeffBN.mantissa,
+    exponent: coeffBN.exponent + exponent
+  };
+  
+  return add(base, powerBN);
 }
 
 // カードのレアリティランク

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGamification } from '../contexts/GamificationContext';
+import { toNumber } from '../utils/bigNumber';
 import './DebugPanel.css';
 
 const DEBUG_PASSWORD = 'kanjiDebug2025'; // デバッグモードのパスワード
@@ -134,11 +135,11 @@ export function DebugPanel() {
             <div className="debug-info">
               <div className="debug-stat">
                 <span className="debug-label">現在のXP:</span>
-                <span className="debug-value">{state.xp}</span>
+                <span className="debug-value">{typeof state.xp === 'number' ? state.xp : toNumber(state.xp)}</span>
               </div>
               <div className="debug-stat">
                 <span className="debug-label">累計XP:</span>
-                <span className="debug-value">{state.totalXp}</span>
+                <span className="debug-value">{typeof state.totalXp === 'number' ? state.totalXp : toNumber(state.totalXp)}</span>
               </div>
               <div className="debug-stat">
                 <span className="debug-label">現在のレベル:</span>

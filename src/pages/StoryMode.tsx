@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { storyChapters } from '../data/storyChapters';
 import type { Chapter } from '../data/storyChapters';
 import { useGamification } from '../contexts/GamificationContext';
+import { toNumber } from '../utils/bigNumber';
 import '../styles/StoryMode.css';
 
 const STORAGE_KEY = 'kanji_story_progress';
@@ -19,7 +20,7 @@ function StoryMode() {
   const [progress, setProgress] = useState<StoryProgress>({
     completedChapters: [],
     currentChapter: 1,
-    totalXp: gamificationState.totalXp // ゲーミフィケーションシステムから累計XPを取得
+    totalXp: typeof gamificationState.totalXp === 'number' ? gamificationState.totalXp : toNumber(gamificationState.totalXp) // ゲーミフィケーションシステムから累計XPを取得
   });
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [showReward, setShowReward] = useState(false);
@@ -38,7 +39,8 @@ function StoryMode() {
   };
 
   const isChapterUnlocked = (chapter: Chapter): boolean => {
-    return gamificationState.totalXp >= chapter.requiredXp;
+    const totalXpValue = typeof gamificationState.totalXp === 'number' ? gamificationState.totalXp : toNumber(gamificationState.totalXp);
+    return totalXpValue >= chapter.requiredXp;
   };
 
   const isChapterCompleted = (chapterId: number): boolean => {
@@ -71,7 +73,7 @@ function StoryMode() {
         ...progress,
         completedChapters: [...progress.completedChapters, selectedChapter.id],
         currentChapter: Math.max(progress.currentChapter, selectedChapter.id + 1),
-        totalXp: gamificationState.totalXp // 最新の累計XPを反映
+        totalXp: typeof gamificationState.totalXp === 'number' ? gamificationState.totalXp : toNumber(gamificationState.totalXp) // 最新の累計XPを反映
       };
       saveProgress(newProgress);
       setShowReward(true);
@@ -89,7 +91,7 @@ function StoryMode() {
       <header className="story-header">
         <Link to="/" className="back-button">← ホームへ戻る</Link>
         <h1>ストーリーモード</h1>
-        <div className="xp-display">累計XP: {gamificationState.totalXp}</div>
+        <div className="xp-display">累計XP: {typeof gamificationState.totalXp === 'number' ? gamificationState.totalXp : toNumber(gamificationState.totalXp)}</div>
       </header>
 
       <div className="story-content">

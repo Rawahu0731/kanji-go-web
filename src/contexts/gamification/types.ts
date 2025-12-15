@@ -2,14 +2,15 @@
 import type { KanjiCard } from '../../data/cardCollection';
 import type { OwnedCharacter } from '../../data/characters';
 import type { SkillLevel } from '../../data/skillTree';
+import type { BigNumber } from '../../utils/bigNumber';
 
 export interface GamificationState {
   version?: number; // データバージョン
-  xp: number;
+  xp: number | BigNumber; // 現在のXP（BigNumberで大きい値も扱える）
   level: number;
   coins: number;
   medals: number; // 新通貨メダル
-  totalXp: number; // 累計XP（ストーリー解放などの判定に使用）
+  totalXp: number | BigNumber; // 累計XP（ストーリー解放などの判定に使用、BigNumberで大きい値も扱える）
   unlockedBadges: string[];
   purchasedItems: string[];
   cardCollection: KanjiCard[]; // カードコレクション
