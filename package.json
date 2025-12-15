@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build --logLevel=warn",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -13,10 +13,10 @@
     "dotenv": "^17.2.3",
     "firebase": "^12.6.0",
     "microcms-js-sdk": "^3.2.0",
-    "react-window": "^1.8.8",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-router-dom": "^7.9.5"
+    "react-router-dom": "^7.9.5",
+    "react-window": "^1.8.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
@@ -28,6 +28,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.22",
     "globals": "^16.4.0",
+    "terser": "^5.44.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.45.0",
     "vite": "npm:rolldown-vite@7.1.14"
