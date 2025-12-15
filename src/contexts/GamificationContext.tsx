@@ -743,7 +743,31 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       
       // コイン・メダル更新
       const newCoins = prev.coins + boostedCoins;
-      const newMedals = prev.medals + medals;
+      
+      // メダル更新 - node14の倍率を適用
+      let finalMedals = medals;
+      if (medals > 0) {
+        try {
+          const raw = localStorage.getItem('revolution_state_v1');
+          if (raw) {
+            const rev = JSON.parse(raw);
+            const ipUp = rev?.ipUpgrades || {};
+            const hasNode14 = (ipUp.node14 || 0) >= 1;
+            if (hasNode14) {
+              const n = Number(rev.infinityPoints || 0);
+              if (isFinite(n) && n >= 0) {
+                const mul = Math.floor(Math.sqrt(n));
+                if (mul >= 1) {
+                  finalMedals = Math.floor(medals * mul);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // ignore parse errors and fall back to base amount
+        }
+      }
+      const newMedals = prev.medals + finalMedals;
       
       // キャラクターXP更新（最適化：必要な場合のみディープコピー）
       let updatedEquippedCharacter = prev.equippedCharacter;
