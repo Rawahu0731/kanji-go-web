@@ -6,6 +6,7 @@ import { getStorage, ref as storageRef, getDownloadURL } from 'firebase/storage'
 import type { Firestore } from 'firebase/firestore';
 import type { Auth } from 'firebase/auth';
 import type { GamificationState } from '../contexts/gamification/types';
+import { toNumber } from '../utils/bigNumber';
 
 // Firebase設定（環境変数から読み込み）
 // 実際に使う際は .env ファイルに以下を追加してください:
@@ -156,11 +157,17 @@ export const saveUserData = async (userId: string, data: GamificationState) => {
   
   // ランキング用データも更新
   const rankingRef = doc(db, 'rankings', userId);
+  
+  // totalXpをBigNumberから数値に変換
+  const totalXpNumber = typeof data.totalXp === 'number' 
+    ? data.totalXp 
+    : toNumber(data.totalXp);
+  
   const rankingObj = {
     userId,
     username: data.username,
     level: data.level,
-    totalXp: data.totalXp,
+    totalXp: totalXpNumber,
     coins: data.coins,
     medals: data.medals,
     iconUrl: data.customIconUrl || data.activeIcon,
