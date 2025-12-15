@@ -578,6 +578,7 @@ function App() {
 
     // pause RAF loop so it won't read stale refs/state while we reset
     pauseLoopRef.current = true
+    resetRef.current = true
 
     // increment infinity points (update both state and ref synchronously)
     const newIP = (infinityPoints || 0) + 1
@@ -1124,14 +1125,10 @@ function App() {
     if (!autoInfinite) return
     if (score !== Infinity) return
     
-    // Use a small timeout to ensure state is stable before auto-triggering
-    const timer = setTimeout(() => {
-      if (score === Infinity && autoInfiniteRef.current && (ipUpgrades.node15 || 0) >= 1) {
-        doInfinite()
-      }
-    }, 100)
-    
-    return () => clearTimeout(timer)
+    // Double-check using refs to ensure state stability without delay
+    if (autoInfiniteRef.current && score === Infinity) {
+      doInfinite()
+    }
   }, [score, ipUpgrades.node15, autoInfinite])
   // unlock auto-buy when node3a is purchased
   useEffect(() => {
@@ -1459,7 +1456,15 @@ function App() {
             // multiply score by the number of rotations that occurred
             setScore((s) => {
               if (resetRef.current) return 0
-              return s + prod * prestigeMul * ipScoreMult * rotationsSinceLastUpdate
+              const newScore = s + prod * prestigeMul * ipScoreMult * rotationsSinceLastUpdate
+              
+              // Check for auto-infinity immediately when score reaches Infinity
+              if (newScore === Infinity && !resetRef.current && autoInfiniteRef.current && (ipUpgradesRef.current.node15 || 0) >= 1) {
+                // Immediately trigger doInfinite (it has its own guards)
+                doInfinite()
+              }
+              
+              return newScore
             })
             // multiply increment by the number of rotations that occurred
             return arr.map((v, idx) => (idx === i ? +((v + inc * rotationsSinceLastUpdate).toFixed(2)) : v))
