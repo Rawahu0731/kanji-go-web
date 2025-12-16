@@ -1,6 +1,5 @@
 import type { GamificationState } from './types';
 import { CURRENT_VERSION } from './utils';
-import { clampXp } from './utils';
 import { fromNumber } from '../../utils/bigNumber';
 
 // データマイグレーション関数
@@ -100,9 +99,8 @@ export function migrateData(data: any): GamificationState {
     // レベルとXPを正しく設定（xpとtotalXpは常に一致）
     console.log(`レベルを ${data.level} から ${newLevel} に修正しました (累積XP: ${totalXp})`);
     data.level = newLevel;
-    // クランプして安全な範囲に収める
-    data.xp = clampXp(totalXp);
-    data.totalXp = clampXp(totalXp);
+    data.xp = fromNumber(totalXp);
+    data.totalXp = fromNumber(totalXp);
     
     data.version = 7;
   }

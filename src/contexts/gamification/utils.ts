@@ -65,15 +65,6 @@ export const INITIAL_STATE: GamificationState = {
   tickets: {}
 };
 
-// 安全なXPの最大値（JSの安全整数を超えると比較や加算が不安定になるためクランプする）
-export const MAX_SAFE_XP = Number.MAX_SAFE_INTEGER || 9007199254740991;
-
-export function clampXp(value: number): number {
-  if (!isFinite(value) || value > MAX_SAFE_XP) return MAX_SAFE_XP;
-  if (value < 0) return 0;
-  return Math.floor(value);
-}
-
 // レベルアップに必要なXPを計算(2次関数的に増加: level^2) - BigNumberを返す
 export function getXpForLevel(level: number): number {
   // 序盤(レベル10まで)は2次関数、それ以降は緩やかに
@@ -85,21 +76,7 @@ export function getXpForLevel(level: number): number {
     const levelDiff = level - 10;
     
     // 指数計算: levelDiff^1.6 = levelDiff * levelDiff^0.6
-    // 0.6乗を計算してから掛け算
-    const power06 = Math.pow(levelDiff, 0.6);
-    
-    // Infinityチェック
-    if (!isFinite(power06)) {
-      return MAX_SAFE_XP;
-    }
-    
-    // levelDiff * power06 = levelDiff^1.6
-    const power16 = levelDiff * power06;
-    
-    if (!isFinite(power16) || power16 > Number.MAX_SAFE_INTEGER / 120) {
-      return MAX_SAFE_XP;
-    }
-    
+    const power16 = levelDiff * Math.pow(levelDiff, 0.6);
     const additional = Math.floor(120 * power16);
     return base + additional;
   }
