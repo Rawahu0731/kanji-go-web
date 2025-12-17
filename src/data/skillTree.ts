@@ -34,12 +34,12 @@ export const SKILLS: Skill[] = [
   {
     id: 'xp_boost_1',
     name: 'XPブースト I',
-    description: 'XP獲得量+1000%（レベルごと）',
+    description: 'XP獲得量+100%（レベルごと）',
     cost: 3,
     maxLevel: 5,
-    effect: {
+      effect: {
       type: 'xp_boost',
-      value: 1000
+      value: 100
     },
     prerequisite: ['core'],
     tier: 1,
@@ -48,12 +48,12 @@ export const SKILLS: Skill[] = [
   {
     id: 'coin_boost_1',
     name: 'コインブースト I',
-    description: 'コイン獲得量+1000%（レベルごと）',
+    description: 'コイン獲得量+100%（レベルごと）',
     cost: 3,
     maxLevel: 5,
     effect: {
       type: 'coin_boost',
-      value: 1000
+      value: 100
     },
     prerequisite: ['core'],
     tier: 1,
@@ -120,12 +120,12 @@ export const SKILLS: Skill[] = [
   {
     id: 'xp_boost_2',
     name: 'XPブースト II',
-    description: 'XP獲得量+1500%（レベルごと）',
+    description: 'XP獲得量+150%（レベルごと）',
     cost: 8,
     maxLevel: 5,
     effect: {
       type: 'xp_boost',
-      value: 1500
+      value: 150
     },
     prerequisite: ['xp_boost_1'],
     tier: 2,
@@ -148,12 +148,12 @@ export const SKILLS: Skill[] = [
   {
     id: 'coin_boost_2',
     name: 'コインブースト II',
-    description: 'コイン獲得量+1500%（レベルごと）',
+    description: 'コイン獲得量+150%（レベルごと）',
     cost: 8,
     maxLevel: 5,
     effect: {
       type: 'coin_boost',
-      value: 1500
+      value: 150
     },
     prerequisite: ['coin_boost_1'],
     tier: 2,
@@ -248,12 +248,12 @@ export const SKILLS: Skill[] = [
   {
     id: 'xp_boost_3',
     name: 'XPブースト III',
-    description: 'XP獲得量+2000%（レベルごと）',
+    description: 'XP獲得量+200%（レベルごと）',
     cost: 15,
     maxLevel: 5,
     effect: {
       type: 'xp_boost',
-      value: 2000
+      value: 200
     },
     prerequisite: ['xp_boost_2'],
     tier: 3,
@@ -290,12 +290,12 @@ export const SKILLS: Skill[] = [
   {
     id: 'coin_boost_3',
     name: 'コインブースト III',
-    description: 'コイン獲得量+2000%（レベルごと）',
+    description: 'コイン獲得量+200%（レベルごと）',
     cost: 15,
     maxLevel: 5,
     effect: {
       type: 'coin_boost',
-      value: 2000
+      value: 200
     },
     prerequisite: ['coin_boost_2'],
     tier: 3,
@@ -376,12 +376,12 @@ export const SKILLS: Skill[] = [
   {
     id: 'master_xp',
     name: 'マスターXP',
-    description: 'XP獲得量+3000%（レベルごと）',
+    description: 'XP獲得量+300%（レベルごと）',
     cost: 30,
     maxLevel: 5,
     effect: {
       type: 'xp_boost',
-      value: 3000
+      value: 300
     },
     prerequisite: ['xp_boost_3'],
     tier: 4,
@@ -390,12 +390,12 @@ export const SKILLS: Skill[] = [
   {
     id: 'master_coin',
     name: 'マスターコイン',
-    description: 'コイン獲得量+3000%（レベルごと）',
+    description: 'コイン獲得量+300%（レベルごと）',
     cost: 30,
     maxLevel: 5,
     effect: {
       type: 'coin_boost',
-      value: 3000
+      value: 300
     },
     prerequisite: ['coin_boost_3'],
     tier: 4,

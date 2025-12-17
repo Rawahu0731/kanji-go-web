@@ -111,14 +111,6 @@ export const CHARACTERS: Record<string, Character> = {
     description: 'XPとコインを12%増加',
     effect: { type: 'both_boost', value: 1.12 }
   },
-  bear: {
-    id: 'bear',
-    name: '熊',
-    icon: '🐻',
-    rarity: 'ultra',
-    description: 'XPとコインを1200%増加（13倍）',
-    effect: { type: 'both_boost', value: 13.0 }
-  },
   
   // エピック
   wizard: {
@@ -225,6 +217,14 @@ export const CHARACTERS: Record<string, Character> = {
     description: 'コインを1000%増加（11倍）',
     effect: { type: 'coin_boost', value: 11.0 },
     unlockDate: '2025-12-01'
+  },
+  bear: {
+    id: 'bear',
+    name: '熊',
+    icon: '🐻',
+    rarity: 'ultra',
+    description: 'XPとコインを1200%増加（13倍）',
+    effect: { type: 'both_boost', value: 13.0 }
   }
 };
 
@@ -344,7 +344,7 @@ export const getXpForCharacterLevel = (level: number): number => {
 export const MAX_CHARACTER_LEVEL = 100;
 
 // キャラクターの最大+値（count - 1の最大値）
-export const MAX_CHARACTER_COUNT = 200001;
+export const MAX_CHARACTER_COUNT = 101;
 
 // レアリティの日本語名
 export const getRarityName = (rarity: CharacterRarity): string => {

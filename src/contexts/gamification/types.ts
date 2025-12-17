@@ -38,8 +38,7 @@ export interface GamificationState {
   lastSkillPurchaseTime?: number;
   // コレクション（漢字ごとの + 値。最大30でカンスト）
   collectionPlus?: { kanji: string; plus: number; obtainedAt?: number }[];
-  // コレクション++（漢字ごとの + 値。最大100でカンスト）
-  collectionPlusPlus?: { kanji: string; plus: number; obtainedAt?: number }[];
+  // コレクション++ は削除
   // チケット（キー: ticketId, 値: 所持数）
   tickets?: Record<string, number>;
   // マイグレーションで使用: 更新配信後の「お詫びアイテム」配布フラグ
@@ -78,19 +77,16 @@ export type GamificationContextType = {
   openCardPack: (packType: string) => KanjiCard[];
   // メダルで引くコレクション+ガチャ（返り値は表示用のカードオブジェクト）
   pullCollectionPlusGacha: (count: number) => KanjiCard[];
-  // コレクション++用のガチャ
-  pullCollectionPlusPlusGacha: (count: number) => KanjiCard[];
   // コレクション+ に+値を追加（内部でカンスト処理）
   addToCollectionPlus: (kanji: string, amount?: number) => void;
-  // コレクション++ に+値を追加（内部でカンスト処理、最大+100）
-  addToCollectionPlusPlus: (kanji: string, amount?: number) => void;
   pullCharacterGacha: (count: number, guaranteedRarity?: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic') => Character[];
   equipCharacter: (character: OwnedCharacter | null) => void;
   getCharacterBoost: (type: 'xp' | 'coin') => number;
   addCharacterXp: (amount: number) => void;
   getCollectionBoost: () => number;
   getCollectionPlusEffect: () => { totalPlus: number; xpCoinBonusFraction: number; medalBoost: number };
-  getCollectionPlusPlusEffect: () => { totalPlus: number; xpCoinBonusFraction: number; medalBoost: number };
+  // コレクション++ は削除
+  isCollectionComplete: () => boolean;
   addCardsToDeck: (cards: KanjiCard[]) => void;
   removeCardFromDeck: (kanji: string) => void;
   upgradeCardInDeck: (kanji: string, cost: number) => void;
@@ -107,7 +103,6 @@ export type GamificationContextType = {
 
   // コレクション（漢字ごとの値。最大30でカンスト）
   collectionPlus?: { kanji: string; plus: number; obtainedAt?: number }[];
-  collectionPlusPlus?: { kanji: string; plus: number; obtainedAt?: number }[];
 };
 
 export type Character = any; // 必要に応じて正確な型を定義

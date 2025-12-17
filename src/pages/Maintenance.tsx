@@ -6,7 +6,10 @@ export default function Maintenance() {
       <div className="maintenance-card">
         <h1>メンテナンス中</h1>
         <p>ただいまサービスを一時停止しています。ご不便をおかけして申し訳ありません。復旧までお待ちください。</p>
-        <p>状況は <a href="/known-issues">不具合情報</a> をご確認ください。</p>
+        <p>
+          <a href="/known-issues">不具合情報</a> |
+          <a href="/announcements" style={{ marginLeft: '8px' }}>お知らせ</a>
+        </p>
       </div>
     </div>
   )

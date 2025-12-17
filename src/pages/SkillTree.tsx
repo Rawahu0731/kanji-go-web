@@ -4,7 +4,15 @@ import { useGamification } from '../contexts/GamificationContext';
 import '../styles/SkillTree.css';
 
 const SkillTree = () => {
-  const { state, isMedalSystemEnabled, getSkillLevel, upgradeSkill } = useGamification();
+  const { state, isMedalSystemEnabled, getSkillLevel, upgradeSkill, isCollectionComplete } = useGamification();
+  if (!isCollectionComplete()) {
+    return (
+      <div style={{ padding: '2rem' }}>
+        <h1>🌳 スキルツリー</h1>
+        <p>コレクションを完了するまでスキルツリーは利用できません。まずは <a href="/collection">コレクション</a> を埋めてください。</p>
+      </div>
+    );
+  }
   const medals = state.medals;
   const streakProtectionCount = state.streakProtectionCount;
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);

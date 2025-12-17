@@ -93,6 +93,10 @@ function App() {
     getLevelProgress,
     initializing
   } = useGamification();
+  // get isCollectionComplete from the same hook
+  const { isCollectionComplete } = useGamification();
+  // `isCollectionComplete` を同じフック呼び出しにまとめる
+  // (useGamification は上で一度呼んでいるため、ここでは追加で取得している箇所を削除しました)
 
   useEffect(() => {
     async function fetchInvestigatingIssues() {
@@ -289,7 +293,7 @@ function App() {
             <span className="stat-label">💰</span>
             <span className="stat-value">{gamificationState.coins}</span>
           </div>
-          {isMedalSystemEnabled && (
+          {isMedalSystemEnabled && isCollectionComplete() && (
             <div className="stat-item">
               <span className="stat-label">🏅</span>
               <span className="stat-value">{gamificationState.medals}</span>
@@ -300,13 +304,16 @@ function App() {
           <Link to="/profile" className="nav-link">プロフィール</Link>
           <Link to="/characters" className="nav-link">⭐ キャラクター</Link>
           <Link to="/shop" className="nav-link">ショップ</Link>
-          <Link to="/skill-tree" className="nav-link">🌳 スキルツリー</Link>
+          {isCollectionComplete() && (
+            <Link to="/skill-tree" className="nav-link">🌳 スキルツリー</Link>
+          )}
           {typeof getSkillLevel === 'function' && getSkillLevel('unlock_rotation') > 0 && (
             <Link to="/revolution" className="nav-link">回転</Link>
           )}
           <Link to="/collection" className="nav-link">📚 コレクション</Link>
-          <Link to="/collection-plus" className="nav-link">🏅 コレクション+</Link>
-          <Link to="/collection-plus-plus" className="nav-link">🏆 コレクション++</Link>
+          {isCollectionComplete() && (
+            <Link to="/collection-plus" className="nav-link">🏅 コレクション+</Link>
+          )}
           <Link to="/story" className="nav-link">ストーリー</Link>
           <Link to="/ranking" className="nav-link">🏆 ランキング</Link>
         </div>

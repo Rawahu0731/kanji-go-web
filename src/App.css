@@ -121,6 +121,11 @@
   font-size: 1.1rem;
 }
 
+/* ヘッダー内の値が他ルールで白くなってしまうケースを防止 */
+.gamification-header .stat-value {
+  color: #1a1a1a !important;
+}
+
 .xp-progress {
   flex-grow: 1;
   min-width: 200px;

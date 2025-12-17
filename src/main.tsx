@@ -16,7 +16,6 @@ const Shop = lazy(() => import('./pages/Shop.tsx'))
 const Profile = lazy(() => import('./pages/Profile.tsx'))
 const CardCollection = lazy(() => import('./pages/CardCollection.tsx'))
 const CollectionPlus = lazy(() => import('./pages/CollectionPlus.tsx'))
-const CollectionPlusPlus = lazy(() => import('./pages/CollectionPlusPlus.tsx'))
 const Characters = lazy(() => import('./pages/Characters.tsx'))
 const Ranking = lazy(() => import('./pages/Ranking.tsx'))
 const Terms = lazy(() => import('./pages/Terms.tsx'))
@@ -38,6 +37,7 @@ createRoot(document.getElementById('root')!).render(
           <BrowserRouter>
             <Routes>
               <Route path="/known-issues" element={<KnownIssues />} />
+              <Route path="/announcements" element={<Announcements />} />
               <Route path="*" element={<Maintenance />} />
             </Routes>
           </BrowserRouter>
@@ -55,7 +55,6 @@ createRoot(document.getElementById('root')!).render(
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/collection" element={<CardCollection />} />
                   <Route path="/collection-plus" element={<CollectionPlus />} />
-                  <Route path="/collection-plus-plus" element={<CollectionPlusPlus />} />
                   <Route path="/characters" element={<Characters />} />
                   <Route path="/ranking" element={<Ranking />} />
                   <Route path="/terms" element={<Terms />} />

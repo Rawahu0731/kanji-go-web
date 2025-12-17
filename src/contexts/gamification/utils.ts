@@ -61,7 +61,6 @@ export const INITIAL_STATE: GamificationState = {
   lastInterestTime: Date.now(),
   lastSkillPurchaseTime: undefined,
   collectionPlus: [],
-  collectionPlusPlus: [],
   tickets: {}
 };
 

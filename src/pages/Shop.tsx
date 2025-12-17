@@ -9,8 +9,8 @@ import { getRarityName as getCharacterRarityName, MAX_CHARACTER_COUNT, CHARACTER
 import '../styles/Shop.css';
 
 function Shop() {
-  const { state, purchaseItem, purchaseWithMedals, pullCollectionPlusGacha, pullCollectionPlusPlusGacha, setTheme, setIcon, setCustomIconUrl, addCardToCollection, openCardPack, pullCharacterGacha, addTickets, useTicket } = useGamification();
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'theme' | 'icon' | 'collection' | 'gacha' | 'medal' | 'ticket' | 'collection_plus_plus'>('all');
+  const { state, purchaseItem, purchaseWithMedals, pullCollectionPlusGacha, setTheme, setIcon, setCustomIconUrl, addCardToCollection, openCardPack, pullCharacterGacha, addTickets, useTicket, isCollectionComplete } = useGamification();
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'theme' | 'icon' | 'collection' | 'gacha' | 'medal' | 'ticket'>('all');
   const [purchaseMessage, setPurchaseMessage] = useState<string>('');
   const [showCustomIconModal, setShowCustomIconModal] = useState(false);
   const [customIconError, setCustomIconError] = useState('');
@@ -25,14 +25,18 @@ function Shop() {
   const [probabilities, setProbabilities] = useState<Record<string, number> | null>(null);
   const [probNote, setProbNote] = useState<string>('');
 
+  const collectionComplete = isCollectionComplete();
+
   const filteredItems = (() => {
     if (selectedCategory === 'all') return SHOP_ITEMS;
-    if (selectedCategory === 'collection_plus_plus') {
-      return SHOP_ITEMS.filter(item => item.effect && String(item.effect).startsWith('collection_plus_plus_'));
-    }
     if (selectedCategory === 'medal') {
-      // コレクション+ タブでは Collection++ のアイテムを除外する
-      return SHOP_ITEMS.filter(item => item.category === 'medal' && !(item.effect && String(item.effect).startsWith('collection_plus_plus_')));
+      // コレクション未完了の場合は、コレクション+ ガチャを一覧から除外する
+      return SHOP_ITEMS.filter(item => {
+        if (item.category !== 'medal') return false;
+        const isCollectionPlusGacha = item.effect && String(item.effect).startsWith('collection_plus_');
+        if (!collectionComplete && isCollectionPlusGacha) return false;
+        return true;
+      });
     }
     return SHOP_ITEMS.filter(item => item.category === selectedCategory);
   })();
@@ -160,17 +164,18 @@ function Shop() {
 
     // メダル専用ガチャ（コレクション+）
     if (item.category === 'medal') {
+      // コレクション完了していない場合は購入不可
+      const collectionComplete = isCollectionComplete();
+      if (!collectionComplete) {
+        setPurchaseMessage('コレクションが完了するまで利用できません');
+        setTimeout(() => setPurchaseMessage(''), 2000);
+        return;
+      }
       const success = purchaseWithMedals(item.id, item.price, false);
 
       if (success && item.effect) {
-        let cards = [] as KanjiCard[];
-        if (item.effect.startsWith('collection_plus_plus_')) {
-          const count = parseInt(item.effect.replace('collection_plus_plus_', '')) || 1;
-          cards = pullCollectionPlusPlusGacha(count);
-        } else {
-          const count = parseInt(item.effect.replace('collection_plus_', '')) || 1;
-          cards = pullCollectionPlusGacha(count);
-        }
+        const count = parseInt(item.effect.replace('collection_plus_', '')) || 1;
+        const cards = pullCollectionPlusGacha(count);
         // collection+ の値はコンテキスト側で反映される
         setOpenedCards(cards);
         setIsCollectionPlusModal(true);
@@ -315,18 +320,15 @@ function Shop() {
           >
             コレクション
           </button>
-          <button 
-            onClick={() => setSelectedCategory('medal')}
-            className={selectedCategory === 'medal' ? 'active' : ''}
-          >
-            コレクション+
-          </button>
-          <button 
-            onClick={() => setSelectedCategory('collection_plus_plus')}
-            className={selectedCategory === 'collection_plus_plus' ? 'active' : ''}
-          >
-            コレクション++
-          </button>
+          {collectionComplete && (
+            <button 
+              onClick={() => setSelectedCategory('medal')}
+              className={selectedCategory === 'medal' ? 'active' : ''}
+            >
+              コレクション+
+            </button>
+          )}
+          {/* コレクション++ は削除済み */}
           <button 
             onClick={() => setSelectedCategory('gacha')}
             className={selectedCategory === 'gacha' ? 'active' : ''}
@@ -347,13 +349,13 @@ function Shop() {
           {filteredItems.map(item => {
             const isPurchased = state.purchasedItems.includes(item.id) || item.price === 0;
             const isMedal = item.category === 'medal';
-            // Collection++ 用アイテムかどうか
-            const isCollectionPlusPlusGacha = item.category === 'medal' && item.effect && String(item.effect).startsWith('collection_plus_plus_');
-            // コレクション+（従来）のガチャかどうか（++ を除外）
-            const isCollectionPlusGacha = item.category === 'medal' && item.effect && String(item.effect).startsWith('collection_plus_') && !isCollectionPlusPlusGacha;
+            // コレクション+（従来）のガチャかどうか
+            const isCollectionPlusGacha = item.category === 'medal' && item.effect && String(item.effect).startsWith('collection_plus_');
+            // collection+ ガチャはコレクション未完了なら非表示
+            if (isCollectionPlusGacha && !collectionComplete) return null;
             const collectionPlusPulls = isCollectionPlusGacha ? (parseInt(String(item.effect).replace('collection_plus_', '')) || 1) : 0;
-            const ticketCount = (state.tickets?.ticket_collection_plus || 0) + (state.tickets?.ticket_collection_plus_3 || 0);
-            const hasCollectionPlusTicket = isCollectionPlusGacha && ticketCount > 0;
+            // collection+ tickets removed: hide ticket-related UI
+            const hasCollectionPlusTicket = false;
             const isActive = (item.category === 'theme' && state.activeTheme === item.effect) ||
                             (item.category === 'icon' && state.activeIcon === item.effect);
             const isFree = item.price === 0;
@@ -391,9 +393,23 @@ function Shop() {
                     全キャラクター上限達成
                   </div>
                 )}
+                {item.category === 'medal' && !collectionComplete && (
+                  <div style={{
+                    background: 'rgba(200,200,200,0.06)',
+                    border: '1px solid rgba(180,180,180,0.08)',
+                    borderRadius: '8px',
+                    padding: '0.4rem',
+                    marginTop: '0.5rem',
+                    fontSize: '0.85rem',
+                    color: '#666',
+                    textAlign: 'center'
+                  }}>
+                    コレクション完了で解放
+                  </div>
+                )}
                 <div className="item-footer">
                   <div className="item-price">
-                    {isFree ? '無料' : hasCollectionPlusTicket ? `🎫 チケット ×${ticketCount}` : isMedal ? `🏅 ${item.price}` : `💰 ${item.price}`}
+                    {isFree ? '無料' : isMedal ? `🏅 ${item.price}` : `💰 ${item.price}`}
                   </div>
                   {item.category === 'ticket' ? (
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -423,8 +439,8 @@ function Shop() {
                       <button
                         onClick={() => {
                           // 使えるチケットIDを優先的に選ぶ（単発チケット優先）
-                          const singleId = 'ticket_collection_plus';
-                          const multiId = 'ticket_collection_plus_3';
+                          const singleId = '';
+                          const multiId = '';
                           const usableId = (state.tickets && state.tickets[singleId] > 0) ? singleId : ((state.tickets && state.tickets[multiId] > 0) ? multiId : null);
                           if (!usableId) {
                             setPurchaseMessage('チケットが足りません');
@@ -459,7 +475,7 @@ function Shop() {
                     <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
                     <button
                       onClick={() => handlePurchase(item)}
-                      disabled={(!isFree && !isPurchased && !isMedal && state.coins < item.price) || (!isFree && isMedal && state.medals < item.price) || isAlreadyOwned || isGachaDisabled}
+                      disabled={(!isFree && !isPurchased && !isMedal && state.coins < item.price) || (!isFree && isMedal && state.medals < item.price) || isAlreadyOwned || isGachaDisabled || (!collectionComplete && item.category === 'medal')}
                       className={`purchase-button ${isPurchased ? 'purchased-btn' : ''} ${isActive ? 'active-btn' : ''} ${isAlreadyOwned ? 'owned-btn' : ''}`}
                     >
                       {isGachaDisabled ? '上限達成' :
@@ -764,27 +780,29 @@ function Shop() {
                 >
                   📚 コレクションを見る
                 </Link>
-                <Link
-                  to="/collection-plus"
-                  style={{
-                    flex: '1',
-                    padding: '1rem',
-                    background: 'linear-gradient(135deg, #ffd27f 0%, #ffc857 100%)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontWeight: '700',
-                    fontSize: '1.1rem',
-                    cursor: 'pointer',
-                    textDecoration: 'none',
-                    textAlign: 'center',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  🏅 コレクション+を見る
-                </Link>
+                {collectionComplete && (
+                  <Link
+                    to="/collection-plus"
+                    style={{
+                      flex: '1',
+                      padding: '1rem',
+                      background: 'linear-gradient(135deg, #ffd27f 0%, #ffc857 100%)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontWeight: '700',
+                      fontSize: '1.1rem',
+                      cursor: 'pointer',
+                      textDecoration: 'none',
+                      textAlign: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    🏅 コレクション+を見る
+                  </Link>
+                )}
               </div>
             </div>
           </div>

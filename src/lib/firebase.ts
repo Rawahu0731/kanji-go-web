@@ -49,6 +49,10 @@ try {
 
 export const googleProvider = new GoogleAuthProvider();
 
+// Firestoreの保存先を一時的に test/root 配下に切り替えるためのヘルパー
+// 例) doc(db, ...withTestRoot('users', userId)) => test/root/users/{userId}
+const withTestRoot = (...segments: string[]) => ['test', 'root', ...segments];
+
 // 認証関連
 export const signInWithGoogle = async () => {
   if (!auth) throw new Error('Firebase not initialized');
@@ -127,7 +131,7 @@ export interface RankingEntry {
 export const saveUserData = async (userId: string, data: GamificationState) => {
   if (!db) throw new Error('Firestore not initialized');
   
-  const userRef = doc(db, 'users', userId);
+  const userRef = doc(db, withTestRoot('users', userId).join('/'));
   // Firestore rejects `undefined` field values. sanitize object first.
   const sanitizeForFirestore = (obj: any): any => {
     if (obj === null || obj === undefined) return undefined;
@@ -154,7 +158,6 @@ export const saveUserData = async (userId: string, data: GamificationState) => {
     cardCollection,
     characters,
     collectionPlus,
-    collectionPlusPlus,
     skillLevels,
     // これらはユーザードキュメントに残す
     username,
@@ -210,7 +213,7 @@ export const saveUserData = async (userId: string, data: GamificationState) => {
   const saveSubDoc = async (key: string, value: any) => {
     try {
       if (value === undefined) return;
-      const subRef = doc(db!, 'users', userId, key, 'data');
+      const subRef = doc(db!, withTestRoot('users', userId, key, 'data').join('/'));
       const sv = sanitizeForFirestore(value) || {};
       await setDoc(subRef, { value: sv, updatedAt: Date.now() }, { merge: true });
     } catch (err) {
@@ -222,12 +225,11 @@ export const saveUserData = async (userId: string, data: GamificationState) => {
     saveSubDoc('cardCollection', cardCollection),
     saveSubDoc('characters', characters),
     saveSubDoc('collectionPlus', collectionPlus),
-    saveSubDoc('collectionPlusPlus', collectionPlusPlus),
     saveSubDoc('skillLevels', skillLevels)
   ]);
   
   // ランキング用データも更新
-  const rankingRef = doc(db, 'rankings', userId);
+  const rankingRef = doc(db, withTestRoot('rankings', userId).join('/'));
   
   // totalXpをBigNumberから数値に変換
   const totalXpNumber = typeof data.totalXp === 'number' 
@@ -252,7 +254,7 @@ export const saveUserData = async (userId: string, data: GamificationState) => {
 export const loadUserData = async (userId: string): Promise<GamificationState | null> => {
   if (!db) throw new Error('Firestore not initialized');
   
-  const userRef = doc(db, 'users', userId);
+  const userRef = doc(db, withTestRoot('users', userId).join('/'));
   const docSnap = await getDoc(userRef);
   
   if (docSnap.exists()) {
@@ -263,7 +265,7 @@ export const loadUserData = async (userId: string): Promise<GamificationState | 
     // サブドキュメントから分離保存された配列を読み込むヘルパー
     const loadSubDoc = async (key: string) => {
       try {
-        const subRef = doc(db!, 'users', userId, key, 'data');
+        const subRef = doc(db!, withTestRoot('users', userId, key, 'data').join('/'));
         const snap = await getDoc(subRef);
         if (!snap.exists()) return undefined;
         const d = snap.data() as any;
@@ -274,11 +276,10 @@ export const loadUserData = async (userId: string): Promise<GamificationState | 
       }
     };
 
-    const [cardCollection, characters, collectionPlus, collectionPlusPlus, skillLevels] = await Promise.all([
+    const [cardCollection, characters, collectionPlus, skillLevels] = await Promise.all([
       loadSubDoc('cardCollection'),
       loadSubDoc('characters'),
       loadSubDoc('collectionPlus'),
-      loadSubDoc('collectionPlusPlus'),
       loadSubDoc('skillLevels')
     ]);
 
@@ -287,7 +288,6 @@ export const loadUserData = async (userId: string): Promise<GamificationState | 
       cardCollection: cardCollection || [],
       characters: characters || [],
       collectionPlus: collectionPlus || [],
-      collectionPlusPlus: collectionPlusPlus || [],
       skillLevels: skillLevels || []
     };
 
@@ -301,7 +301,7 @@ export const loadUserData = async (userId: string): Promise<GamificationState | 
 export const getRankings = async (limitCount: number = 100): Promise<RankingEntry[]> => {
   if (!db) throw new Error('Firestore not initialized');
   
-  const rankingsRef = collection(db, 'rankings');
+  const rankingsRef = collection(db, withTestRoot('rankings').join('/'));
   const q = query(rankingsRef, orderBy('totalXp', 'desc'), limit(limitCount));
   const querySnapshot = await getDocs(q);
   
@@ -317,7 +317,7 @@ export const getRankings = async (limitCount: number = 100): Promise<RankingEntr
 export const getUserRank = async (userId: string): Promise<number> => {
   if (!db) throw new Error('Firestore not initialized');
   
-  const rankingsRef = collection(db, 'rankings');
+  const rankingsRef = collection(db, withTestRoot('rankings').join('/'));
   const q = query(rankingsRef, orderBy('totalXp', 'desc'));
   const querySnapshot = await getDocs(q);
   
@@ -336,7 +336,7 @@ export const getUserRank = async (userId: string): Promise<number> => {
 // Revolution（回転）用の状態を保存/読み込みするヘルパー
 export const saveRevolutionState = async (userId: string, state: any) => {
   if (!db) throw new Error('Firestore not initialized');
-  const revRef = doc(db, 'revolution', userId);
+  const revRef = doc(db, withTestRoot('revolution', userId).join('/'));
 
   const sanitizeForFirestore = (obj: any): any => {
     if (obj === null || obj === undefined) return undefined;
@@ -363,7 +363,7 @@ export const saveRevolutionState = async (userId: string, state: any) => {
 
 export const loadRevolutionState = async (userId: string): Promise<any | null> => {
   if (!db) throw new Error('Firestore not initialized');
-  const revRef = doc(db, 'revolution', userId);
+  const revRef = doc(db, withTestRoot('revolution', userId).join('/'));
   const snap = await getDoc(revRef);
   if (!snap.exists()) return null;
   const { updatedAt, ...data } = snap.data() as any;

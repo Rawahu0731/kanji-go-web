@@ -8,8 +8,8 @@
 .profile-header {
   background: white;
   padding: 1.5rem 2rem;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   border-bottom: 1px solid #e0e0e0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -20,6 +20,7 @@
   font-size: 1.8rem;
   color: #1a1a1a;
   font-weight: 700;
+  justify-self: center;
 }
 
 .profile-content {
