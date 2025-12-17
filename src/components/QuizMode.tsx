@@ -50,6 +50,13 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
   const [choices, setChoices] = useState<string[]>([]);
   const [correctChoiceIndex, setCorrectChoiceIndex] = useState<number>(-1);
   const [isProcessing, setIsProcessing] = useState(false); // 正誤判定中フラグ
+  // デバッグ用: 入手したXPの詳細情報
+  const [xpDebugInfo, setXpDebugInfo] = useState<{
+    baseXp: number;
+    xpBoost: number;
+    totalXp: number;
+    actualXp?: number; // デバッグ用: 実際に追加されたXP量
+  } | null>(null);
   
   const inputRef = useRef<HTMLInputElement>(null);
   
@@ -178,10 +185,21 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
     
     if (correct) {
       const newStreak = currentStreak + 1;
-      const xpGain = Math.floor(150 * (1 + getSkillBoost('xp_boost')));
+      // デバッグ用: XP計算の詳細を記録
+      const baseXp = 150;
+      const xpBoost = getSkillBoost('xp_boost');
+      const xpMultiplierBoost = getSkillBoost('xp_multiplier');
+      const xpGain = Math.floor(baseXp * (1 + xpBoost) * (1 + xpMultiplierBoost));
       const coinGain = Math.floor(100 * (1 + getSkillBoost('coin_boost')));
       const medalBoost = getSkillBoost('medal_boost') + (getCollectionPlusEffect()?.medalBoost || 0);
       const medalGain = tryGetMedal(quizFormat, medalBoost);
+      
+      // デバッグ情報を保存
+      setXpDebugInfo({
+        baseXp,
+        xpBoost,
+        totalXp: xpGain
+      });
       
       // ローディング開始
       setIsProcessing(true);
@@ -195,13 +213,16 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
       // 最低300ms表示して、ユーザーがスピナーを認識できるようにする
       const startTime = Date.now();
       setTimeout(() => {
-        addQuizRewards(xpGain, coinGain, medalGain, 20, {
+        const actualRewards = addQuizRewards(xpGain, coinGain, medalGain, 20, {
           totalQuizzes: gamificationState.stats.totalQuizzes + 1,
           correctAnswers: gamificationState.stats.correctAnswers + 1,
           currentStreak: newStreak,
           bestStreak: Math.max(gamificationState.stats.bestStreak, newStreak)
         });
-        showRewardPopup(xpGain, coinGain, medalGain || undefined, isMedalSystemEnabled);
+        // デバッグ用: 実際に追加されたXP量を更新
+        setXpDebugInfo(prev => prev ? { ...prev, actualXp: actualRewards.actualXp } : null);
+        // 実際に追加された量を表示
+        showRewardPopup(actualRewards.actualXp, actualRewards.actualCoins, actualRewards.actualMedals || undefined, isMedalSystemEnabled);
         
         const elapsed = Date.now() - startTime;
         const delay = Math.max(0, 300 - elapsed);
@@ -213,6 +234,9 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
     } else {
       const protectionUsed = useStreakProtection();
       const newStreak = protectionUsed ? currentStreak : 0;
+      
+      // デバッグ情報をクリア
+      setXpDebugInfo(null);
       
       // ローディング開始
       setIsProcessing(true);
@@ -244,6 +268,9 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
 
   const giveUp = () => {
     if (!quizItems[currentIndex]) return;
+    
+    // デバッグ情報をクリア
+    setXpDebugInfo(null);
     
     // ローディング開始
     setIsProcessing(true);
@@ -286,6 +313,7 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
       setCurrentIndex(nextIndex);
       setUserAnswer('');
       setShowResult(false);
+      setXpDebugInfo(null); // デバッグ情報をクリア
     } else {
       alert(`問題終了！\n正解: ${score.correct}問\n不正解: ${score.incorrect}問`);
       onBack();
@@ -299,10 +327,21 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
     
     if (correct) {
       const newStreak = currentStreak + 1;
-      const xpGain = Math.floor(50 * (1 + getSkillBoost('xp_boost')));
+      // デバッグ用: XP計算の詳細を記録
+      const baseXp = 50;
+      const xpBoost = getSkillBoost('xp_boost');
+      const xpMultiplierBoost = getSkillBoost('xp_multiplier');
+      const xpGain = Math.floor(baseXp * (1 + xpBoost) * (1 + xpMultiplierBoost));
       const coinGain = Math.floor(30 * (1 + getSkillBoost('coin_boost')));
       const medalBoost = getSkillBoost('medal_boost') + (getCollectionPlusEffect()?.medalBoost || 0);
       const medalGain = tryGetMedal(quizFormat, medalBoost);
+      
+      // デバッグ情報を保存
+      setXpDebugInfo({
+        baseXp,
+        xpBoost,
+        totalXp: xpGain
+      });
       
       // ローディング開始
       setIsProcessing(true);
@@ -316,18 +355,24 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
       
       // 重い計算（レベル計算など）は非同期化してUIブロックを防ぐ
       setTimeout(() => {
-        addQuizRewards(xpGain, coinGain, medalGain, 5, {
+        const actualRewards = addQuizRewards(xpGain, coinGain, medalGain, 5, {
           totalQuizzes: gamificationState.stats.totalQuizzes + 1,
           correctAnswers: gamificationState.stats.correctAnswers + 1,
           currentStreak: newStreak,
           bestStreak: Math.max(gamificationState.stats.bestStreak, newStreak)
         });
-        showRewardPopup(xpGain, coinGain, medalGain || undefined, isMedalSystemEnabled);
+        // デバッグ用: 実際に追加されたXP量を更新
+        setXpDebugInfo(prev => prev ? { ...prev, actualXp: actualRewards.actualXp } : null);
+        // 実際に追加された量を表示
+        showRewardPopup(actualRewards.actualXp, actualRewards.actualCoins, actualRewards.actualMedals || undefined, isMedalSystemEnabled);
         setIsProcessing(false); // ローディング終了
       });
     } else {
       const protectionUsed = useStreakProtection();
       const newStreak = protectionUsed ? currentStreak : 0;
+      
+      // デバッグ情報をクリア
+      setXpDebugInfo(null);
       
       // ローディング開始
       setIsProcessing(true);
@@ -527,6 +572,26 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
             <div className={`result-message ${isCorrect ? 'correct' : 'incorrect'}`}>
               {isCorrect ? '✓ 正解！' : '✗ 不正解'}
             </div>
+            {/* デバッグ用: 獲得XP詳細表示 */}
+            {isCorrect && xpDebugInfo && (
+              <div style={{ 
+                margin: '10px 0', 
+                padding: '8px', 
+                background: '#f0f0f0', 
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontFamily: 'monospace'
+              }}>
+                <div>【デバッグ: XP獲得詳細】</div>
+                <div>ベースXP: {xpDebugInfo.baseXp}</div>
+                <div>スキルブースト適用後: {xpDebugInfo.totalXp}</div>
+                {xpDebugInfo.actualXp !== undefined && (
+                  <div style={{ fontWeight: 'bold', color: '#d9534f' }}>
+                    最終獲得XP: {xpDebugInfo.actualXp}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="correct-answer">
               {selectedLevel === 'extra' ? (
                 <>

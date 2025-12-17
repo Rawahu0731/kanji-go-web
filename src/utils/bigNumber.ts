@@ -67,7 +67,9 @@ export function add(a: BigNumber, b: BigNumber): BigNumber {
   let mantissaSum: number;
   let resultExponent: number;
 
-  if (Math.abs(expDiff) > 15) {
+  // JavaScriptのnumber精度限界（約15桁）を考慮しつつ、より広い範囲で加算
+  // 閾値を15→25に変更（レベル10000超えでも150XPが加算されるように）
+  if (Math.abs(expDiff) > 25) {
     // 差が大きすぎる場合は大きい方をそのまま返す
     return expDiff > 0 ? a : b;
   }
@@ -86,6 +88,40 @@ export function add(a: BigNumber, b: BigNumber): BigNumber {
 // BigNumberの減算
 export function subtract(a: BigNumber, b: BigNumber): BigNumber {
   return add(a, { mantissa: -b.mantissa, exponent: b.exponent });
+}
+
+// BigNumberの乗算
+export function multiply(a: BigNumber, b: BigNumber | number): BigNumber {
+  // bが数値の場合はBigNumberに変換
+  const bNum = typeof b === 'number' ? fromNumber(b) : b;
+  
+  if (a.mantissa === 0 || bNum.mantissa === 0) {
+    return { mantissa: 0, exponent: 0 };
+  }
+
+  const mantissa = a.mantissa * bNum.mantissa;
+  const exponent = a.exponent + bNum.exponent;
+
+  return normalize({ mantissa, exponent });
+}
+
+// BigNumberの除算
+export function divide(a: BigNumber, b: BigNumber | number): BigNumber {
+  // bが数値の場合はBigNumberに変換
+  const bNum = typeof b === 'number' ? fromNumber(b) : b;
+  
+  if (bNum.mantissa === 0) {
+    throw new Error('Division by zero');
+  }
+  
+  if (a.mantissa === 0) {
+    return { mantissa: 0, exponent: 0 };
+  }
+
+  const mantissa = a.mantissa / bNum.mantissa;
+  const exponent = a.exponent - bNum.exponent;
+
+  return normalize({ mantissa, exponent });
 }
 
 // BigNumberの比較（a > b なら正、a < b なら負、a === b なら0）

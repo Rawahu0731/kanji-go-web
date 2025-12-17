@@ -253,6 +253,27 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       // @ts-ignore - 任意フィールドとして保存
       (merged as any).updatedAt = Date.now();
 
+      // merged の totalXp に基づき level/xp の整合性を保証する
+      try {
+        const mergedTotalXpBN = BN.ensureBigNumber(merged.totalXp);
+        const mergedTotalXpNum = BN.toNumber(mergedTotalXpBN);
+        if (isFinite(mergedTotalXpNum)) {
+          let recalculatedLevel = 1;
+          let accumulated = 0;
+          while (true) {
+            const nextXp = getXpForLevel(recalculatedLevel + 1);
+            if (accumulated + nextXp > mergedTotalXpNum) break;
+            accumulated += nextXp;
+            recalculatedLevel++;
+          }
+          merged.level = recalculatedLevel;
+          merged.xp = BN.fromNumber ? BN.fromNumber(mergedTotalXpNum) : BN.fromNumber(mergedTotalXpNum);
+          merged.totalXp = BN.fromNumber ? BN.fromNumber(mergedTotalXpNum) : BN.fromNumber(mergedTotalXpNum);
+        }
+      } catch (e) {
+        console.warn('Failed to normalize merged level/XP from totalXp:', e);
+      }
+
       // ローカル状態をマージ結果で更新してから保存
       setState(merged);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
@@ -355,12 +376,12 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       multiplier *= (1 + collectionBonus);
       // (Challenge 機能削除)
       
-      const boostedAmount = Math.floor(amount * multiplier);
-      
-      // BigNumberとして処理
+      // BigNumberとして処理（倍率適用もBigNumberで）
       const prevXpBN = BN.ensureBigNumber(prev.xp);
       const prevTotalXpBN = BN.ensureBigNumber(prev.totalXp);
-      const boostedBN = BN.fromNumber(boostedAmount);
+      const amountBN = BN.fromNumber(amount);
+      const boostedBN = BN.multiply(amountBN, multiplier);
+      const boostedAmount = BN.toNumber(boostedBN);
       
       // 累計XP(totalXp)は常に加算する
       const newTotalXp = BN.add(prevTotalXpBN, boostedBN);
@@ -470,7 +491,10 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       multiplier *= (1 + collectionBonus);
       // (Challenge 機能削除)
       
-      const boostedAmount = Math.floor(amount * multiplier);
+      // BigNumberで倍率計算（大きな数値でも正確に計算）
+      const amountBN = BN.fromNumber(amount);
+      const boostedBN = BN.multiply(amountBN, multiplier);
+      const boostedAmount = Math.floor(BN.toNumber(boostedBN));
       const newCoins = prev.coins + boostedAmount;
 
       // コインが負から正になった場合、または正から負になった場合にタイマーをリセット
@@ -731,7 +755,13 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   };
 
   // クイズ報酬をまとめて付与（パフォーマンス最適化 - useCallbackでメモ化）
+  // 実際に追加された報酬量を返す
   const addQuizRewards = useCallback((xp: number, coins: number, medals: number, characterXp: number, statsUpdate: Partial<GamificationState['stats']>) => {
+    // 実際に追加された報酬量を格納する変数
+    let actualXp = 0;
+    let actualCoins = 0;
+    let actualMedals = 0;
+    
     setState(prev => {
       console.time('gamification:addQuizRewards');
       // 全ての更新を1つのsetStateでまとめて処理
@@ -739,7 +769,9 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       // コレクションボーナスを1回だけ計算（最適化）
       const collectionBonus = calculateCollectionBonus(prev.cardCollection);
       
-      // XP計算 - 最適化：キャラクターブースト計算を簡略化
+      // XP計算 - スキルブースト、キャラクターブースト、コレクションボーナスを適用
+      // 注意: QuizModeで既にスキルブースト(xp_boost, xp_multiplier)は適用済みのため、
+      // ここではキャラクターとコレクションのブーストのみを追加で適用
       let xpMultiplier = 1;
       if (prev.equippedCharacter) {
         const char = prev.equippedCharacter;
@@ -748,7 +780,10 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         }
       }
       xpMultiplier *= (1 + collectionBonus);
-      const boostedXp = Math.floor(xp * xpMultiplier);
+      // BigNumberで倍率計算（大きな数値でも正確に計算）
+      const xpBN = BN.fromNumber(xp);
+      const boostedXpBN = BN.multiply(xpBN, xpMultiplier);
+      const boostedXp = Math.floor(BN.toNumber(boostedXpBN));
       
       // コイン計算
       let coinMultiplier = 1;
@@ -759,12 +794,15 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         }
       }
       coinMultiplier *= (1 + collectionBonus);
-      const boostedCoins = Math.floor(coins * coinMultiplier);
+      // BigNumberで倍率計算（大きな数値でも正確に計算）
+      const coinsBN = BN.fromNumber(coins);
+      const boostedCoinsBN = BN.multiply(coinsBN, coinMultiplier);
+      const boostedCoins = Math.floor(BN.toNumber(boostedCoinsBN));
       
       // BigNumberとして処理
       const prevXpBN = BN.ensureBigNumber(prev.xp);
       const prevTotalXpBN = BN.ensureBigNumber(prev.totalXp);
-      const boostedXpBN = BN.fromNumber(boostedXp);
+      // boostedXpBNは既に上で宣言済み（line 764）
       
       // 累計XP更新とレベル計算
       const newTotalXp = BN.add(prevTotalXpBN, boostedXpBN);
@@ -798,9 +836,6 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       
       console.log('[DEBUG] Level-up check END - finalLevel:', newLevel);
       
-      // コイン・メダル更新
-      const newCoins = prev.coins + boostedCoins;
-      
       // メダル更新 - node14の倍率を適用
       let finalMedals = medals;
       if (medals > 0) {
@@ -824,6 +859,14 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
           // ignore parse errors and fall back to base amount
         }
       }
+      
+      // 実際に追加される報酬量を記録
+      actualXp = boostedXp;
+      actualCoins = boostedCoins;
+      actualMedals = finalMedals;
+      
+      // コイン・メダル更新
+      const newCoins = prev.coins + boostedCoins;
       const newMedals = prev.medals + finalMedals;
       
       // キャラクターXP更新（最適化：必要な場合のみディープコピー）
@@ -882,6 +925,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       console.timeEnd('gamification:addQuizRewards');
       return newState;
     });
+    
+    return { actualXp, actualCoins, actualMedals };
   }, []); // 依存配列を空にして、関数を一度だけ作成
 
   const setTheme = (themeId: string) => {
@@ -1256,6 +1301,13 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     const plusList = state.collectionPlus || [];
     for (let i = 0; i < plusList.length; i++) {
       bonus += (plusList[i].plus || 0) * COLLECTION_PLUS_XP_PER_POINT;
+    }
+
+    // collectionPlusPlus によるボーナスも追加
+    // 仕様: collectionPlusPlus の +1 ごとに XP/コインを +1000% (= +10.0) 増加させる（同じ倍率）
+    const plusPlusList = state.collectionPlusPlus || [];
+    for (let i = 0; i < plusPlusList.length; i++) {
+      bonus += (plusPlusList[i].plus || 0) * COLLECTION_PLUS_XP_PER_POINT;
     }
 
     return bonus;

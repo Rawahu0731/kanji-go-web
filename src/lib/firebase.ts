@@ -149,11 +149,82 @@ export const saveUserData = async (userId: string, data: GamificationState) => {
     return obj;
   };
 
-  const sanitized = sanitizeForFirestore(data) || {};
-  await setDoc(userRef, {
-    ...sanitized,
-    updatedAt: Date.now()
-  }, { merge: true });
+  // 分離する大きな配列を切り出してサブドキュメントへ保存する
+  const {
+    cardCollection,
+    characters,
+    collectionPlus,
+    collectionPlusPlus,
+    skillLevels,
+    // これらはユーザードキュメントに残す
+    username,
+    activeTheme,
+    activeIcon,
+    customIconUrl,
+    level,
+    xp,
+    totalXp,
+    coins,
+    medals,
+    unlockedBadges,
+    purchasedItems,
+    stats,
+    streakProtectionCount,
+    tickets,
+    apologyCompensationAvailable,
+    apologyCompensationClaimedVersion,
+    lastInterestTime,
+    lastSkillPurchaseTime,
+    debugLastReward,
+    version,
+    ...rest
+  } = data as any;
+
+  const core = sanitizeForFirestore({
+    username,
+    activeTheme,
+    activeIcon,
+    customIconUrl,
+    level,
+    xp,
+    totalXp,
+    coins,
+    medals,
+    unlockedBadges,
+    purchasedItems,
+    stats,
+    streakProtectionCount,
+    tickets,
+    apologyCompensationAvailable,
+    apologyCompensationClaimedVersion,
+    lastInterestTime,
+    lastSkillPurchaseTime,
+    debugLastReward,
+    version,
+    ...rest
+  }) || {};
+
+  await setDoc(userRef, { ...core, updatedAt: Date.now() }, { merge: true });
+
+  // ヘルパー: サブドキュメントに配列/オブジェクトを保存（doc id = 'data'）
+  const saveSubDoc = async (key: string, value: any) => {
+    try {
+      if (value === undefined) return;
+      const subRef = doc(db!, 'users', userId, key, 'data');
+      const sv = sanitizeForFirestore(value) || {};
+      await setDoc(subRef, { value: sv, updatedAt: Date.now() }, { merge: true });
+    } catch (err) {
+      console.warn(`Failed to save subdoc ${key} for ${userId}:`, err);
+    }
+  };
+
+  await Promise.all([
+    saveSubDoc('cardCollection', cardCollection),
+    saveSubDoc('characters', characters),
+    saveSubDoc('collectionPlus', collectionPlus),
+    saveSubDoc('collectionPlusPlus', collectionPlusPlus),
+    saveSubDoc('skillLevels', skillLevels)
+  ]);
   
   // ランキング用データも更新
   const rankingRef = doc(db, 'rankings', userId);
@@ -187,8 +258,40 @@ export const loadUserData = async (userId: string): Promise<GamificationState | 
   if (docSnap.exists()) {
     const data = docSnap.data();
     // updatedAtは除外して返す
-    const { updatedAt, ...userData } = data;
-    return userData as GamificationState;
+    const { updatedAt, ...userData } = data as any;
+
+    // サブドキュメントから分離保存された配列を読み込むヘルパー
+    const loadSubDoc = async (key: string) => {
+      try {
+        const subRef = doc(db!, 'users', userId, key, 'data');
+        const snap = await getDoc(subRef);
+        if (!snap.exists()) return undefined;
+        const d = snap.data() as any;
+        return d?.value;
+      } catch (err) {
+        console.warn(`Failed to read subdoc ${key} for ${userId}:`, err);
+        return undefined;
+      }
+    };
+
+    const [cardCollection, characters, collectionPlus, collectionPlusPlus, skillLevels] = await Promise.all([
+      loadSubDoc('cardCollection'),
+      loadSubDoc('characters'),
+      loadSubDoc('collectionPlus'),
+      loadSubDoc('collectionPlusPlus'),
+      loadSubDoc('skillLevels')
+    ]);
+
+    const merged: any = {
+      ...userData,
+      cardCollection: cardCollection || [],
+      characters: characters || [],
+      collectionPlus: collectionPlus || [],
+      collectionPlusPlus: collectionPlusPlus || [],
+      skillLevels: skillLevels || []
+    };
+
+    return merged as GamificationState;
   }
   
   return null;

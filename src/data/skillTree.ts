@@ -34,7 +34,7 @@ export const SKILLS: Skill[] = [
   {
     id: 'xp_boost_1',
     name: 'XPブースト I',
-    description: 'XP獲得量+10%',
+    description: 'XP獲得量+1000%（レベルごと）',
     cost: 3,
     maxLevel: 5,
     effect: {
@@ -48,7 +48,7 @@ export const SKILLS: Skill[] = [
   {
     id: 'coin_boost_1',
     name: 'コインブースト I',
-    description: 'コイン獲得量+10%',
+    description: 'コイン獲得量+1000%（レベルごと）',
     cost: 3,
     maxLevel: 5,
     effect: {
@@ -120,7 +120,7 @@ export const SKILLS: Skill[] = [
   {
     id: 'xp_boost_2',
     name: 'XPブースト II',
-    description: 'XP獲得量+15%',
+    description: 'XP獲得量+1500%（レベルごと）',
     cost: 8,
     maxLevel: 5,
     effect: {
@@ -148,7 +148,7 @@ export const SKILLS: Skill[] = [
   {
     id: 'coin_boost_2',
     name: 'コインブースト II',
-    description: 'コイン獲得量+15%',
+    description: 'コイン獲得量+1500%（レベルごと）',
     cost: 8,
     maxLevel: 5,
     effect: {
@@ -248,7 +248,7 @@ export const SKILLS: Skill[] = [
   {
     id: 'xp_boost_3',
     name: 'XPブースト III',
-    description: 'XP獲得量+20%',
+    description: 'XP獲得量+2000%（レベルごと）',
     cost: 15,
     maxLevel: 5,
     effect: {
@@ -290,7 +290,7 @@ export const SKILLS: Skill[] = [
   {
     id: 'coin_boost_3',
     name: 'コインブースト III',
-    description: 'コイン獲得量+20%',
+    description: 'コイン獲得量+2000%（レベルごと）',
     cost: 15,
     maxLevel: 5,
     effect: {
@@ -376,7 +376,7 @@ export const SKILLS: Skill[] = [
   {
     id: 'master_xp',
     name: 'マスターXP',
-    description: 'XP獲得量+30%',
+    description: 'XP獲得量+3000%（レベルごと）',
     cost: 30,
     maxLevel: 5,
     effect: {
@@ -390,7 +390,7 @@ export const SKILLS: Skill[] = [
   {
     id: 'master_coin',
     name: 'マスターコイン',
-    description: 'コイン獲得量+30%',
+    description: 'コイン獲得量+3000%（レベルごと）',
     cost: 30,
     maxLevel: 5,
     effect: {
