@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useGamification } from '../contexts/GamificationContext';
 import { SHOP_ITEMS } from '../data/shopItems';
@@ -9,7 +9,7 @@ import { getRarityName as getCharacterRarityName, MAX_CHARACTER_COUNT, CHARACTER
 import '../styles/Shop.css';
 
 function Shop() {
-  const { state, purchaseItem, purchaseWithMedals, pullCollectionPlusGacha, setTheme, setIcon, setCustomIconUrl, addCardToCollection, openCardPack, pullCharacterGacha, addTickets, useTicket, isCollectionComplete } = useGamification();
+  const { state, purchaseItem, purchaseWithMedals, pullCollectionPlusGacha, setTheme, setIcon, setCustomIconUrl, addCardToCollection, openCardPack, canOpenCardPack, pullCharacterGacha, addTickets, useTicket, isCollectionComplete } = useGamification();
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'theme' | 'icon' | 'collection' | 'gacha' | 'medal' | 'ticket'>('all');
   const [purchaseMessage, setPurchaseMessage] = useState<string>('');
   const [showCustomIconModal, setShowCustomIconModal] = useState(false);
@@ -21,11 +21,107 @@ function Shop() {
   const [previousOwnedKanji, setPreviousOwnedKanji] = useState<Set<string>>(new Set());
   const [showGachaModal, setShowGachaModal] = useState(false);
   const [pulledCharacters, setPulledCharacters] = useState<Character[]>([]);
+  const [lastShopAction, setLastShopAction] = useState<{
+    id: string;
+    price: number;
+    category: string;
+    effect?: any;
+    rarity?: string;
+  } | null>(null);
   const [showProbModal, setShowProbModal] = useState(false);
   const [probabilities, setProbabilities] = useState<Record<string, number> | null>(null);
   const [probNote, setProbNote] = useState<string>('');
 
   const collectionComplete = isCollectionComplete();
+
+  useEffect(() => {
+    // モーダル表示中に Enter を押すと最後に引いたショップアクションを再実行する
+    if (!lastShopAction) return;
+    if (!showGachaModal && !showCardPackModal) return;
+
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      // safety
+      if (!lastShopAction) return;
+
+      // キャラクターガチャ
+      if (lastShopAction.category === 'gacha') {
+        if (areAllCharactersMaxed()) {
+          setPurchaseMessage('全てのキャラクターが上限に達しています');
+          setTimeout(() => setPurchaseMessage(''), 2000);
+          return;
+        }
+        if (state.coins < lastShopAction.price) {
+          setPurchaseMessage('コインが足りません');
+          setTimeout(() => setPurchaseMessage(''), 2000);
+          return;
+        }
+        const ok = purchaseItem(lastShopAction.id, lastShopAction.price, false);
+        if (!ok) {
+          setPurchaseMessage('コインが足りません');
+          setTimeout(() => setPurchaseMessage(''), 2000);
+          return;
+        }
+        const count = parseInt(String(lastShopAction.effect).replace('character_gacha_', '')) || 1;
+        const chars = pullCharacterGacha(count, lastShopAction.rarity as any);
+        setPulledCharacters(chars);
+        setShowGachaModal(true);
+        setPurchaseMessage('再びガチャを引きました');
+        setTimeout(() => setPurchaseMessage(''), 2000);
+        return;
+      }
+
+      // カードパック（コイン）
+      if (lastShopAction.category === 'collection') {
+        if (state.coins < lastShopAction.price) {
+          setPurchaseMessage('コインが足りません');
+          setTimeout(() => setPurchaseMessage(''), 2000);
+          return;
+        }
+        const ok = purchaseItem(lastShopAction.id, lastShopAction.price, false);
+        if (!ok) {
+          setPurchaseMessage('コインが足りません');
+          setTimeout(() => setPurchaseMessage(''), 2000);
+          return;
+        }
+        const cards = lastShopAction.effect ? openCardPack(lastShopAction.effect) : [];
+        cards.forEach(card => addCardToCollection(card));
+        setOpenedCards(cards);
+        setIsCollectionPlusModal(false);
+        setShowCardPackModal(true);
+        setPurchaseMessage('再びカードパックを開封しました');
+        setTimeout(() => setPurchaseMessage(''), 2000);
+        return;
+      }
+
+      // コレクション+（メダル）
+      if (lastShopAction.category === 'medal') {
+        if (state.medals < lastShopAction.price) {
+          setPurchaseMessage('メダルが足りません');
+          setTimeout(() => setPurchaseMessage(''), 2000);
+          return;
+        }
+        const ok = purchaseWithMedals(lastShopAction.id, lastShopAction.price, false);
+        if (!ok) {
+          setPurchaseMessage('メダルが足りません');
+          setTimeout(() => setPurchaseMessage(''), 2000);
+          return;
+        }
+        const count = parseInt(String(lastShopAction.effect).replace('collection_plus_', '')) || 1;
+        const cards = pullCollectionPlusGacha(count);
+        setOpenedCards(cards);
+        setIsCollectionPlusModal(true);
+        setShowCardPackModal(true);
+        setPurchaseMessage('再びコレクション+を引きました');
+        setTimeout(() => setPurchaseMessage(''), 2000);
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showGachaModal, showCardPackModal, lastShopAction, state.coins, state.medals, purchaseItem, purchaseWithMedals, pullCharacterGacha, pullCollectionPlusGacha, openCardPack, addCardToCollection]);
 
   const filteredItems = (() => {
     if (selectedCategory === 'all') return SHOP_ITEMS;
@@ -112,6 +208,7 @@ function Shop() {
           setOpenedCards(cards);
           setIsCollectionPlusModal(false);
           setShowCardPackModal(true);
+          setLastShopAction({ id: item.id, price: item.price, category: item.category, effect: item.effect });
           setPurchaseMessage(`${item.name}を開封中...`);
         } else if (!success) {
           setPurchaseMessage('コインが足りません');
@@ -154,6 +251,7 @@ function Shop() {
         const characters = pullCharacterGacha(count, item.rarity as 'common' | 'rare' | 'epic' | 'legendary' | 'mythic' | undefined);
         setPulledCharacters(characters);
         setShowGachaModal(true);
+        setLastShopAction({ id: item.id, price: item.price, category: item.category, effect: item.effect, rarity: item.rarity });
         setPurchaseMessage(`${item.name}を引いています...`);
       } else if (!success) {
         setPurchaseMessage('コインが足りません');
@@ -180,6 +278,7 @@ function Shop() {
         setOpenedCards(cards);
         setIsCollectionPlusModal(true);
         setShowCardPackModal(true);
+        setLastShopAction({ id: item.id, price: item.price, category: item.category, effect: item.effect });
         setPurchaseMessage(`${item.name}を引いています...`);
       } else if (!success) {
         setPurchaseMessage('メダルが足りません');
@@ -276,6 +375,101 @@ function Shop() {
     reader.readAsDataURL(file);
   };
 
+  const blockSameGacha = (id?: string) => {
+    const targetId = id || lastShopAction?.id;
+    if (!targetId || !lastShopAction) {
+      setPurchaseMessage('操作できません');
+      setTimeout(() => setPurchaseMessage(''), 2000);
+      return;
+    }
+
+    // 再実行処理（Enter押下時と同等）
+    try {
+      // キャラクターガチャ
+      if (lastShopAction.category === 'gacha') {
+        if (areAllCharactersMaxed()) {
+          setPurchaseMessage('全てのキャラクターが上限に達しています');
+          setTimeout(() => setPurchaseMessage(''), 2000);
+          return;
+        }
+        if (state.coins < lastShopAction.price) {
+          setPurchaseMessage('コインが足りません');
+          setTimeout(() => setPurchaseMessage(''), 2000);
+          return;
+        }
+        const ok = purchaseItem(lastShopAction.id, lastShopAction.price, false);
+        if (!ok) {
+          setPurchaseMessage('コインが足りません');
+          setTimeout(() => setPurchaseMessage(''), 2000);
+          return;
+        }
+        const count = parseInt(String(lastShopAction.effect).replace('character_gacha_', '')) || 1;
+        const chars = pullCharacterGacha(count, lastShopAction.rarity as any);
+        setPulledCharacters(chars);
+        setShowGachaModal(true);
+        setPurchaseMessage('再びガチャを引きました');
+        setTimeout(() => setPurchaseMessage(''), 2000);
+      }
+
+      // カードパック（コイン）
+      if (lastShopAction.category === 'collection') {
+        if (state.coins < lastShopAction.price) {
+          setPurchaseMessage('コインが足りません');
+          setTimeout(() => setPurchaseMessage(''), 2000);
+          return;
+        }
+        const ok = purchaseItem(lastShopAction.id, lastShopAction.price, false);
+        if (!ok) {
+          setPurchaseMessage('コインが足りません');
+          setTimeout(() => setPurchaseMessage(''), 2000);
+          return;
+        }
+        const cards = lastShopAction.effect ? openCardPack(lastShopAction.effect) : [];
+        cards.forEach(card => addCardToCollection(card));
+        setOpenedCards(cards);
+        setIsCollectionPlusModal(false);
+        setShowCardPackModal(true);
+        setPurchaseMessage('再びカードパックを開封しました');
+        setTimeout(() => setPurchaseMessage(''), 2000);
+      }
+
+      // コレクション+（メダル）
+      if (lastShopAction.category === 'medal') {
+        if (state.medals < lastShopAction.price) {
+          setPurchaseMessage('メダルが足りません');
+          setTimeout(() => setPurchaseMessage(''), 2000);
+          return;
+        }
+        const ok = purchaseWithMedals(lastShopAction.id, lastShopAction.price, false);
+        if (!ok) {
+          setPurchaseMessage('メダルが足りません');
+          setTimeout(() => setPurchaseMessage(''), 2000);
+          return;
+        }
+        const count = parseInt(String(lastShopAction.effect).replace('collection_plus_', '')) || 1;
+        const cards = pullCollectionPlusGacha(count);
+        setOpenedCards(cards);
+        setIsCollectionPlusModal(true);
+        setShowCardPackModal(true);
+        setPurchaseMessage('再びコレクション+を引きました');
+        setTimeout(() => setPurchaseMessage(''), 2000);
+      }
+
+      // 実行後にブロックIDを保存
+      try {
+        const key = 'blockedGachas';
+        const raw = localStorage.getItem(key) || '[]';
+        const arr = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
+        if (!arr.includes(targetId)) arr.push(targetId);
+        localStorage.setItem(key, JSON.stringify(arr));
+      } catch (e) { /* ignore storage error */ }
+
+    } catch (e) {
+      setPurchaseMessage('操作に失敗しました');
+      setTimeout(() => setPurchaseMessage(''), 2000);
+    }
+  };
+
   const handleModalClose = () => {
     setShowCustomIconModal(false);
     setPreviewImage('');
@@ -283,13 +477,15 @@ function Shop() {
   };
 
   return (
-    <div className="shop-container">
+    <div className="shop-container page-root">
       <header className="shop-header">
         <Link to="/" className="back-button">← ホームへ戻る</Link>
         <h1>ショップ</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <div className="coins-display">💰 {state.coins} コイン</div>
-          <div className="coins-display" style={{ fontSize: '0.95rem' }}>🏅 {state.medals} メダル</div>
+          {collectionComplete && (
+            <div className="coins-display" style={{ fontSize: '0.95rem' }}>🪙 {state.medals} メダル</div>
+          )}
         </div>
       </header>
 
@@ -361,6 +557,8 @@ function Shop() {
             const isFree = item.price === 0;
             const isCustomIcon = item.id === 'icon_custom';
             const isCollection = item.category === 'collection';
+            const isCollectionPack = isCollection && item.effect && String(item.effect).startsWith('card_pack_');
+            const isCollectionPackDisabled = isCollectionPack && !canOpenCardPack(String(item.effect));
             const isAlreadyOwned = isCollection && isPurchased;
             const isGacha = item.category === 'gacha';
             const isGachaDisabled = isGacha && areAllCharactersMaxed();
@@ -393,6 +591,20 @@ function Shop() {
                     全キャラクター上限達成
                   </div>
                 )}
+                {isCollectionPackDisabled && (
+                  <div style={{
+                    background: 'rgba(255, 68, 68, 0.2)',
+                    border: '1px solid rgba(255, 68, 68, 0.5)',
+                    borderRadius: '8px',
+                    padding: '0.5rem',
+                    marginTop: '0.5rem',
+                    fontSize: '0.85rem',
+                    color: '#ff4444',
+                    textAlign: 'center'
+                  }}>
+                    全ての漢字が既にレジェンダリーです
+                  </div>
+                )}
                 {item.category === 'medal' && !collectionComplete && (
                   <div style={{
                     background: 'rgba(200,200,200,0.06)',
@@ -409,7 +621,7 @@ function Shop() {
                 )}
                 <div className="item-footer">
                   <div className="item-price">
-                    {isFree ? '無料' : isMedal ? `🏅 ${item.price}` : `💰 ${item.price}`}
+                    {isFree ? '無料' : isMedal ? `🪙 ${item.price}` : `💰 ${item.price}`}
                   </div>
                   {item.category === 'ticket' ? (
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -475,10 +687,17 @@ function Shop() {
                     <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
                     <button
                       onClick={() => handlePurchase(item)}
-                      disabled={(!isFree && !isPurchased && !isMedal && state.coins < item.price) || (!isFree && isMedal && state.medals < item.price) || isAlreadyOwned || isGachaDisabled || (!collectionComplete && item.category === 'medal')}
+                      disabled={
+                        (!isFree && !isPurchased && !isMedal && state.coins < item.price) ||
+                        (!isFree && isMedal && state.medals < item.price) ||
+                        isAlreadyOwned ||
+                        isGachaDisabled ||
+                        (!collectionComplete && item.category === 'medal') ||
+                        Boolean(isCollection && item.effect && String(item.effect).startsWith('card_pack_') && !canOpenCardPack(String(item.effect)))
+                      }
                       className={`purchase-button ${isPurchased ? 'purchased-btn' : ''} ${isActive ? 'active-btn' : ''} ${isAlreadyOwned ? 'owned-btn' : ''}`}
                     >
-                      {isGachaDisabled ? '上限達成' :
+                      {isGachaDisabled || isCollectionPackDisabled ? '上限達成' :
                         isAlreadyOwned ? 'コレクション済' : 
                         isCustomIcon && isPurchased ? '設定' : 
                           isCollection ? '獲得' : 
@@ -759,50 +978,25 @@ function Shop() {
                 >
                   確認
                 </button>
-                <Link
-                  to="/collection"
+                <button
+                  onClick={() => blockSameGacha()}
                   style={{
                     flex: '1',
                     padding: '1rem',
-                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                    background: 'linear-gradient(135deg,#ff8a8a 0%,#ff6b6b 100%)',
                     border: 'none',
                     borderRadius: '8px',
                     color: 'white',
                     fontWeight: '700',
                     fontSize: '1.1rem',
-                    cursor: 'pointer',
-                    textDecoration: 'none',
-                    textAlign: 'center',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
+                    cursor: 'pointer'
                   }}
                 >
-                  📚 コレクションを見る
-                </Link>
-                {collectionComplete && (
-                  <Link
-                    to="/collection-plus"
-                    style={{
-                      flex: '1',
-                      padding: '1rem',
-                      background: 'linear-gradient(135deg, #ffd27f 0%, #ffc857 100%)',
-                      border: 'none',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontWeight: '700',
-                      fontSize: '1.1rem',
-                      cursor: 'pointer',
-                      textDecoration: 'none',
-                      textAlign: 'center',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    🏅 コレクション+を見る
-                  </Link>
-                )}
+                  同じガチャを引く
+                </button>
+                <div style={{ minWidth: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ fontSize: '0.85rem', color: '#888' }}>Enterで同じガチャを引く</div>
+                </div>
               </div>
             </div>
           </div>
@@ -857,21 +1051,39 @@ function Shop() {
                 ))}
               </div>
               <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-                <button
-                  onClick={() => setShowGachaModal(false)}
-                  style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    padding: '0.75rem 2rem',
-                    borderRadius: '8px',
-                    border: 'none',
-                    fontWeight: '700',
-                    fontSize: '1rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  閉じる
-                </button>
+                <div style={{ marginBottom: '0.5rem', color: '#888', fontSize: '0.9rem' }}>Enterで同じガチャを引く</div>
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', alignItems: 'center' }}>
+                  <button
+                    onClick={() => blockSameGacha()}
+                    style={{
+                      background: 'linear-gradient(135deg,#ff8a8a 0%,#ff6b6b 100%)',
+                      color: 'white',
+                      padding: '0.6rem 1.25rem',
+                      borderRadius: '8px',
+                      border: 'none',
+                      fontWeight: '700',
+                      fontSize: '0.95rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                     同じガチャを引く
+                  </button>
+                  <button
+                    onClick={() => setShowGachaModal(false)}
+                    style={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      padding: '0.75rem 2rem',
+                      borderRadius: '8px',
+                      border: 'none',
+                      fontWeight: '700',
+                      fontSize: '1rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    閉じる
+                  </button>
+                </div>
               </div>
             </div>
           </div>

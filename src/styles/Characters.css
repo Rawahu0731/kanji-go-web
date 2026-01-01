@@ -1,1 +1,384 @@
 /* Characters page styles */
+.characters-container {
+  min-height: 100vh;
+  background: #f8f9fa;
+  color: #1a1a1a;
+  padding-bottom: 2rem;
+}
+
+.characters-header {
+  background: white;
+  padding: 1.5rem 2rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  gap: 1rem;
+}
+
+.characters-header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: #1a1a1a;
+  font-weight: 700;
+  justify-self: center;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.6rem 1.2rem;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  color: #1a1a1a;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.back-button:hover {
+  background: #f8f9fa;
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.characters-content {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 2rem;
+}
+
+.equipped-section {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.equipped-section h2 {
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
+.equipped-character {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: #f8f9fa;
+  border: 2px solid #667eea;
+  border-radius: 12px;
+  padding: 1.5rem;
+  color: #1a1a1a;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.equipped-icon {
+  font-size: 4rem;
+  min-width: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.equipped-info {
+  flex: 1;
+}
+
+.equipped-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.equipped-count {
+  font-size: 1rem;
+  margin-left: 0.5rem;
+  color: #ffd700;
+}
+
+.equipped-meta {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.9;
+}
+
+.equipped-xp {
+  font-size: 0.85rem;
+  margin-left: 0.5rem;
+  opacity: 0.7;
+}
+
+.equipped-description {
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.8;
+}
+
+.equipped-effect {
+  font-size: 1.1rem;
+  color: #10b981;
+  font-weight: 600;
+  background: #ecfdf5;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.equipped-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.unequip-button {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  color: #1a1a1a;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.unequip-button:hover {
+  background: #f8f9fa;
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.debug-button {
+  background: #ff6b6b;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.debug-button:hover {
+  background: #ff5252;
+}
+
+.no-equipped {
+  text-align: center;
+  padding: 2rem;
+  color: #999;
+  font-size: 1rem;
+}
+
+.characters-list-section {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.characters-list-section h2 {
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
+.no-characters {
+  text-align: center;
+  padding: 3rem;
+  color: #999;
+}
+
+.no-characters p {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.no-characters-hint {
+  font-size: 0.95rem;
+  color: #666;
+}
+
+.characters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.character-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.character-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #667eea;
+}
+
+.character-card.equipped {
+  background: #f0f4ff;
+  border: 2px solid #667eea;
+  color: #1a1a1a;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.character-card.equipped:hover {
+  transform: translateY(0);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.25);
+}
+
+.equipped-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #667eea;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.character-card-debug {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: #ff9f43;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: white;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.character-card-debug:hover {
+  background: #ff8c1a;
+}
+
+.character-icon {
+  font-size: 3.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.character-name {
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  font-size: 1.1rem;
+}
+
+.character-name-count {
+  font-size: 0.8rem;
+  margin-left: 0.25rem;
+  color: #ffd700;
+}
+
+.character-rarity {
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.character-rarity.mythic {
+  color: #ff4444;
+}
+
+.character-rarity.legendary {
+  color: #ffd700;
+}
+
+.character-rarity.epic {
+  color: #a335ee;
+}
+
+.character-rarity.rare {
+  color: #0070dd;
+}
+
+.character-rarity.common {
+  color: #9d9d9d;
+}
+
+.character-xp {
+  font-size: 0.75rem;
+  color: #999;
+  margin-bottom: 0.5rem;
+}
+
+.character-description {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.character-effect {
+  font-size: 0.9rem;
+  color: #10b981;
+  font-weight: 600;
+  background: #ecfdf5;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+@media (max-width: 768px) {
+  .characters-header {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .characters-header h1 {
+    justify-self: center;
+  }
+
+  .back-button {
+    justify-self: center;
+  }
+
+  .characters-content {
+    padding: 0 1rem;
+  }
+
+  .equipped-character {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .equipped-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .unequip-button,
+  .debug-button {
+    width: 100%;
+  }
+
+  .characters-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+  }
+}

@@ -20,19 +20,32 @@ function tryGetMedal(quizFormat: QuizFormat, medalBoost: number): number {
     const guaranteedMedals = Math.floor(totalChance / 100);
     const extraChance = totalChance % 100;
     const random = Math.random() * 100;
-    return guaranteedMedals + (random < extraChance ? 1 : 0);
+    const result = guaranteedMedals + (random < extraChance ? 1 : 0);
+    console.log(`[MEDAL] format=${quizFormat}, base=${baseChance}%, boost=${medalBoost}, total=${totalChance}%, random=${random.toFixed(2)}, result=${result}`);
+    return result;
   }
   
   const random = Math.random() * 100;
-  return random < totalChance ? 1 : 0;
+  const result = random < totalChance ? 1 : 0;
+  console.log(`[MEDAL] format=${quizFormat}, base=${baseChance}%, boost=${medalBoost}, total=${totalChance}%, random=${random.toFixed(2)}, result=${result}`);
+  return result;
 }
 
 function showRewardPopup(xp: number, coins: number, medals?: number, showMedals: boolean = true) {
   const popup = document.createElement('div');
   popup.className = 'reward-popup';
-  popup.textContent = medals && showMedals 
-    ? `+${xp} XP  +${coins} コイン  +${medals} メダル🏅`
-    : `+${xp} XP  +${coins} コイン`;
+  
+  // メダル獲得時は目立つように表示
+  if (medals && medals > 0 && showMedals) {
+    popup.style.cssText = 'background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); font-size: 1.3rem; padding: 1.2rem 1.5rem; box-shadow: 0 10px 30px rgba(255, 215, 0, 0.5);';
+    popup.textContent = `+${xp} XP  +${coins} コイン  🎉 +${medals} メダル🪙 🎉`;
+    console.log(`[MEDAL POPUP] Showing medal reward popup: ${medals} medals`);
+  } else {
+    popup.textContent = showMedals 
+      ? `+${xp} XP  +${coins} コイン  +0 メダル`
+      : `+${xp} XP  +${coins} コイン`;
+  }
+  
   document.body.appendChild(popup);
   
   setTimeout(() => popup.remove(), 1300);
@@ -57,6 +70,11 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
     totalXp: number;
     actualXp?: number; // デバッグ用: 実際に追加されたXP量
   } | null>(null);
+  
+  // スコア変化を監視してログ出力（正解時にメダル判定ログと突合するため）
+  useEffect(() => {
+    console.log(`[SCORE] score changed: correct=${score.correct}, incorrect=${score.incorrect}, currentIndex=${currentIndex}`);
+  }, [score.correct, score.incorrect, currentIndex]);
   
   const inputRef = useRef<HTMLInputElement>(null);
   
@@ -193,6 +211,7 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
       const coinGain = Math.floor(100 * (1 + getSkillBoost('coin_boost')));
       const medalBoost = getSkillBoost('medal_boost') + (getCollectionPlusEffect()?.medalBoost || 0);
       const medalGain = tryGetMedal(quizFormat, medalBoost);
+      console.log(`[MEDAL REWARD] Calling addQuizRewards with medalGain=${medalGain}`);
       
       // デバッグ情報を保存
       setXpDebugInfo({
@@ -219,6 +238,7 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
           currentStreak: newStreak,
           bestStreak: Math.max(gamificationState.stats.bestStreak, newStreak)
         });
+        console.log(`[MEDAL REWARD] actualRewards.actualMedals=${actualRewards.actualMedals}`);
         // デバッグ用: 実際に追加されたXP量を更新
         setXpDebugInfo(prev => prev ? { ...prev, actualXp: actualRewards.actualXp } : null);
         // 実際に追加された量を表示
@@ -300,6 +320,7 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
   };
 
   const nextQuestion = () => {
+    console.log(`[NEXT] Moving to next question. currentIndex=${currentIndex}, showResult=${showResult}, score=${score.correct}/${score.correct + score.incorrect}`);
     if (currentIndex < quizItems.length - 1) {
       const nextIndex = currentIndex + 1;
       
@@ -335,6 +356,7 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady }: QuizModeProps)
       const coinGain = Math.floor(30 * (1 + getSkillBoost('coin_boost')));
       const medalBoost = getSkillBoost('medal_boost') + (getCollectionPlusEffect()?.medalBoost || 0);
       const medalGain = tryGetMedal(quizFormat, medalBoost);
+      console.log(`[MEDAL REWARD CHOICE] Calling addQuizRewards with medalGain=${medalGain}`);
       
       // デバッグ情報を保存
       setXpDebugInfo({

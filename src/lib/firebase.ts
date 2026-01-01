@@ -3,6 +3,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signO
 import type { User } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { getStorage, ref as storageRef, getDownloadURL } from 'firebase/storage';
+import { deleteDoc } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
 import type { Auth } from 'firebase/auth';
 import type { GamificationState } from '../contexts/gamification/types';
@@ -368,6 +369,162 @@ export const loadRevolutionState = async (userId: string): Promise<any | null> =
   if (!snap.exists()) return null;
   const { updatedAt, ...data } = snap.data() as any;
   return data || null;
+};
+
+// ユーザーデータをFirestoreから完全に削除する（サブドキュメントも含む）
+export const deleteUserData = async (userId: string) => {
+  if (!db) throw new Error('Firestore not initialized');
+
+  const docsToDelete = [
+    // コアユーザードキュメント
+    doc(db, withTestRoot('users', userId).join('/')),
+    // サブドキュメント
+    doc(db, withTestRoot('users', userId, 'cardCollection', 'data').join('/')),
+    doc(db, withTestRoot('users', userId, 'characters', 'data').join('/')),
+    doc(db, withTestRoot('users', userId, 'collectionPlus', 'data').join('/')),
+    doc(db, withTestRoot('users', userId, 'skillLevels', 'data').join('/')),
+    // ランキング、Revolution
+    doc(db, withTestRoot('rankings', userId).join('/')),
+    doc(db, withTestRoot('revolution', userId).join('/')),
+    // PresentBox (プレゼントボックス)
+    doc(db, withTestRoot('presentBox', userId).join('/'))
+  ];
+
+  for (const d of docsToDelete) {
+    try {
+      await deleteDoc(d);
+    } catch (err) {
+      console.warn('Failed to delete doc', d.path, err);
+    }
+  }
+};
+
+// 問い合わせを保存するヘルパー
+export const saveInquiry = async (name: string, email: string, message: string, replyRequested: boolean = false) => {
+  if (!db) throw new Error('Firestore not initialized');
+
+  const id = `inquiry_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+  const inquiryRef = doc(db, withTestRoot('inquiries', id).join('/'));
+
+  const payload = {
+    name: name || null,
+    email: email || null,
+    message: message || null,
+    replyRequested: !!replyRequested,
+    createdAt: Date.now()
+  };
+
+  await setDoc(inquiryRef, payload, { merge: true });
+  
+  // Webhookフォールバック: Firebase Functions が使えない環境（Spark等）では
+  // 管理者メールへ転送する外部Webhook（Google Apps Script / Formspree など）を設定できます。
+  // .env に `VITE_INQUIRY_WEBHOOK_URL` を追加してください。
+  try {
+    const webhookUrl = (import.meta as any).env?.VITE_INQUIRY_WEBHOOK_URL || '';
+    if (webhookUrl) {
+      // GAS の公開 exec URL はブラウザからの POST でプリフライト（OPTIONS）を要求し、
+      // そのままだと CORS エラーになることが多いです。
+      // そこで簡易にクエリ文字列を付けた GET で送信します（サイズに注意）。
+      try {
+        // webhook 用にメッセージを安全に切り詰める（JSONP/GET の URL 長制限対策）
+        const MAX_WEBHOOK_MESSAGE = 800; // 送信時は最大800文字に制限
+        const isTruncated = (message || '').length > MAX_WEBHOOK_MESSAGE;
+        // 切り詰めが発生する場合、メール本文には一切本文を載せない（ユーザ要求）
+        const safeMessage = isTruncated ? '' : (message || '').slice(0, MAX_WEBHOOK_MESSAGE);
+        const truncatedFlag = isTruncated ? '1' : '0';
+
+        const params = new URLSearchParams({
+          id,
+          name: name || '',
+          email: email || '',
+          // 本文は切り詰め発生時は空にする
+          message: safeMessage,
+          truncated: truncatedFlag,
+          replyRequested: replyRequested ? '1' : '0',
+          createdAt: String(Date.now())
+        });
+        // webhookUrl に既にクエリが含まれている可能性を考慮
+        const sep = webhookUrl.includes('?') ? '&' : '?';
+        const url = `${webhookUrl}${sep}${params.toString()}`;
+        // まず通常の fetch を試して、成功したらレスポンスを確認して完了扱いにする。
+        // CORS 等で fetch が失敗した場合は JSONP フォールバックを試み、JSONP の完了まで待つ。
+        try {
+          const resp = await fetch(url, { method: 'GET' });
+          // fetch が成功した場合、可能なら JSON を読んで OK を確認する
+          try {
+            const text = await resp.text();
+            // よくある JSONP 応答 (callback(...)) の場合はそのまま成功とみなす
+            if (text) {
+              // もし JSON なら解析して ok フィールドを確認
+              try {
+                const j = JSON.parse(text);
+                if (j && j.ok === false) {
+                  throw new Error('Webhook responded with error: ' + (j.error || 'unknown'));
+                }
+              } catch (e) {
+                // JSON 以外（JSONP等）は成功とみなす
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to read webhook response body, but request succeeded', e);
+          }
+        } catch (err) {
+          console.warn('Inquiry webhook delivery failed (GET):', err);
+
+          // CORS 等で失敗した場合、JSONP (script タグ) でフォールバックする — Promiseで待機
+          try {
+            await new Promise<void>((resolve, reject) => {
+              const cbName = `__inquiry_cb_${Date.now()}_${Math.floor(Math.random()*100000)}`;
+              let finished = false;
+              (window as any)[cbName] = (resp: any) => {
+                if (finished) return;
+                finished = true;
+                try { console.log('inquiry webhook jsonp response', resp); } catch (e) {}
+                try { delete (window as any)[cbName]; } catch (e) {}
+                const s = document.getElementById(cbName);
+                if (s && s.parentNode) s.parentNode.removeChild(s);
+                if (resp && resp.ok === false) {
+                  reject(new Error('Webhook responded with error: ' + (resp.error || 'unknown')));
+                } else {
+                  resolve();
+                }
+              };
+
+              const jsonpSep = url.includes('?') ? '&' : '?';
+              const jsonpUrl = `${url}${jsonpSep}callback=${cbName}`;
+              const script = document.createElement('script');
+              script.src = jsonpUrl;
+              script.id = cbName;
+              script.onerror = () => {
+                if (finished) return;
+                finished = true;
+                console.warn('Inquiry webhook JSONP script load failed');
+                try { delete (window as any)[cbName]; } catch (e) {}
+                if (script.parentNode) script.parentNode.removeChild(script);
+                reject(new Error('JSONP script load failed'));
+              };
+              document.body.appendChild(script);
+              // タイムアウト
+              setTimeout(() => {
+                if (finished) return;
+                finished = true;
+                try { delete (window as any)[cbName]; } catch (e) {}
+                if (script.parentNode) script.parentNode.removeChild(script);
+                reject(new Error('JSONP callback timeout'));
+              }, 10000);
+            });
+          } catch (e) {
+            console.warn('Inquiry webhook JSONP fallback failed', e);
+            throw e; // webhook 全失敗は呼び出し元に伝える
+          }
+        }
+      } catch (err) {
+        console.warn('Inquiry webhook prepare failed:', err);
+      }
+    }
+  } catch (err) {
+    console.warn('Inquiry webhook step failed:', err);
+  }
 };
 
 export { auth, db, isFirebaseEnabled };

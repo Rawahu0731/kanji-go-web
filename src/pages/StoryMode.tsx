@@ -87,7 +87,7 @@ function StoryMode() {
   };
 
   return (
-    <div className="story-mode-container">
+    <div className="story-mode-container page-root">
       <header className="story-header">
         <Link to="/" className="back-button">← ホームへ戻る</Link>
         <h1>ストーリーモード</h1>

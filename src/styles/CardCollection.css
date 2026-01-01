@@ -8,12 +8,13 @@
   text-align: center;
   margin-bottom: 2rem;
   position: relative;
+  padding-top: 3rem;
 }
 
-.back-button {
+.collection-header .back-button {
   position: absolute;
-  left: 0;
   top: 0;
+  left: 0;
   padding: 0.75rem 1.5rem;
   background: white;
   color: #1a1a1a;
@@ -806,8 +807,7 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .back-button {
-    position: static;
+  .collection-header .back-button {
     display: inline-block;
     margin-bottom: 1rem;
   }

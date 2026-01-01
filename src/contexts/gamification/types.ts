@@ -41,10 +41,6 @@ export interface GamificationState {
   // コレクション++ は削除
   // チケット（キー: ticketId, 値: 所持数）
   tickets?: Record<string, number>;
-  // マイグレーションで使用: 更新配信後の「お詫びアイテム」配布フラグ
-  apologyCompensationAvailable?: boolean;
-  // 配布済みバージョン（重複配布防止のために記録）
-  apologyCompensationClaimedVersion?: number;
 }
 
 export type GamificationContextType = {
@@ -64,7 +60,6 @@ export type GamificationContextType = {
   addQuizRewards: (xp: number, coins: number, medals: number, characterXp: number, statsUpdate: Partial<GamificationState['stats']>) => { actualXp: number; actualCoins: number; actualMedals: number };
   addTickets: (ticketId: string, count?: number) => void;
   useTicket: (ticketId: string, count?: number) => KanjiCard[] | null;
-  grantMaintenanceCompensation: () => void;
   setTheme: (themeId: string) => void;
   setIcon: (iconId: string) => void;
   setCustomIconUrl: (url: string) => void;
@@ -75,6 +70,7 @@ export type GamificationContextType = {
   getLevelProgress: () => number;
   addCardToCollection: (card: KanjiCard) => void;
   openCardPack: (packType: string) => KanjiCard[];
+  canOpenCardPack: (packType: string) => boolean;
   // メダルで引くコレクション+ガチャ（返り値は表示用のカードオブジェクト）
   pullCollectionPlusGacha: (count: number) => KanjiCard[];
   // コレクション+ に+値を追加（内部でカンスト処理）
@@ -84,7 +80,7 @@ export type GamificationContextType = {
   getCharacterBoost: (type: 'xp' | 'coin') => number;
   addCharacterXp: (amount: number) => void;
   getCollectionBoost: () => number;
-  getCollectionPlusEffect: () => { totalPlus: number; xpCoinBonusFraction: number; medalBoost: number };
+  getCollectionPlusEffect: () => { totalPlus: number; xpCoinBonusPercent: number; xpCoinBonusFraction: number; medalBoost: number };
   // コレクション++ は削除
   isCollectionComplete: () => boolean;
   addCardsToDeck: (cards: KanjiCard[]) => void;
@@ -100,6 +96,10 @@ export type GamificationContextType = {
   setDebugInfo: (info: Record<string, any> | null) => void;
   syncWithFirebase: (userId: string) => Promise<void>;
   loadFromFirebase: (userId: string, preferRemote?: boolean) => Promise<void>;
+  // ゲームデータをリセット/削除する。引数に true を渡すと Firebase 上のデータも削除する
+  deleteGameData: (deleteRemote?: boolean) => Promise<void>;
+  // デバッグ用: 指定キャラクターを最大レベルにする（デバッグ用）
+  debugSetCharacterLevelMax: (characterId: string) => void;
 
   // コレクション（漢字ごとの値。最大30でカンスト）
   collectionPlus?: { kanji: string; plus: number; obtainedAt?: number }[];

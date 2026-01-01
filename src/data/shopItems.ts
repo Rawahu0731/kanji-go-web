@@ -274,7 +274,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     description: 'メダルで引くコレクション+ガチャ。出た漢字の+値が増えます（最大+30）。',
     price: 500,
     category: 'medal',
-    icon: '🏅',
+    icon: '🪙',
     effect: 'collection_plus_1'
   },
   {
@@ -283,7 +283,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     description: 'メダルで引く10連コレクション+ガチャ。10回分のお得価格（4500メダル）。',
     price: 4500,
     category: 'medal',
-    icon: '🏅🏅',
+    icon: '🪙🪙',
     effect: 'collection_plus_10'
   }
   ,

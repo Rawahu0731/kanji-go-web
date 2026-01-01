@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import '../styles/Revolution.css'
 import { useAuth } from '../contexts/AuthContext'
 import { saveRevolutionState, loadRevolutionState, isFirebaseEnabled } from '../lib/firebase'
 
-const STORAGE_KEY = 'revolution_state_v1'
+// Use a new storage key for Season2 to avoid any leftover Season1 data
+const STORAGE_KEY = 'revolution_state_v2'
 
 function loadSavedState() {
   try {
@@ -1601,6 +1603,23 @@ function App() {
 
   return (
     <>
+      {/* Back button */}
+      <Link to="/" style={{ 
+        position: 'fixed', 
+        top: '1rem', 
+        left: '1rem', 
+        zIndex: 10000,
+        display: 'inline-block',
+        padding: '0.5rem 1rem',
+        background: 'rgba(255, 255, 255, 0.9)',
+        borderRadius: '8px',
+        color: '#222',
+        textDecoration: 'none',
+        transition: 'background 0.3s',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }}>
+        ← ホームへ戻る
+      </Link>
       {/* Debug button removed */}
       
       {/* Challenge Panel - rendered first to be on top when opened from IP Shop */}

@@ -1,6 +1,7 @@
 import type { GamificationState } from './types';
 import { CURRENT_VERSION } from './utils';
 import { fromNumber } from '../../utils/bigNumber';
+import { MAX_CHARACTER_LEVEL, MAX_CHARACTER_COUNT } from '../../data/characters';
 
 // データマイグレーション関数
 export function migrateData(data: any): GamificationState {
@@ -125,6 +126,34 @@ export function migrateData(data: any): GamificationState {
   if (!data.equippedCharacter) {
     data.equippedCharacter = null;
   }
+
+  // 既存データの正規化: 旧仕様で被り時に level を上げていたケースがあるため、
+  // level が MAX_CHARACTER_LEVEL を超えている場合はその超過分を count(+値) に変換する。
+  if (Array.isArray(data.characters)) {
+    for (let i = 0; i < data.characters.length; i++) {
+      const ch = data.characters[i] as any;
+      if (!ch) continue;
+      ch.count = typeof ch.count === 'number' ? ch.count : 1;
+      ch.level = typeof ch.level === 'number' ? ch.level : 1;
+      if (ch.level > MAX_CHARACTER_LEVEL) {
+        const excess = ch.level - MAX_CHARACTER_LEVEL;
+        ch.level = MAX_CHARACTER_LEVEL;
+        ch.count = Math.min(MAX_CHARACTER_COUNT, (ch.count || 1) + excess);
+      }
+    }
+  }
+
+  // 装備中キャラクターも同様に正規化
+  if (data.equippedCharacter) {
+    const ec = data.equippedCharacter as any;
+    ec.count = typeof ec.count === 'number' ? ec.count : 1;
+    ec.level = typeof ec.level === 'number' ? ec.level : 1;
+    if (ec.level > MAX_CHARACTER_LEVEL) {
+      const excess = ec.level - MAX_CHARACTER_LEVEL;
+      ec.level = MAX_CHARACTER_LEVEL;
+      ec.count = Math.min(MAX_CHARACTER_COUNT, (ec.count || 1) + excess);
+    }
+  }
   
   // 負債利子計算のタイムスタンプを初期化
   if (!data.lastInterestTime) {
@@ -147,11 +176,6 @@ export function migrateData(data: any): GamificationState {
   // (Challenge 機能削除)
   if (data.lastSkillPurchaseTime === undefined) {
     data.lastSkillPurchaseTime = undefined;
-  }
-  
-  // バージョン番号を最新に更新
-  if (!data.apologyCompensationClaimedVersion && !data.apologyCompensationAvailable) {
-    data.apologyCompensationAvailable = true;
   }
 
   // xp と totalXp を BigNumber に変換（既に BigNumber の場合はそのまま）

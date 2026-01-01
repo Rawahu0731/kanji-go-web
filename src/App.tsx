@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { getKnownIssues, getPatchNotes } from './lib/microcms'
 import type { Article } from './lib/microcms'
 import { useGamification } from './contexts/GamificationContext'
+import { usePresentBox } from './contexts/PresentBoxContext'
 import { DebugPanel } from './components/DebugPanel'
 import AuthButton from './components/AuthButton'
 import './App.css'
@@ -43,7 +44,19 @@ if (typeof document !== 'undefined' && !document.getElementById('reward-animatio
 
 
 function App() {
-  const [selectedLevel, setSelectedLevel] = useState<Level>(7);
+  // ローカルストレージから前回のレベルを読み込む
+  const getInitialLevel = (): Level => {
+    const saved = localStorage.getItem('selectedLevel');
+    if (saved) {
+      const parsed = saved === 'extra' ? 'extra' : parseInt(saved);
+      if ([4, 5, 6, 7, 8, 'extra'].includes(parsed as Level)) {
+        return parsed as Level;
+      }
+    }
+    return 7; // デフォルトはレベル7
+  };
+
+  const [selectedLevel, setSelectedLevel] = useState<Level>(getInitialLevel());
   const [items, setItems] = useState<Item[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,12 +104,18 @@ function App() {
     isMedalSystemEnabled,
     getTotalXpForNextLevel, 
     getLevelProgress,
-    initializing
+    initializing,
+    isCollectionComplete
   } = useGamification();
-  // get isCollectionComplete from the same hook
-  const { isCollectionComplete } = useGamification();
-  // `isCollectionComplete` を同じフック呼び出しにまとめる
-  // (useGamification は上で一度呼んでいるため、ここでは追加で取得している箇所を削除しました)
+  
+  const { unclaimedCount, syncFromMicroCMS } = usePresentBox();
+
+  useEffect(() => {
+    // マウント時に常に microCMS から同期を行う
+    syncFromMicroCMS().catch(err => {
+      console.warn('microCMS sync failed on App mount:', err);
+    });
+  }, [syncFromMicroCMS]);
 
   useEffect(() => {
     async function fetchInvestigatingIssues() {
@@ -107,6 +126,17 @@ function App() {
           return status === 'investigating';
         });
         setInvestigatingIssues(investigating);
+        
+        // LocalStorageから閉じた状態を復元
+        const DISMISSED_ISSUES_KEY = 'dismissed_issue_banners';
+        const dismissedStr = localStorage.getItem(DISMISSED_ISSUES_KEY);
+        const dismissed = dismissedStr ? JSON.parse(dismissedStr) : [];
+        
+        // すべての調査中の不具合が閉じられている場合のみバナーを非表示
+        const allDismissed = investigating.every(issue => dismissed.includes(issue.id));
+        if (allDismissed && investigating.length > 0) {
+          setShowIssueBanner(false);
+        }
       } catch (error) {
         console.error('不具合情報の取得に失敗:', error);
       }
@@ -295,7 +325,7 @@ function App() {
           </div>
           {isMedalSystemEnabled && isCollectionComplete() && (
             <div className="stat-item">
-              <span className="stat-label">🏅</span>
+              <span className="stat-label">🪙</span>
               <span className="stat-value">{gamificationState.medals}</span>
             </div>
           )}
@@ -303,6 +333,28 @@ function App() {
         <div className="nav-links">
           <Link to="/profile" className="nav-link">プロフィール</Link>
           <Link to="/characters" className="nav-link">⭐ キャラクター</Link>
+          <Link to="/present-box" className="nav-link" style={{ position: 'relative' }}>
+            🎁 プレゼント
+            {unclaimedCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-4px',
+                right: '-4px',
+                background: '#ef4444',
+                color: 'white',
+                borderRadius: '50%',
+                width: '20px',
+                height: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '11px',
+                fontWeight: 'bold'
+              }}>
+                {unclaimedCount > 99 ? '99+' : unclaimedCount}
+              </span>
+            )}
+          </Link>
           <Link to="/shop" className="nav-link">ショップ</Link>
           {isCollectionComplete() && (
             <Link to="/skill-tree" className="nav-link">🌳 スキルツリー</Link>
@@ -312,9 +364,9 @@ function App() {
           )}
           <Link to="/collection" className="nav-link">📚 コレクション</Link>
           {isCollectionComplete() && (
-            <Link to="/collection-plus" className="nav-link">🏅 コレクション+</Link>
+            <Link to="/collection-plus" className="nav-link">🪙 コレクション+</Link>
           )}
-          <Link to="/story" className="nav-link">ストーリー</Link>
+          
           <Link to="/ranking" className="nav-link">🏆 ランキング</Link>
         </div>
         <div className="auth-section">
@@ -349,12 +401,18 @@ function App() {
           <div className="issue-banner-content">
             <span className="issue-icon">⚠️</span>
             <span className="issue-text">
-              現在不具合が発生しています。詳細は
+              現在{investigatingIssues.length}件の不具合が発生しています。詳細は
               <Link to="/known-issues" style={{ color: '#fff', textDecoration: 'underline', marginLeft: '0.3rem' }}>こちら</Link>
             </span>
             <button
               className="issue-close"
-              onClick={() => setShowIssueBanner(false)}
+              onClick={() => {
+                setShowIssueBanner(false);
+                // すべての調査中の不具合IDをlocalStorageに保存
+                const DISMISSED_ISSUES_KEY = 'dismissed_issue_banners';
+                const issueIds = investigatingIssues.map(issue => issue.id);
+                localStorage.setItem(DISMISSED_ISSUES_KEY, JSON.stringify(issueIds));
+              }}
               aria-label="閉じる"
             >
               ✕
@@ -374,7 +432,10 @@ function App() {
         {levels.map(level => (
           <button
             key={level}
-            onClick={() => setSelectedLevel(level)}
+            onClick={() => {
+              setSelectedLevel(level);
+              localStorage.setItem('selectedLevel', String(level));
+            }}
             className={`level-button ${selectedLevel === level ? 'active' : ''}`}
           >
             {level === 'extra' ? (
@@ -555,6 +616,8 @@ function App() {
         <a href="/patch-notes.html" target="_blank" rel="noopener noreferrer">パッチノート</a>
         <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
         <Link to="/known-issues">不具合情報</Link>
+        <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
+        <Link to="/contact">お問い合わせ</Link>
         <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
         <a href="/terms.html" target="_blank" rel="noopener noreferrer" style={{ padding: '6px 10px', background:'#f5f7ff', borderRadius:6, textDecoration:'none' }}>利用規約</a>
       </footer>

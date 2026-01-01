@@ -217,14 +217,6 @@ export const CHARACTERS: Record<string, Character> = {
     description: 'コインを1000%増加（11倍）',
     effect: { type: 'coin_boost', value: 11.0 },
     unlockDate: '2025-12-01'
-  },
-  bear: {
-    id: 'bear',
-    name: '熊',
-    icon: '🐻',
-    rarity: 'ultra',
-    description: 'XPとコインを1200%増加（13倍）',
-    effect: { type: 'both_boost', value: 13.0 }
   }
 };
 
@@ -330,21 +322,32 @@ export const getCharacterEffectValue = (character: OwnedCharacter): number => {
   const baseValue = character.effect.value;
   // レアリティに応じてレベルごとの上昇率を変える
   const perLevel = RARITY_LEVEL_BONUS[character.rarity] ?? 0.02;
-  const levelBonus = 1 + (character.level - 1) * perLevel;
+  // plus 値（count - 1）は効果計算にのみ反映する（レベルアップ/必要XPには影響させない）
+  const plus = Math.max(0, (character.count || 1) - 1);
+  const effectiveLevel = character.level + plus;
+  const levelBonus = 1 + (effectiveLevel - 1) * perLevel;
   return baseValue * levelBonus;
 };
 
 // キャラクターの次のレベルに必要な経験値（レベルに応じて増加）
 export const getXpForCharacterLevel = (level: number): number => {
-  // レベル1→2: 100XP, レベル2→3: 110XP... と徐々に増加
-  return Math.floor(100 * Math.pow(1.05, level - 1));
+  return Math.floor(50 * Math.pow(1.02, level - 1));
 };
 
-// キャラクターの最大レベル
+// キャラクターの最大レベル（ベース）
 export const MAX_CHARACTER_LEVEL = 100;
 
-// キャラクターの最大+値（count - 1の最大値）
-export const MAX_CHARACTER_COUNT = 101;
+// キャラクターの最大+値（count - 1 の最大値）および所持上限
+// MAX_CHARACTER_COUNT = 所持数の最大値。count - 1 が +値となるため、+300 を許容するには 301 に設定する。
+export const MAX_CHARACTER_COUNT = 301;
+
+// キャラクターに適用される実効最大レベルを返す。
+// ベースの最大レベルに所持数による+分を加算する（最大で MAX_CHARACTER_COUNT-1 まで）。
+export const getEffectiveCharacterMaxLevel = (character: OwnedCharacter): number => {
+  const plus = Math.max(0, (character.count || 1) - 1);
+  const maxPlus = Math.max(0, MAX_CHARACTER_COUNT - 1);
+  return Math.min(MAX_CHARACTER_LEVEL + plus, MAX_CHARACTER_LEVEL + maxPlus);
+};
 
 // レアリティの日本語名
 export const getRarityName = (rarity: CharacterRarity): string => {

@@ -148,11 +148,15 @@ export function getKanjiByLevel(level: number): KanjiData[] {
 // ランダムに漢字を取得する関数
 import shuffleArray from '../lib/shuffle';
 
-export function getRandomKanji(count: number, levelRange?: [number, number]): KanjiData[] {
+export function getRandomKanji(count: number, levelRange?: [number, number], exclude?: Set<string>): KanjiData[] {
   let pool = ALL_KANJI;
 
   if (levelRange) {
     pool = ALL_KANJI.filter(k => k.level >= levelRange[0] && k.level <= levelRange[1]);
+  }
+
+  if (exclude && exclude.size > 0) {
+    pool = pool.filter(k => !exclude.has(k.kanji));
   }
 
   const shuffled = shuffleArray(pool);

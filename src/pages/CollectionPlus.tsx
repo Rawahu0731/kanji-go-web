@@ -34,10 +34,12 @@ export default function CollectionPlus() {
   }, [list, query, sortBy, showOnlyMaxed]);
 
   return (
-    <div className="collection-plus-container">
+    <div className="collection-plus-container page-root">
       <header className="collection-plus-header">
-        <Link to="/" className="back-button">← ホームへ戻る</Link>
-        <h1>🏅 コレクション+</h1>
+        <div className="header-top">
+          <Link to="/" className="back-button">← ホームへ戻る</Link>
+          <h1>🪙 コレクション+</h1>
+        </div>
         <div className="collection-stats">
           <div className="stat-badge">
             <span className="stat-label">収集率</span>
@@ -47,7 +49,6 @@ export default function CollectionPlus() {
           {(() => {
             const eff = getCollectionPlusEffect();
             if (!eff) return null;
-            const multiplier = 1 + (eff.xpCoinBonusFraction || 0);
             return (
               <>
                 <div className="stat-badge">
@@ -55,8 +56,8 @@ export default function CollectionPlus() {
                   <span className="stat-value">{eff.totalPlus}</span>
                 </div>
                 <div className="stat-badge">
-                  <span className="stat-label">XP/コイン倍率</span>
-                  <span className="stat-value">x{multiplier.toFixed(2)}</span>
+                  <span className="stat-label">XP/コインボーナス</span>
+                  <span className="stat-value">+{eff.xpCoinBonusPercent.toFixed(0)}%</span>
                 </div>
                 <div className="stat-badge">
                   <span className="stat-label">メダル獲得</span>

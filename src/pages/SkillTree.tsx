@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { SKILLS, type Skill } from '../data/skillTree';
 import { useGamification } from '../contexts/GamificationContext';
 import '../styles/SkillTree.css';
@@ -7,7 +8,8 @@ const SkillTree = () => {
   const { state, isMedalSystemEnabled, getSkillLevel, upgradeSkill, isCollectionComplete } = useGamification();
   if (!isCollectionComplete()) {
     return (
-      <div style={{ padding: '2rem' }}>
+      <div className="page-root" style={{ padding: '2rem' }}>
+        <Link to="/" className="back-button">← ホームへ戻る</Link>
         <h1>🌳 スキルツリー</h1>
         <p>コレクションを完了するまでスキルツリーは利用できません。まずは <a href="/collection">コレクション</a> を埋めてください。</p>
       </div>
@@ -188,7 +190,7 @@ const SkillTree = () => {
     if (skill.id === 'unlock_rotation') {
       return SKILLS
         .filter(s => s.id !== 'unlock_rotation' && s.tier > 0) // コアを除き、実際のノード群を対象
-        .every(s => getSkillLevel(s.id) > 0);
+        .every(s => getSkillLevel(s.id) >= (s.maxLevel ?? 1));
     }
 
     if (!skill.prerequisite || skill.prerequisite.length === 0) return true;
@@ -421,9 +423,10 @@ const SkillTree = () => {
   };
 
   return (
-    <div className="skill-tree-page">
+    <div className="skill-tree-page page-root">
       {!isMedalSystemEnabled ? (
         <div className="skill-tree-disabled">
+          <Link to="/" className="back-button">← ホームへ戻る</Link>
           <div className="disabled-message">
             <h1>🌳 スキルツリー</h1>
             <div className="coming-soon-banner">
@@ -436,19 +439,15 @@ const SkillTree = () => {
         </div>
       ) : (
         <>
-          <div className="skill-tree-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <h1>スキルツリー</h1>
-              <div className="medal-display">
+          <div className="skill-tree-header">
+            <Link to="/" className="back-button">← ホームへ戻る</Link>
+            <h1>スキルツリー</h1>
+            <div className="medal-display">
               <span className="medal-icon">🪙</span>
               <div>
                 <div className="medal-count">{medals}</div>
                 <div className="medal-label">メダル</div>
               </div>
-              </div>
-            </div>
-            <div style={{ marginLeft: 'auto' }}>
-              {/* チャレンジ機能は削除済み */}
             </div>
           </div>
 
