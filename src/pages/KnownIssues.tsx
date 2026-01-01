@@ -69,7 +69,8 @@ export default function KnownIssues() {
         padding: '2rem',
         minHeight: '100vh'
       }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+            <div style={{ maxWidth: '900px', margin: '0 auto' }} className="page-root">
+              <Link to="/" className="back-button" style={{ padding: '0.6rem 1rem', background: '#fff', border: '1px solid #eef0f6', borderRadius: '8px', boxShadow: '0 6px 16px rgba(30,30,60,0.04)', textDecoration: 'none', color: '#222' }}>← サイトに戻る</Link>
           <h1 style={{ fontSize: '1.8rem', marginBottom: '1rem', color: '#4756e6' }}>
             既知の不具合
           </h1>
@@ -89,7 +90,8 @@ export default function KnownIssues() {
         padding: '2rem',
         minHeight: '100vh'
       }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }} className="page-root">
+          <Link to="/" className="back-button" style={{ padding: '0.6rem 1rem', background: '#fff', border: '1px solid #eef0f6', borderRadius: '8px', boxShadow: '0 6px 16px rgba(30,30,60,0.04)', textDecoration: 'none', color: '#222' }}>← サイトに戻る</Link>
           <h1 style={{ fontSize: '1.8rem', marginBottom: '1rem', color: '#4756e6' }}>
             既知の不具合
           </h1>
@@ -102,22 +104,6 @@ export default function KnownIssues() {
           }}>
             <p style={{ margin: 0, color: '#856404' }}>⚠️ {error}</p>
           </div>
-          <Link 
-            to="/"
-            style={{
-              display: 'inline-block',
-              marginTop: '1.6rem',
-              padding: '0.6rem 1rem',
-              background: '#fff',
-              border: '1px solid #eef0f6',
-              borderRadius: '8px',
-              boxShadow: '0 6px 16px rgba(30,30,60,0.04)',
-              textDecoration: 'none',
-              color: '#222'
-            }}
-          >
-            ← サイトに戻る
-          </Link>
         </div>
       </div>
     );
@@ -132,7 +118,8 @@ export default function KnownIssues() {
       padding: '2rem',
       minHeight: '100vh'
     }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto' }} className="page-root">
+        <Link to="/" className="back-button" style={{ padding: '0.6rem 1rem', background: '#fff', border: '1px solid #eef0f6', borderRadius: '8px', boxShadow: '0 6px 16px rgba(30,30,60,0.04)', textDecoration: 'none', color: '#222' }}>← サイトに戻る</Link>
         <h1 style={{ fontSize: '1.8rem', marginBottom: '1rem', color: '#4756e6' }}>
           既知の不具合
         </h1>
@@ -242,23 +229,6 @@ export default function KnownIssues() {
             );
           })
         )}
-
-        <Link 
-          to="/"
-          style={{
-            display: 'inline-block',
-            marginTop: '1.6rem',
-            padding: '0.6rem 1rem',
-            background: '#fff',
-            border: '1px solid #eef0f6',
-            borderRadius: '8px',
-            boxShadow: '0 6px 16px rgba(30,30,60,0.04)',
-            textDecoration: 'none',
-            color: '#222'
-          }}
-        >
-          ← サイトに戻る
-        </Link>
       </div>
     </div>
   );

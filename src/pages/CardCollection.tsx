@@ -209,7 +209,7 @@ function CardCollection() {
   const deckBoost = calculateDeckTotalBoost();
 
   return (
-    <div className="card-collection-container">
+    <div className="card-collection-container page-root">
       <header className="collection-header">
         <Link to="/" className="back-button">← ホームへ戻る</Link>
         <h1>📚 カードコレクション</h1>

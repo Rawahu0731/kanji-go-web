@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { getPatchNotes } from '../lib/microcms';
 import type { Article } from '../lib/microcms';
 import '../styles/Announcements.css';
@@ -27,7 +28,8 @@ function Announcements() {
 
   if (loading) {
     return (
-      <div className="announcements-container">
+      <div className="announcements-container page-root">
+        <Link to="/" className="back-button">← ホームへ戻る</Link>
         <h1>📢 お知らせ</h1>
         <div className="loading">読み込み中...</div>
       </div>
@@ -36,7 +38,8 @@ function Announcements() {
 
   if (error) {
     return (
-      <div className="announcements-container">
+      <div className="announcements-container page-root">
+        <Link to="/" className="back-button">← ホームへ戻る</Link>
         <h1>📢 お知らせ</h1>
         <div className="error">{error}</div>
       </div>
@@ -44,7 +47,8 @@ function Announcements() {
   }
 
   return (
-    <div className="announcements-container">
+    <div className="announcements-container page-root">
+      <Link to="/" className="back-button">← ホームへ戻る</Link>
       <h1>📢 お知らせ</h1>
       
       {announcements.length === 0 ? (

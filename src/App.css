@@ -450,6 +450,11 @@ h1 {
   transform: translateX(-2px);
 }
 
+/* 汎用ページコンテナ：page-root クラスは将来の拡張用に保持 */
+.page-root {
+  /* 通常のフローで配置 */
+}
+
 .quiz-progress {
   font-size: 20px;
   font-weight: 700;

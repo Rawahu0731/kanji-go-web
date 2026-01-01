@@ -44,15 +44,49 @@ Firestore Databaseの「ルール」タブで、以下のルールを設定し�
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ユーザーデータ: ログインユーザーのみ自分のデータを読み書き可能
+    // 既存: 本番用
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      match /{subCollection}/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
-    
-    // ランキングデータ: 全員が読み取り可能、ログインユーザーのみ自分のデータを書き込み可能
+    match /revolution/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
     match /rankings/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /archive/{archivePath=**} {
+      allow read, write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // test/root 配下（現在のコードで使用中）
+    match /test/root/users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      match /{subCollection}/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    match /test/root/revolution/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /test/root/rankings/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /test/root/presentBox/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    // お問い合わせフォーム用（クライアントが書き込む）
+    // 作成は誰でも許可し、読み取りや削除は管理者のみとする例
+    match /test/root/inquiries/{inquiryId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null && request.auth.token.admin == true;
+    }
+    match /test/root/archive/{archivePath=**} {
+      allow read, write: if request.auth != null && request.auth.token.admin == true;
     }
   }
 }

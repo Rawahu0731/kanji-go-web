@@ -1,14 +1,172 @@
-.collection-plus-container{padding:1.25rem;max-width:1100px;margin:0 auto}
-.collection-plus-header{display:flex;align-items:center;gap:1rem;margin-bottom:1rem}
-.collection-plus-header h1{flex:1}
-.controls{display:flex;gap:0.75rem;margin-bottom:1rem;align-items:center}
-.controls input{padding:0.5rem;border-radius:6px;border:1px solid #ccc}
-.controls select{padding:0.5rem;border-radius:6px;border:1px solid #ccc}
-.checkbox{display:flex;align-items:center;gap:0.5rem}
-.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:0.75rem}
-.tile{background:rgba(255,255,255,0.02);border:1px solid rgba(200,200,200,0.04);padding:0.75rem;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:120px;position:relative}
-.tile.maxed{background:linear-gradient(135deg,#fff7e6,#e8fff1)}
-.tile-kanji{font-size:2rem;font-weight:800;margin-bottom:0.25rem}
-.tile-plus{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:white;padding:0.15rem 0.4rem;border-radius:6px;font-weight:700}
-.tile-meta{font-size:0.75rem;color:#888;margin-top:6px}
-.empty{padding:1rem;color:#888;text-align:center}
+.collection-plus-container {
+  min-height: 100vh;
+  background: #f8f9fa;
+  color: #1a1a1a;
+  padding: 1.25rem;
+  padding-bottom: 2rem;
+}
+
+.collection-plus-header {
+  background: white;
+  padding: 1.5rem 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e1e4e8;
+  margin-bottom: 1.5rem;
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.header-top {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.collection-plus-header h1 {
+  margin: 0;
+  font-size: 2rem;
+  color: #24292e;
+  font-weight: 600;
+  justify-self: center;
+}
+
+.collection-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.stat-badge {
+  background: #f8f9fa;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #e1e4e8;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #586069;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #24292e;
+}
+
+.stat-percentage {
+  font-size: 0.9rem;
+  color: #586069;
+}
+
+.controls {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 0.5rem;
+}
+
+.controls input {
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #e1e4e8;
+  background: white;
+  font-size: 0.95rem;
+}
+
+.controls select {
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #e1e4e8;
+  background: white;
+  font-size: 0.95rem;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 0.5rem;
+}
+
+.tile {
+  background: white;
+  border: 1px solid #e1e4e8;
+  padding: 0.75rem;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.tile.maxed {
+  background: linear-gradient(135deg, #fff7e6, #e8fff1);
+  border-color: #ffd700;
+}
+
+.tile-kanji {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 0.25rem;
+  color: #24292e;
+}
+
+.tile-plus {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #24292e;
+  color: white;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.tile-meta {
+  font-size: 0.75rem;
+  color: #586069;
+  margin-top: 6px;
+}
+
+.empty {
+  grid-column: 1 / -1;
+  padding: 2rem;
+  color: #586069;
+  text-align: center;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e1e4e8;
+}

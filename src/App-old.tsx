@@ -129,7 +129,7 @@ function showRewardPopup(xp: number, coins: number, medals?: number, showMedals:
     pointer-events: none;
   `;
   popup.innerHTML = (medals && showMedals)
-    ? `+${xp} XP &nbsp;&nbsp; +${coins} コイン &nbsp;&nbsp; <span style="color: #ffd700;">+${medals} メダル🏅</span>`
+    ? `+${xp} XP &nbsp;&nbsp; +${coins} コイン &nbsp;&nbsp; <span style="color: #ffd700;">+${medals} メダル🪙</span>`
     : `+${xp} XP &nbsp;&nbsp; +${coins} コイン`;
   document.body.appendChild(popup);
   
@@ -1245,7 +1245,7 @@ function App() {
           </div>
           {isMedalSystemEnabled && (
             <div className="stat-item">
-              <span className="stat-label">🏅</span>
+              <span className="stat-label">🪙</span>
               <span className="stat-value">{gamificationState.medals}</span>
             </div>
           )}
@@ -1261,9 +1261,9 @@ function App() {
             <Link to="/revolution" className="nav-link">回転</Link>
           )}
           <Link to="/collection" className="nav-link">📚 コレクション</Link>
-          <Link to="/collection-plus" className="nav-link">🏅 コレクション+</Link>
+          <Link to="/collection-plus" className="nav-link">🪙 コレクション+</Link>
           <Link to="/collection-plus-plus" className="nav-link">🏆 コレクション++</Link>
-          <Link to="/story" className="nav-link">ストーリー</Link>
+          
           <Link to="/ranking" className="nav-link">🏆 ランキング</Link>
         </div>
         <div className="auth-section">

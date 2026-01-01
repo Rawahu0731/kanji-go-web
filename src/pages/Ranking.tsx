@@ -4,6 +4,7 @@ import { getRankings, getUserRank, isFirebaseEnabled, getStorageDownloadUrl } fr
 import type { RankingEntry } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useGamification } from '../contexts/GamificationContext';
+import { toString as bigNumberToString, ensureBigNumber } from '../utils/bigNumber';
 import '../styles/Ranking.css';
 
 export default function Ranking() {
@@ -104,10 +105,10 @@ export default function Ranking() {
   };
 
   return (
-    <div className="ranking-page">
+    <div className="ranking-page page-root">
       <header>
+        <Link to="/" className="back-button">← ホームへ戻る</Link>
         <h1>🏆 ランキング</h1>
-        <Link to="/" className="back-link">← メニューに戻る</Link>
       </header>
 
       {!isFirebaseEnabled && (
@@ -131,7 +132,7 @@ export default function Ranking() {
             <div className="user-stats">
               <p className="username">{state.username}</p>
               <p className="level">レベル {state.level}</p>
-              <p className="xp">累計XP: {(state.totalXp ?? 0).toLocaleString()}</p>
+              <p className="xp">累計XP: {bigNumberToString(ensureBigNumber(state.totalXp ?? 0))}</p>
               <p className="medals">メダル: {(state.medals ?? 0).toLocaleString()}</p>
             </div>
           </div>
@@ -191,7 +192,7 @@ export default function Ranking() {
                       </div>
                     </td>
                     <td className="level-cell">{entry.level}</td>
-                    <td className="xp-cell">{(entry.totalXp ?? 0).toLocaleString()}</td>
+                    <td className="xp-cell">{bigNumberToString(ensureBigNumber(entry.totalXp ?? 0))}</td>
                     <td className="coin-cell">{(entry.coins ?? 0).toLocaleString()}</td>
                     <td className="medal-cell">{(entry.medals ?? 0).toLocaleString()}</td>
                   </tr>

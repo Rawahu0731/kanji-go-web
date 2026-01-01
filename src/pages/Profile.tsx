@@ -6,7 +6,7 @@ import '../styles/Profile.css';
 import * as BN from '../utils/bigNumber';
 
 function Profile() {
-  const { state, isMedalSystemEnabled, getTotalXpForNextLevel, getLevelProgress, setUsername } = useGamification();
+  const { state, isMedalSystemEnabled, getTotalXpForNextLevel, getLevelProgress, setUsername, deleteGameData } = useGamification();
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(state.username);
 
@@ -24,7 +24,7 @@ function Profile() {
   };
 
   return (
-    <div className="profile-container">
+    <div className="profile-container page-root">
       <header className="profile-header">
         <Link to="/" className="back-button">← ホームへ戻る</Link>
         <h1>プロフィール</h1>
@@ -196,40 +196,43 @@ function Profile() {
           </div>
         </div>
 
-        {/* キャラクター管理へのリンク */}
-        <div className="stats-card">
-          <h2>キャラクター</h2>
-          <p style={{ textAlign: 'center', color: '#a0a0c0', padding: '1rem', marginBottom: '1rem' }}>
-            所持キャラクター: {state.characters.length}体
-          </p>
-          <Link 
-            to="/characters" 
-            style={{
-              display: 'block',
-              textAlign: 'center',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              padding: '1rem 2rem',
-              borderRadius: '12px',
-              textDecoration: 'none',
-              fontWeight: '600',
-              fontSize: '1.1rem',
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)';
-            }}
-          >
-            キャラクター管理へ →
-          </Link>
-        </div>
+        
       </div>
+
+        {/* データ削除ボタン */}
+        <div className="stats-card">
+          <h2>データ管理</h2>
+          <p style={{ textAlign: 'center', color: '#a0a0c0', padding: '0.5rem' }}>
+            ゲーム内の進行状況・所持品・統計などを消去します。アカウント情報は残ります。
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <button
+              onClick={async () => {
+                const ok = window.confirm('本当にゲームデータを完全に削除しますか？ アカウント情報は残ります。Firebase上のデータも削除されます。');
+                if (!ok) return;
+                try {
+                  await deleteGameData(true);
+                  alert('ゲームデータを削除しました。');
+                } catch (e) {
+                  console.error('Failed to delete game data:', e);
+                  alert('ゲームデータの削除に失敗しました。コンソールを確認してください。');
+                }
+              }}
+              style={{
+                background: '#e02424',
+                color: 'white',
+                padding: '0.8rem 1.2rem',
+                borderRadius: '10px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 700
+              }}
+              title="ゲームデータを削除"
+            >
+              ゲームデータを削除する
+            </button>
+          </div>
+        </div>
     </div>
   );
 }
