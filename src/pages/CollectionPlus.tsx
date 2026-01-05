@@ -1,17 +1,35 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useGamification } from '../contexts/GamificationContext';
+import { usePresentBox } from '../contexts/PresentBoxContext';
 import { ALL_KANJI } from '../data/allKanji';
 import '../styles/CollectionPlus.css';
 
 type SortKey = 'plus' | 'kanji' | 'obtained';
 
 export default function CollectionPlus() {
-  const { state, getCollectionPlusEffect } = useGamification();
+  const { state, getCollectionPlusEffect, isCollectionPlusComplete } = useGamification();
+  const { addPresent } = usePresentBox();
   const list = state.collectionPlus || [];
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortKey>('plus');
   const [showOnlyMaxed, setShowOnlyMaxed] = useState(false);
+  const invitationSentRef = useRef(false);
+
+  // コレクション+が完全にコンプリートした時に招待状をプレゼントボックスに送る
+  useEffect(() => {
+    if (isCollectionPlusComplete() && !invitationSentRef.current) {
+      invitationSentRef.current = true;
+      addPresent({
+        title: '文霊世界への招待状',
+        description: '文霊世界を、、、、、救って、、、、、',
+        rewards: [{ type: 'xp', amount: 0 }], // ダミー報酬
+        createdAt: Date.now()
+      }).catch(err => {
+        console.error('Failed to add story invitation:', err);
+      });
+    }
+  }, [isCollectionPlusComplete, addPresent]);
 
   const filtered = useMemo(() => {
     // Only include kanji that have + >= 1
@@ -22,7 +40,7 @@ export default function CollectionPlus() {
     const q = query.trim();
     let items = base;
     if (q.length > 0) items = items.filter(e => e.kanji.includes(q));
-    if (showOnlyMaxed) items = items.filter(e => e.plus >= 30);
+    if (showOnlyMaxed) items = items.filter(e => e.plus >= 10);
 
     items.sort((a, b) => {
       if (sortBy === 'plus') return b.plus - a.plus;
@@ -78,7 +96,7 @@ export default function CollectionPlus() {
         </select>
         <label className="checkbox">
           <input type="checkbox" checked={showOnlyMaxed} onChange={e => setShowOnlyMaxed(e.target.checked)} />
-          +30のみ
+          +10のみ
         </label>
       </div>
 
@@ -88,7 +106,7 @@ export default function CollectionPlus() {
         )}
 
         {filtered.map(item => (
-          <div key={item.kanji} className={`tile ${ (item.plus||0) >= 30 ? 'maxed' : ''}`}>
+          <div key={item.kanji} className={`tile ${ (item.plus||0) >= 10 ? 'maxed' : ''}`}>
             <div className="tile-kanji">{item.kanji}</div>
             <div className="tile-plus">+{item.plus || 0}</div>
             <div className="tile-meta">{item.obtainedAt ? new Date(item.obtainedAt).toLocaleDateString() : ''}</div>

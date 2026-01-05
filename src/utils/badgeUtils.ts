@@ -44,7 +44,7 @@ export function computeNewBadges(prev: PartialState, next: PartialState): string
 
   // 連勝系
   const streakThresholds: Array<[string, number]> = [
-    ['perfect_streak_5', 5], ['perfect_streak_10', 10], ['perfect_streak_50', 50], ['perfect_streak_100', 100]
+    ['perfect_streak_5', 5], ['perfect_streak_10', 10], ['perfect_streak_50', 50], ['perfect_streak_100', 100], ['perfect_streak_1000', 1000]
   ];
   for (const [id, th] of streakThresholds) {
     if ((stats.currentStreak || 0) >= th && !prevSet.has(id) && BADGES[id]) toAdd.add(id);

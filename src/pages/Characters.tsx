@@ -4,7 +4,7 @@ import { RARITY_ORDER, getCharacterEffectValue, getXpForCharacterLevel, MAX_CHAR
 import '../styles/Characters.css';
 
 function Characters() {
-  const { state, equipCharacter, debugSetCharacterLevelMax } = useGamification();
+  const { state, equipCharacter } = useGamification();
 
   const getRarityName = (rarity: string) => {
     switch (rarity) {
@@ -32,7 +32,13 @@ function Characters() {
           <h2>装備中</h2>
           {state.equippedCharacter ? (
             <div className="equipped-character">
-              <div className="equipped-icon">{state.equippedCharacter.icon}</div>
+              <div className="equipped-icon">
+                {state.equippedCharacter.icon.startsWith('/') || state.equippedCharacter.icon.startsWith('http') ? (
+                  <img src={state.equippedCharacter.icon} alt={state.equippedCharacter.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                ) : (
+                  state.equippedCharacter.icon
+                )}
+              </div>
               <div className="equipped-info">
                 <div className="equipped-name">
                   {state.equippedCharacter.name}
@@ -79,13 +85,6 @@ function Characters() {
                 >
                   解除
                 </button>
-                <button
-                  onClick={() => debugSetCharacterLevelMax && state.equippedCharacter && debugSetCharacterLevelMax(state.equippedCharacter.id)}
-                  className="debug-button"
-                  title="デバッグ用: 装備中キャラを最大レベルにします（本番では非表示推奨）"
-                >
-                  デバッグ: Lv最大
-                </button>
               </div>
             </div>
           ) : (
@@ -127,14 +126,14 @@ function Characters() {
                         ✓
                       </div>
                     )}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); debugSetCharacterLevelMax && debugSetCharacterLevelMax(char.id); }}
-                      className="character-card-debug"
-                      title="デバッグ用: このキャラを最大レベルにします"
-                    >
-                      デバッグ: Lv最大
-                    </button>
-                    <div className="character-icon">{char.icon}</div>
+                    {/* デバッグ用ボタン（開発時のみ）を削除しました */}
+                    <div className="character-icon">
+                      {char.icon.startsWith('/') || char.icon.startsWith('http') ? (
+                        <img src={char.icon} alt={char.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      ) : (
+                        char.icon
+                      )}
+                    </div>
                     <div className="character-name">
                       {char.name}
                       {char.count > 1 && (

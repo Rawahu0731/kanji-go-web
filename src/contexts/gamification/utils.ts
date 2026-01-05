@@ -6,6 +6,8 @@ import type { BigNumber } from '../../utils/bigNumber';
 
 export const STORAGE_KEY = 'kanji_gamification';
 export const CURRENT_VERSION = 8; // データバージョン（バージョン8：カードcountリセット）
+// Data schema version for major incompatible changes (Season2 等)
+export const DATA_VERSION = 2;
 
 // メダルシステムの有効化日（2025年11月26日 00:00:00 JST）
 const MEDAL_SYSTEM_START_DATE = new Date('2025-11-26T00:00:00+09:00').getTime();
@@ -33,6 +35,8 @@ export const isMedalSystemEnabled = (): boolean => {
 };
 
 export const INITIAL_STATE: GamificationState = {
+  // schema version
+  dataVersion: DATA_VERSION,
   version: CURRENT_VERSION,
   xp: fromNumber(0),
   level: 1,
@@ -53,6 +57,9 @@ export const INITIAL_STATE: GamificationState = {
     incorrectAnswers: 0,
     currentStreak: 0,
     bestStreak: 0
+    ,
+    // エンドレスモード専用の最高連続正解数（ローカル保存用）
+    endlessBestStreak: 0
   },
   activeTheme: 'default',
   activeIcon: 'default',
@@ -62,6 +69,12 @@ export const INITIAL_STATE: GamificationState = {
   lastSkillPurchaseTime: undefined,
   collectionPlus: [],
   tickets: {}
+  ,
+  // ストーリー進行の初期値
+  unlockedScenes: [0],
+  clearedQuizzes: [],
+  completedChapters: [],
+  hasStoryInvitation: false
 };
 
 // レベルアップに必要なXPを計算(2次関数的に増加: level^2) - BigNumberを返す

@@ -6,6 +6,7 @@ import type { BigNumber } from '../../utils/bigNumber';
 
 export interface GamificationState {
   version?: number; // データバージョン
+  dataVersion?: number; // スキーマバージョン
   xp: number | BigNumber; // 現在のXP（BigNumberで大きい値も扱える）
   level: number;
   coins: number;
@@ -25,7 +26,13 @@ export interface GamificationState {
     incorrectAnswers: number;
     currentStreak: number;
     bestStreak: number;
+    // エンドレスモード専用の最高連続正解数
+    endlessBestStreak?: number;
+    // 旧名/互換性のためのフィールド
+    endlessMaxStreak?: number;
   };
+  // シーズン管理用フィールド（サーバ側のシーズンリセットを識別するため）
+  season?: number;
   activeTheme: string;
   activeIcon: string;
   customIconUrl: string; // カスタムアイコンのURL
@@ -36,11 +43,19 @@ export interface GamificationState {
   // (Challenge 機能削除)
   // 最後にスキルを購入(アップグレード)した時刻（ミリ秒）
   lastSkillPurchaseTime?: number;
-  // コレクション（漢字ごとの + 値。最大30でカンスト）
+  // コレクション（漢字ごとの + 値。最大10でカンスト）
   collectionPlus?: { kanji: string; plus: number; obtainedAt?: number }[];
   // コレクション++ は削除
   // チケット（キー: ticketId, 値: 所持数）
   tickets?: Record<string, number>;
+  // 文霊世界への招待状を受け取ったか
+  hasStoryInvitation?: boolean;
+  // ストーリー進行状況
+  unlockedScenes?: number[];
+  clearedQuizzes?: number[];
+  completedChapters?: number[];
+  // エンドロールを初めて完了してタイトルに戻ったか
+  hasCompletedEndroll?: boolean;
 }
 
 export type GamificationContextType = {
@@ -76,13 +91,23 @@ export type GamificationContextType = {
   // コレクション+ に+値を追加（内部でカンスト処理）
   addToCollectionPlus: (kanji: string, amount?: number) => void;
   pullCharacterGacha: (count: number, guaranteedRarity?: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic') => Character[];
+  addCharacter: (characterId: string) => boolean;
   equipCharacter: (character: OwnedCharacter | null) => void;
   getCharacterBoost: (type: 'xp' | 'coin') => number;
   addCharacterXp: (amount: number) => void;
   getCollectionBoost: () => number;
   getCollectionPlusEffect: () => { totalPlus: number; xpCoinBonusPercent: number; xpCoinBonusFraction: number; medalBoost: number };
+  getCharacterMedalBoost: () => number;
   // コレクション++ は削除
   isCollectionComplete: () => boolean;
+  isCollectionPlusComplete: () => boolean;
+  setHasStoryInvitation: (value: boolean) => void;
+  // ストーリー進行を更新する関数
+  unlockScene: (sceneIndex: number) => void;
+  clearQuiz: (sceneIndex: number) => void;
+  completeChapter: (chapterIndex: number) => void;
+  setStoryProgress: (progress: { unlockedScenes?: number[]; clearedQuizzes?: number[]; completedChapters?: number[] }) => void;
+  setHasCompletedEndroll: (value: boolean) => void;
   addCardsToDeck: (cards: KanjiCard[]) => void;
   removeCardFromDeck: (kanji: string) => void;
   upgradeCardInDeck: (kanji: string, cost: number) => void;
@@ -101,7 +126,7 @@ export type GamificationContextType = {
   // デバッグ用: 指定キャラクターを最大レベルにする（デバッグ用）
   debugSetCharacterLevelMax: (characterId: string) => void;
 
-  // コレクション（漢字ごとの値。最大30でカンスト）
+  // コレクション（漢字ごとの値。最大10でカンスト）
   collectionPlus?: { kanji: string; plus: number; obtainedAt?: number }[];
 };
 

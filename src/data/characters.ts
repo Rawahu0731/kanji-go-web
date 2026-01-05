@@ -1,5 +1,5 @@
 // キャラクター定義
-export type CharacterRarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic' | 'ultra';
+export type CharacterRarity = 'common' | 'rare' | 'epic' | 'legendary' | 'mythic' | 'ultra' | 'origin';
 
 export type CharacterEffect = {
   type: 'xp_boost' | 'coin_boost' | 'both_boost' | 'streak_shield' | 'lucky';
@@ -24,6 +24,7 @@ export type OwnedCharacter = Character & {
 
 // レアリティの優先度（ソート用）
 export const RARITY_ORDER: Record<CharacterRarity, number> = {
+  origin: 7,
   ultra: 6,
   mythic: 5,
   legendary: 4,
@@ -39,7 +40,8 @@ export const RARITY_LEVEL_BONUS: Record<CharacterRarity, number> = {
   epic: 0.04,
   legendary: 0.06,
   mythic: 0.10,
-  ultra: 0.15
+  ultra: 0.15,
+  origin: 0.20
 };
 
 // キャラクターリスト
@@ -217,6 +219,16 @@ export const CHARACTERS: Record<string, Character> = {
     description: 'コインを1000%増加（11倍）',
     effect: { type: 'coin_boost', value: 11.0 },
     unlockDate: '2025-12-01'
+  },
+  
+  // オリジン（最高位、プレゼント限定）
+  zero: {
+    id: 'zero',
+    name: '零',
+    icon: '/images/zeroAnime/Scene1_000.png',
+    rarity: 'origin',
+    description: 'XPとコインを100%増加、メダル確率1%UP（レベル上限無し）',
+    effect: { type: 'both_boost', value: 2.0 }
   }
 };
 
@@ -358,6 +370,7 @@ export const getRarityName = (rarity: CharacterRarity): string => {
     case 'legendary': return 'レジェンダリー';
     case 'mythic': return 'ミシック';
     case 'ultra': return 'ウルトラ';
+    case 'origin': return 'オリジン';
     default: return '';
   }
 };

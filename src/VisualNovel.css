@@ -1,0 +1,650 @@
+.visual-novel {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: pointer;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+/* 背景 */
+.background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.background-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.4) 100%);
+}
+
+/* 背景画像のユーティリティ */
+.background {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: background-image 0.6s ease, opacity 0.6s ease;
+}
+
+/* 既存の画像ファイルに対応するクラス */
+.background.bg_room_lonely_night { background-image: url('/images/backgrounds/bg_room_lonely_night.jpg'); }
+.background.bg_arena_trial_fire { background-image: url('/images/backgrounds/bg_arena_trial_fire.jpg'); }
+.background.bg_city_fading {
+  /* 強制的に真っ白にする（他のダークスタイルを上書き） */
+  background-color: #ffffff !important;
+  background-image: none !important;
+  color: #111;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 秋の街並み（カスタム画像） - 使用しないため削除済み */
+
+/* 背景の暗いオーバーレイを無効化して白を維持 */
+.background.bg_city_fading .background-overlay {
+  background: transparent;
+}
+
+/* 浮遊する細かい漢字レイヤー（近景） */
+.background.bg_city_fading::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.14;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><text x='0' y='32' font-size='28' fill='%23111' font-family='serif'>消 滅 老 消 零</text></svg>");
+  background-repeat: repeat;
+  background-size: 180px 180px;
+  mix-blend-mode: multiply;
+  animation: floatUp 40s linear infinite;
+  transform-origin: center;
+}
+
+/* 浮遊する大きめの漢字（遠景・ゆっくり） */
+.background.bg_city_fading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.08;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><text x='0' y='80' font-size='72' fill='%23111' font-family='serif'>消滅</text></svg>");
+  background-repeat: repeat;
+  background-size: 360px 360px;
+  mix-blend-mode: multiply;
+  animation: floatUpReverse 80s linear infinite;
+}
+
+/* 漢字の浮遊アニメーション */
+@keyframes floatUp {
+  0% { background-position: 0 0; transform: translateY(0) rotate(0deg); }
+  100% { background-position: 0 -2000px; transform: translateY(-40px) rotate(2deg); }
+}
+
+@keyframes floatUpReverse {
+  0% { background-position: 0 0; transform: translateY(0) rotate(0deg); }
+  100% { background-position: 0 2000px; transform: translateY(40px) rotate(-2deg); }
+}
+
+/* テキストボックスやキャラが白背景に埋もれないよう微妙に影をつける */
+.text-box {
+  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.9) 25%, rgba(0,0,0,0.98) 100%);
+}
+
+/* scene3用の追加上書き: overlayやbrightenが暗くなるのを防ぐ */
+.background.bg_city_fading .background-overlay { background: transparent !important; }
+.background.bg_city_fading .background-brighten { mix-blend-mode: normal; background: rgba(255,255,255,0.03); }
+.background.bg_city_fading { z-index: 1; }
+
+.character-container .character-image {
+  filter: drop-shadow(0 12px 26px rgba(0,0,0,0.45));
+}
+.background.bg_classroom { background-image: url('/images/backgrounds/bg_classroom.jpg'); }
+.background.bg_gathering_square { background-image: url('/images/backgrounds/bg_gathering_square.jpg'); }
+.background.bg_ink_city_street { background-image: url('/images/backgrounds/bg_ink_city_street.jpg'); }
+.background.bg_ink_realm_landscape { background-image: url('/images/backgrounds/bg_ink_realm_landscape.jpg'); }
+.background.bg_inn_moonlight_room { background-image: url('/images/backgrounds/bg_inn_moonlight_room.jpg'); }
+.background.bg_oldman_farewell { background-image: url('/images/backgrounds/bg_oldman_farewell.jpg'); }
+.background.bg_ice_ocean {
+  background: linear-gradient(180deg, #f7fbff 0%, #eaf6ff 40%, #d6eefb 100%);
+  background-size: cover;
+  background-position: center;
+}
+.background.bg_silent_horizon { background-image: url('/images/backgrounds/bg_silent_horizon.jpg'); }
+.background.bg_soul_spring { background-image: url('/images/backgrounds/bg_soul_spring.jpg'); }
+.background.bg_text_layer_city { background-image: url('/images/backgrounds/bg_text_layer_city.jpg'); }
+.background.bg_volcano_fire { background-image: url('/images/backgrounds/bg_volcano_fire.png'); }
+.background.bg_warehouse_gate { background-image: url('/images/backgrounds/bg_warehouse_gate.jpg'); }
+
+/* memoにあるがファイルが無い場合のCSSでの代替表現 */
+.background.bg_white_void_letters {
+  /* 白紙の無限空間表現：中心の微かな光と浮遊文字 */
+  background-color: #ffffff;
+  background-image: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.98), rgba(250,250,250,0.96) 30%, rgba(245,245,247,0.9) 60%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 浮遊する細かい文字（近景） */
+.background.bg_white_void_letters::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.18;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><text x='0' y='28' font-size='20' fill='%23000000' font-family='serif'>風 海 氷 零 意 命</text></svg>");
+  background-repeat: repeat;
+  background-size: 180px 180px;
+  mix-blend-mode: multiply;
+  animation: floatSlow 50s linear infinite;
+}
+
+/* 浮遊する大きな文字（遠景） */
+.background.bg_white_void_letters::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'><text x='0' y='120' font-size='120' fill='%23000000' font-family='serif'>夢</text></svg>");
+  background-repeat: repeat;
+  background-size: 560px 560px;
+  mix-blend-mode: multiply;
+  animation: floatSlowReverse 120s linear infinite;
+}
+
+@keyframes floatSlow {
+  0% { background-position: 0 0; transform: translateY(0); }
+  100% { background-position: 0 -2000px; transform: translateY(-60px); }
+}
+
+@keyframes floatSlowReverse {
+  0% { background-position: 0 0; transform: translateY(0); }
+  100% { background-position: 0 2000px; transform: translateY(60px); }
+}
+
+/* 白紙の中央に浮かぶ淡い文字のハロー */
+.background.bg_white_void_letters .background-overlay {
+  background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.0), rgba(255,255,255,0.0) 40%, rgba(240,240,245,0.6));
+}
+
+.background.bg_room_ink_aura {
+  background: radial-gradient(circle at 30% 20%, rgba(40,40,40,0.9), rgba(10,10,10,0.75) 40%),
+              radial-gradient(circle at 80% 80%, rgba(18,18,20,0.6), rgba(6,6,10,0.9));
+  background-blend-mode: multiply;
+}
+
+.background.bg_zero_manifestation {
+  background: radial-gradient(ellipse at center, rgba(10,10,12,0.95) 0%, rgba(20,20,24,0.96) 30%, rgba(40,6,6,0.85) 100%);
+}
+
+/* 感情オーバーレイ */
+.overlay-tension-red {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(180,10,10,0.12), rgba(120,10,10,0.08));
+  pointer-events: none;
+  z-index: 5;
+}
+
+.overlay-melancholy-blue {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(30,60,120,0.12), rgba(10,20,50,0.06));
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* scene-specific brighten overlay (背景の下・キャラの後ろに入る) */
+.background .background-brighten {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  z-index: 1;
+  background: radial-gradient(ellipse at center, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 40%, transparent 100%);
+  mix-blend-mode: screen;
+}
+
+.background .background-brighten.active {
+  opacity: 1;
+}
+
+/* キャラクター表示エリア */
+.character-area {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 70%;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 50px;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* 零のGIFコンテナ（位置はインラインスタイルで制御） */
+.zero-gif-container {
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform, opacity;
+}
+
+/* video for zero character */
+.zero-video {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
+.character-container {
+  position: relative;
+  width: 350px;
+  height: 550px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeIn 0.5s ease-in;
+  opacity: 0.6;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+  flex-shrink: 0;
+}
+
+.character-container.speaking {
+  opacity: 1;
+}
+
+.character-container.character-left {
+  margin-right: auto;
+}
+
+.character-container.character-right {
+  margin-left: auto;
+}
+
+.character-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.7));
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* 指定キャラクターの背後に表示する白いもやもや（やや濃いめ） */
+.character-glow {
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.5;
+}
+
+.character-name-tag {
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: bold;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* 7人以上の配置のときは名札を近くする */
+.character-name-tag.crowded {
+  bottom: -15px;
+}
+
+/* 守、彁、問、結、希の名札はさらに近くする */
+.character-name-tag.very-close {
+  bottom: 25px;
+}
+
+.zero-name-tag {
+  /* position: absolute; top/left are set inline */
+  z-index: 100;
+  padding: 8px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  width: auto;
+  height: auto;
+}
+
+/* 話者別のスタイル */
+.character-container.character-left .character-image {
+  filter: drop-shadow(0 10px 30px rgba(80, 120, 160, 0.4));
+}
+
+.character-container.character-right .character-image {
+  filter: drop-shadow(0 10px 30px rgba(100, 60, 140, 0.4));
+}
+
+.character-container.speaking.character-left .character-image {
+  filter: drop-shadow(0 10px 30px rgba(80, 120, 160, 0.8));
+}
+
+.character-container.speaking.character-right .character-image {
+  filter: drop-shadow(0 10px 30px rgba(100, 60, 140, 0.8));
+}
+
+/* テキストボックス */
+.text-box {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  min-height: 200px;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.95) 20%, rgba(0, 0, 0, 0.98) 100%);
+  z-index: 3;
+  padding: 40px 60px 30px;
+  box-sizing: border-box;
+  border-top: 3px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8);
+}
+
+/* 中央タイトル表示 */
+.center-title {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  text-align: center;
+  width: 90%;
+  max-width: 800px;
+  animation: titleFadeIn 1s ease-in;
+  /* Ensure child title text lays out horizontally even if some global rule tries to make vertical */
+  writing-mode: horizontal-tb !important;
+  direction: ltr !important;
+}
+
+.center-title-text {
+  font-size: 48px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 
+    0 0 20px rgba(255, 255, 255, 0.8),
+    0 0 40px rgba(255, 255, 255, 0.5),
+    4px 4px 8px rgba(0, 0, 0, 0.9);
+  letter-spacing: 4px;
+  line-height: 1.5;
+  font-family: 'Yu Mincho', 'Yu Gothic', serif;
+  padding: 30px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(5px);
+  /* Ensure horizontal layout for chapter titles (prevent unexpected vertical writing) */
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  white-space: normal !important;
+  display: inline-block !important;
+}
+
+/* 章読み込みオーバーレイ */
+.chapter-loading-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.6);
+  z-index: 300;
+}
+.chapter-loading-box {
+  background: rgba(17,17,17,0.98);
+  color: #fff;
+  padding: 18px 20px;
+  border-radius: 10px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid rgba(255,255,255,0.16);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+
+/* 強力な上書き: 外部の競合スタイル（縦書きやマルチカラム）を無効化する */
+.center-title, .center-title-text, .center-scroll-text, .center-scroll-inner {
+  writing-mode: horizontal-tb !important;
+  text-orientation: upright !important;
+  -webkit-column-count: auto !important;
+  -moz-column-count: auto !important;
+  column-count: auto !important;
+  -webkit-column-width: auto !important;
+  -moz-column-width: auto !important;
+  column-width: auto !important;
+  white-space: normal !important;
+  max-height: none !important;
+  height: auto !important;
+  display: block !important;
+  overflow: visible !important;
+}
+
+/* When title is wrapped by CenterScrollText, let flex centering handle positioning
+   and disable the original absolute centering which can push it off-screen. */
+.center-scroll-text .center-title {
+  position: static !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  margin: 0 auto !important;
+  width: auto !important;
+  max-width: 80% !important;
+  text-align: center !important;
+  z-index: 20 !important;
+}
+.center-scroll-text .center-title-text {
+  display: inline-block !important;
+  transform: none !important;
+  margin: 0 auto !important;
+}
+
+.dialogue-text {
+  font-size: 22px;
+  line-height: 1.8;
+  color: #fff;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  font-family: 'Yu Gothic', 'Meiryo', sans-serif;
+  animation: textFadeIn 0.3s ease-in;
+  min-height: 60px;
+}
+
+.continue-indicator {
+  position: absolute;
+  bottom: 15px;
+  right: 40px;
+  font-size: 24px;
+  color: rgba(255, 255, 255, 0.7);
+  animation: bounce 1s infinite;
+}
+
+/* プログレスバー */
+.progress-bar {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  z-index: 4;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.dialogue-progress {
+  opacity: 0.7;
+  font-size: 12px;
+}
+
+/* ローディング */
+.loading, .error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+  background: #1a1a2e;
+}
+
+/* Prevent text/image selection while clicking to advance the story */
+.visual-novel, .visual-novel * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Ensure character images cannot be dragged */
+.visual-novel img, .visual-novel .character-image {
+  -webkit-user-drag: none;
+}
+
+/* Allow certain inputs if ever needed by making them selectable explicitly */
+input, textarea, select {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+
+.loading-text, .error-text {
+  font-size: 24px;
+  color: #fff;
+}
+
+/* アニメーション */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes textFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes titleFadeIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .text-box {
+    padding: 30px 30px 20px;
+  }
+  
+  .dialogue-text {
+    font-size: 18px;
+  }
+  
+  .character-container {
+    width: 250px;
+    height: 400px;
+  }
+}
+
+/* Body class applied when visual novel is active: prevent page scrolling */
+.vn-no-scroll {
+  overflow: hidden !important;
+  height: 100vh !important;
+}
+
+/* 履歴パネル専用 - 内部でスクロールさせ、ページ本体へのスクロール伝播を防ぐ */
+.history-panel {
+  width: 420px;
+  max-height: 360px;
+  overflow-y: auto;
+  background: rgba(0,0,0,0.9);
+  color: #fff;
+  text-align: left;
+  font-size: 13px;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 6px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
+/* 履歴パネル内のスクロールバーの見た目（任意） */
+.history-panel::-webkit-scrollbar {
+  width: 10px;
+}
+.history-panel::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 6px;
+}

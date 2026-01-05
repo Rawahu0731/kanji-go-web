@@ -271,7 +271,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'collection_plus_gacha_single',
     name: 'コレクション+ 単発',
-    description: 'メダルで引くコレクション+ガチャ。出た漢字の+値が増えます（最大+30）。',
+    description: 'メダルで引くコレクション+ガチャ。出た漢字の+値が増えます（最大+10）。',
     price: 500,
     category: 'medal',
     icon: '🪙',

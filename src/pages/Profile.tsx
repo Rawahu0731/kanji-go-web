@@ -10,7 +10,7 @@ function Profile() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(state.username);
 
-  const unlockedBadgesList = state.unlockedBadges.map(id => BADGES[id]).filter(Boolean);
+  const unlockedBadgesList = (state.unlockedBadges ?? []).map(id => BADGES[id]).filter(Boolean);
   const totalBadges = Object.keys(BADGES).length;
 
   const handleNameSave = () => {
@@ -155,6 +155,13 @@ function Profile() {
               <div className="stat-value">{state.stats.bestStreak}</div>
               <div className="stat-label">最高連勝</div>
             </div>
+            {state.characters && state.characters.some((c: any) => c?.id === 'zero') && (
+              <div className="stat-card">
+                <div className="stat-icon">🎯</div>
+                <div className="stat-value">{state.stats.endlessBestStreak ?? 0}</div>
+                <div className="stat-label">エンドレス最高連勝</div>
+              </div>
+            )}
           </div>
           
           {state.stats.totalQuizzes > 0 && (
@@ -172,7 +179,7 @@ function Profile() {
           <h2>バッジコレクション ({unlockedBadgesList.length} / {totalBadges})</h2>
           <div className="badges-grid">
             {Object.values(BADGES).map(badge => {
-              const isUnlocked = state.unlockedBadges.includes(badge.id);
+              const isUnlocked = (state.unlockedBadges ?? []).includes(badge.id);
               return (
                 <div 
                   key={badge.id}

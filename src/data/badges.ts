@@ -79,6 +79,13 @@ export const BADGES: Record<string, Badge> = {
     icon: '💥',
     category: 'achievement'
   },
+  perfect_streak_1000: {
+    id: 'perfect_streak_1000',
+    name: '永遠の流れ',
+    description: '1000問連続正解した',
+    icon: '🌊',
+    category: 'achievement'
+  },
   level_5: {
     id: 'level_5',
     name: '成長の証',

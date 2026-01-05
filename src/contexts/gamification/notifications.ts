@@ -80,3 +80,29 @@ if (typeof document !== 'undefined') {
   `;
   document.head.appendChild(style);
 }
+
+// 汎用の一時通知を表示（右上）
+export function showTemporaryNotification(text: string, duration: number = 2000) {
+  const notification = document.createElement('div');
+  notification.className = 'temporary-notification';
+  notification.style.position = 'fixed';
+  notification.style.top = '16px';
+  notification.style.right = '16px';
+  notification.style.background = 'linear-gradient(135deg, #ffb86b 0%, #ff7eb6 100%)';
+  notification.style.color = 'white';
+  notification.style.padding = '0.75rem 1rem';
+  notification.style.borderRadius = '10px';
+  notification.style.fontWeight = '700';
+  notification.style.fontSize = '1rem';
+  notification.style.zIndex = '1200';
+  notification.style.boxShadow = '0 10px 30px rgba(0,0,0,0.15)';
+  notification.style.animation = 'slideInRight 0.35s ease-out';
+  notification.textContent = text;
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    const el = notification as HTMLElement | null;
+    if (el) el.style.animation = 'slideOutRight 0.35s ease-out';
+    setTimeout(() => notification.remove(), 350);
+  }, duration);
+}

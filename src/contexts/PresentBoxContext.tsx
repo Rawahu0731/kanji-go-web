@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { useGamification } from './GamificationContext';
 import { isFirebaseEnabled } from '../lib/firebase';
+import { firebaseEnvironment } from '../config';
 import { doc, getDoc, setDoc, getFirestore } from 'firebase/firestore';
 import type { Present, PresentBoxState, PresentReward } from '../types/present';
 import { getPresentDistributions } from '../lib/microcms';
@@ -20,9 +21,7 @@ interface PresentBoxContextType {
 
 const PresentBoxContext = createContext<PresentBoxContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'presentBox_state';
-// (以前はゲームリセット検知で使用していたが、チュートリアルはmicroCMS管理に移行済み)
-const MICROCMS_SYNC_KEY = 'microcms_last_sync';
+// localStorage は使用しない（状態は Firebase のみで管理）
 
 // 初期状態
 const INITIAL_STATE: PresentBoxState = {
@@ -33,6 +32,7 @@ const INITIAL_STATE: PresentBoxState = {
 export function PresentBoxProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<PresentBoxState>(INITIAL_STATE);
   const [loading, setLoading] = useState(true);
+  const remoteLoadedRef = useRef(false);
   const auth = useAuth();
   const gamification = useGamification();
   
@@ -56,30 +56,15 @@ export function PresentBoxProvider({ children }: { children: ReactNode }) {
     return Array.from(map.values());
   };
 
-  // LocalStorageから読み込み
+  // 初期はローカル読み込みを行わない。Firebase の読み込み完了を待つ。
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as PresentBoxState;
-        parsed.presents = dedupePresents(parsed.presents || []);
-        setState(parsed);
-      }
-    } catch (error) {
-      console.error('Failed to load present box state from localStorage:', error);
-    }
     setLoading(false);
   }, []);
 
   // ゲームデータ削除イベントを監視して in-memory state を即時クリア
   useEffect(() => {
     const handler = () => {
-      try {
-        localStorage.removeItem(STORAGE_KEY);
-        localStorage.removeItem(MICROCMS_SYNC_KEY);
-      } catch (e) {
-        // ignore
-      }
+      // in-memory state を即時クリア
       setState({ ...INITIAL_STATE });
     };
 
@@ -87,17 +72,21 @@ export function PresentBoxProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('gameDataDeleted', handler);
   }, []);
 
-  // LocalStorageに保存（loading完了後のみ）
+  // localStorage への保存は行わない
+
+  // state.presents に招待状（受け取り済み/未受け取り問わず）が含まれている場合は
+  // ゲーミフィケーション側のフラグを設定する（ロード時対応）
   useEffect(() => {
-    if (loading) return; // 初期読み込み中は保存しない
-    
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      console.log('Present box state saved to localStorage:', state.presents.length, 'presents');
-    } catch (error) {
-      console.error('Failed to save present box state to localStorage:', error);
+      const hasInvitation = state.presents.some(p => p.title === '文霊世界への招待状');
+      const already = gamification?.state?.hasStoryInvitation;
+      if (hasInvitation && !already) {
+        gamification.setHasStoryInvitation(true);
+      }
+    } catch (e) {
+      // ignore
     }
-  }, [state, loading]);
+  }, [state.presents, gamification?.state?.hasStoryInvitation, gamification?.setHasStoryInvitation]);
 
   // Firebaseからデータを読み込む
   const loadFromFirebase = useCallback(async (userId: string) => {
@@ -105,7 +94,10 @@ export function PresentBoxProvider({ children }: { children: ReactNode }) {
 
     try {
       const db = getFirestore();
-      const docRef = doc(db, 'test', 'root', 'presentBox', userId);
+      const pathParts = firebaseEnvironment === 'test'
+        ? ['test', 'root', 'presentBox', userId]
+        : ['presentBox', userId];
+      const docRef = doc(db as any, ...pathParts);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
@@ -124,12 +116,15 @@ export function PresentBoxProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Firebaseにデータを保存
-  const saveToFirebase = useCallback(async (userId: string, data: PresentBoxState) => {
-    if (!isFirebaseEnabled) return;
+  const saveToFirebase = useCallback(async (userId: string, data: PresentBoxState): Promise<boolean> => {
+    if (!isFirebaseEnabled) return false;
 
     try {
       const db = getFirestore();
-      const docRef = doc(db, 'test', 'root', 'presentBox', userId);
+      const pathParts = firebaseEnvironment === 'test'
+        ? ['test', 'root', 'presentBox', userId]
+        : ['presentBox', userId];
+      const docRef = doc(db as any, ...pathParts);
       
       // undefinedフィールドを削除してFirestoreに保存（Firestoreはundefinedを許可しない）
       const cleanData = JSON.parse(JSON.stringify(data, (_k, v) => {
@@ -137,12 +132,14 @@ export function PresentBoxProvider({ children }: { children: ReactNode }) {
       }));
       
       await setDoc(docRef, cleanData);
+      return true;
     } catch (error: any) {
-      // permissionエラーの場合は、Firestoreルールが未設定なので警告を抑制
-      // LocalStorageには保存されているので機能に問題はない
-      if (error?.code !== 'permission-denied') {
+      if (error?.code === 'permission-denied') {
+        console.warn('プレゼントボックスのFirebase保存は無効です（Firestoreルール未設定）');
+      } else {
         console.error('Failed to save present box to Firebase:', error);
       }
+      return false;
     }
   }, []);
 
@@ -186,8 +183,7 @@ export function PresentBoxProvider({ children }: { children: ReactNode }) {
         return { ...prev, presents: merged };
       });
 
-      // 最終同期時刻を保存
-      localStorage.setItem(MICROCMS_SYNC_KEY, Date.now().toString());
+      // 最終同期時刻はローカルに保存しない
     } catch (error) {
       console.error('microCMSからのプレゼント同期に失敗しました:', error);
     }
@@ -196,15 +192,19 @@ export function PresentBoxProvider({ children }: { children: ReactNode }) {
   // ユーザーログイン時にFirebaseから読み込み（microCMS同期はページ側で明示的に行う）
   useEffect(() => {
     if (auth.user && isFirebaseEnabled) {
-      loadFromFirebase(auth.user.uid).catch(() => {
-        // ignore
+      // 読み込み中は保存を抑止する
+      setLoading(true);
+      remoteLoadedRef.current = false;
+      loadFromFirebase(auth.user.uid).finally(() => {
+        remoteLoadedRef.current = true;
+        setLoading(false);
       });
     }
   }, [auth.user, loadFromFirebase]);
 
-  // 状態が変更されたらFirebaseに保存
+  // 状態が変更されたらFirebaseに保存（リモート読み込みが終わっている場合のみ）
   useEffect(() => {
-    if (auth.user && isFirebaseEnabled && !loading) {
+    if (auth.user && isFirebaseEnabled && !loading && remoteLoadedRef.current) {
       saveToFirebase(auth.user.uid, state);
     }
   }, [auth.user, state, loading, saveToFirebase]);
@@ -236,90 +236,99 @@ export function PresentBoxProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // 報酬を付与（setState の外で実行）
+      // まず、Firebase に受け取り状態を保存して成功を確認する
+      const newState: PresentBoxState = {
+        ...state,
+        presents: state.presents.map(p =>
+          p.id === presentId ? { ...p, claimed: true, claimedAt: Date.now() } : p
+        )
+      };
+
+      if (auth.user && isFirebaseEnabled) {
+        const ok = await saveToFirebase(auth.user.uid, newState);
+        if (!ok) {
+          alert('プレゼントの受け取りを保存できませんでした。通信環境を確認してください。');
+          return;
+        }
+      }
+
+      // 保存が確認できたら報酬を付与
       for (const reward of present.rewards) {
         switch (reward.type) {
           case 'coins':
-            if (reward.amount) {
-              gamification.addCoins(reward.amount);
-            }
+            if (reward.amount) gamification.addCoins(reward.amount);
             break;
           case 'medals':
-            if (reward.amount) {
-              gamification.addMedals(reward.amount);
-            }
+            if (reward.amount) gamification.addMedals(reward.amount);
             break;
           case 'xp':
-            if (reward.amount) {
-              gamification.addXp(reward.amount);
-            }
+            if (reward.amount) gamification.addXp(reward.amount);
             break;
           case 'tickets':
-            if (reward.ticketId && reward.amount) {
-              gamification.addTickets(reward.ticketId, reward.amount);
-            }
+            if (reward.ticketId && reward.amount) gamification.addTickets(reward.ticketId, reward.amount);
             break;
           case 'character':
-            // キャラクターの追加は今後実装
-            console.log('Character reward not yet implemented');
+            if (reward.characterId) gamification.addCharacter(reward.characterId);
             break;
           case 'card':
-            // カードの追加は今後実装
             console.log('Card reward not yet implemented');
             break;
         }
       }
 
-      // プレゼントを受け取り済みにする（報酬付与後に状態を更新）
-      setState(prev => ({
-        ...prev,
-        presents: prev.presents.map(p =>
-          p.id === presentId
-            ? { ...p, claimed: true, claimedAt: Date.now() }
-            : p
-        )
-      }));
+      // 文霊世界への招待状を受け取った場合、フラグを立てる
+      if (present.title === '文霊世界への招待状') {
+        gamification.setHasStoryInvitation(true);
+      }
+
+      // in-memory state を更新
+      setState(newState);
     } finally {
       // 処理完了を記録（エラーが発生しても必ず実行）
       claimingIdsRef.current.delete(presentId);
     }
-  }, [state.presents, gamification]);
+  }, [state, gamification, auth.user, saveToFirebase]);
 
   // すべてのプレゼントを受け取る
   const claimAllPresents = useCallback(async () => {
-    const unclaimedPresents = state.presents.filter(p => !p.claimed);
-    
-    for (const present of unclaimedPresents) {
-      // 有効期限チェック
-      if (present.expiresAt && present.expiresAt < Date.now()) {
-        continue;
-      }
+    const unclaimedPresents = state.presents.filter(p => !p.claimed && (!p.expiresAt || p.expiresAt >= Date.now()));
 
-      // 報酬を付与
+    if (unclaimedPresents.length === 0) return;
+
+    const now = Date.now();
+    const newState: PresentBoxState = {
+      ...state,
+      presents: state.presents.map(p =>
+        !p.claimed && (!p.expiresAt || p.expiresAt >= now) ? { ...p, claimed: true, claimedAt: now } : p
+      )
+    };
+
+    if (auth.user && isFirebaseEnabled) {
+      const ok = await saveToFirebase(auth.user.uid, newState);
+      if (!ok) {
+        alert('プレゼントの受け取りを保存できませんでした。通信環境を確認してください。');
+        return;
+      }
+    }
+
+    // 保存が確認できたら報酬を付与
+    for (const present of unclaimedPresents) {
       for (const reward of present.rewards) {
         switch (reward.type) {
           case 'coins':
-            if (reward.amount) {
-              gamification.addCoins(reward.amount);
-            }
+            if (reward.amount) gamification.addCoins(reward.amount);
             break;
           case 'medals':
-            if (reward.amount) {
-              gamification.addMedals(reward.amount);
-            }
+            if (reward.amount) gamification.addMedals(reward.amount);
             break;
           case 'xp':
-            if (reward.amount) {
-              gamification.addXp(reward.amount);
-            }
+            if (reward.amount) gamification.addXp(reward.amount);
             break;
           case 'tickets':
-            if (reward.ticketId && reward.amount) {
-              gamification.addTickets(reward.ticketId, reward.amount);
-            }
+            if (reward.ticketId && reward.amount) gamification.addTickets(reward.ticketId, reward.amount);
             break;
           case 'character':
-            console.log('Character reward not yet implemented');
+            if (reward.characterId) gamification.addCharacter(reward.characterId);
             break;
           case 'card':
             console.log('Card reward not yet implemented');
@@ -328,16 +337,14 @@ export function PresentBoxProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // すべてのプレゼントを受け取り済みにする
-    setState(prev => ({
-      ...prev,
-      presents: prev.presents.map(p =>
-        !p.claimed && (!p.expiresAt || p.expiresAt >= Date.now())
-          ? { ...p, claimed: true, claimedAt: Date.now() }
-          : p
-      )
-    }));
-  }, [state.presents, gamification]);
+    // 文霊世界への招待状が含まれている場合はフラグを立てる
+    if (unclaimedPresents.some(p => p.title === '文霊世界への招待状')) {
+      gamification.setHasStoryInvitation(true);
+    }
+
+    // in-memory state を更新
+    setState(newState);
+  }, [state, gamification, auth.user, saveToFirebase]);
 
   // プレゼントを追加
   const addPresent = useCallback(async (present: Omit<Present, 'id' | 'claimed' | 'claimedAt'>) => {

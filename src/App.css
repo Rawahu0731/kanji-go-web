@@ -1005,6 +1005,70 @@ h1 {
   transform: scale(1.05);
 }
 
+/* エンドレスモード ラベル */
+.endless-mode-label {
+  display: inline-block;
+  margin: 12px auto 18px; /* レベル選択ボタンの下に自然に配置される */
+  background: linear-gradient(90deg, #ff7eb6, #667eea);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  z-index: 1500;
+  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.2);
+  animation: endlessLabelPop 0.6s cubic-bezier(.2,.9,.2,1);
+  text-align: center;
+}
+
+@keyframes endlessLabelPop {
+  0% { transform: translateX(-50%) scale(0.6); opacity: 0; }
+  60% { transform: translateX(-50%) scale(1.06); opacity: 1; }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+
+/* エンドレス開始オーバーレイ */
+.endless-intro-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(25,25,40,0.9) 0%, rgba(10,10,20,0.95) 70%);
+  z-index: 30000;
+  pointer-events: auto; /* ブロックする */
+}
+
+.endless-intro-card {
+  text-align: center;
+  color: white;
+  padding: 28px 40px;
+  border-radius: 14px;
+  backdrop-filter: blur(6px) saturate(120%);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  transform: scale(0.9);
+  animation: endlessCardPop 0.9s cubic-bezier(.2,.9,.2,1);
+}
+
+.endless-intro-title {
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #fff;
+  text-shadow: 0 8px 40px rgba(102,126,234,0.2);
+}
+.endless-intro-sub {
+  margin-top: 6px;
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+@keyframes endlessCardPop {
+  0% { transform: scale(0.82) translateY(8px); opacity: 0; }
+  60% { transform: scale(1.04) translateY(-6px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
 /* エクストラレベル用のスタイル */
 .extra-list {
   max-width: 900px;

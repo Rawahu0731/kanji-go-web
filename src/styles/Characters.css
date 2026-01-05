@@ -301,6 +301,16 @@
   font-weight: 600;
 }
 
+.character-rarity.origin {
+  color: #ff00ff;
+  text-shadow: 0 0 10px #ff00ff;
+}
+
+.character-rarity.ultra {
+  color: #00ffff;
+  text-shadow: 0 0 10px #00ffff;
+}
+
 .character-rarity.mythic {
   color: #ff4444;
 }

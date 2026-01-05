@@ -231,7 +231,6 @@ function App() {
     getSkillLevel,
     getCollectionPlusEffect,
     useStreakProtection,
-    setDebugInfo,
     state: gamificationState,
     isMedalSystemEnabled,
     getTotalXpForNextLevel, 
@@ -672,7 +671,7 @@ function App() {
           debugInfo.overflow = true;
           debugInfo.overflowReasons = overflowReasons;
         }
-        if (typeof setDebugInfo === 'function') setDebugInfo(debugInfo);
+        // debug 表示を無効化: 正解時にデバッグ情報を自動で表示しない
       } catch (e) {
         // ignore
       }
@@ -956,7 +955,7 @@ function App() {
           debugInfo.overflow = true;
           debugInfo.overflowReasons = overflowReasons;
         }
-        if (typeof setDebugInfo === 'function') setDebugInfo(debugInfo);
+        // debug 表示を無効化: 正解時にデバッグ情報を自動で表示しない
       } catch (e) { }
 
       addXp(xpGain);

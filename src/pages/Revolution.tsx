@@ -1603,23 +1603,7 @@ function App() {
 
   return (
     <>
-      {/* Back button */}
-      <Link to="/" style={{ 
-        position: 'fixed', 
-        top: '1rem', 
-        left: '1rem', 
-        zIndex: 10000,
-        display: 'inline-block',
-        padding: '0.5rem 1rem',
-        background: 'rgba(255, 255, 255, 0.9)',
-        borderRadius: '8px',
-        color: '#222',
-        textDecoration: 'none',
-        transition: 'background 0.3s',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
-        ← ホームへ戻る
-      </Link>
+      {/* Back button moved into top control bar to avoid overlap */}
       {/* Debug button removed */}
       
       {/* Challenge Panel - rendered first to be on top when opened from IP Shop */}
@@ -2548,6 +2532,7 @@ function App() {
       <div style={{ position: 'fixed', top: 8, left: 0, right: 0, zIndex: 10001, padding: '6px 12px', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Link to="/" style={{ display: 'inline-block', padding: '0.45rem 0.85rem', background: 'rgba(255,255,255,0.92)', borderRadius: '8px', color: '#222', textDecoration: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', fontWeight: 600 }}>← ホームへ戻る</Link>
             <button onClick={() => setShowAutomationPanel(true)} style={{ padding: '0.5em 0.9em', fontSize: '0.95rem' }}>Automation</button>
             {hasReachedInfinity ? (
               <>

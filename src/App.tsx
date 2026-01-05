@@ -4,8 +4,8 @@ import { getKnownIssues, getPatchNotes } from './lib/microcms'
 import type { Article } from './lib/microcms'
 import { useGamification } from './contexts/GamificationContext'
 import { usePresentBox } from './contexts/PresentBoxContext'
-import { DebugPanel } from './components/DebugPanel'
 import AuthButton from './components/AuthButton'
+import { DebugPanel } from './components/DebugPanel'
 import './App.css'
 import { type Item, type Level, type Mode } from './types/kanji'
 import { loadKanjiData } from './utils/dataLoader'
@@ -239,11 +239,42 @@ function App() {
     setMode('quiz');
   };
 
+  const startEndlessWithZero = async () => {
+    // load level 7 and 8 and combine
+    setLoading(true);
+    setError(null);
+    setItems(null);
+    try {
+      const [lv7, lv8] = await Promise.all([loadKanjiData(7), loadKanjiData(8)]);
+      const combined = [...lv7, ...lv8];
+      // shuffle combined for randomness
+      try {
+        // lightweight shuffle: use sort with random for now
+        combined.sort(() => Math.random() - 0.5);
+      } catch (e) {
+        // ignore
+      }
+      setItems(combined);
+      setMode('endless');
+    } catch (err: any) {
+      console.error('エンドレスモード読み込み失敗', err);
+      setError(err?.message || 'エンドレスモードの読み込みに失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const backToList = () => {
     setMode('list');
   };
 
   const handleTitleTap = () => {
+    // If player has zero equipped, start endless mode
+    if (gamificationState.equippedCharacter && gamificationState.equippedCharacter.id === 'zero') {
+      startEndlessWithZero();
+      return;
+    }
+
     if (debugTapTimer) {
       clearTimeout(debugTapTimer);
     }
@@ -366,7 +397,9 @@ function App() {
           {isCollectionComplete() && (
             <Link to="/collection-plus" className="nav-link">🪙 コレクション+</Link>
           )}
-          
+          {gamificationState.hasStoryInvitation && (
+            <Link to="/title" className="nav-link">ストーリー</Link>
+          )}
           <Link to="/ranking" className="nav-link">🏆 ランキング</Link>
         </div>
         <div className="auth-section">
@@ -597,13 +630,14 @@ function App() {
         </div>
       )}
 
-      {items && mode === 'quiz' && (
+      {items && (mode === 'quiz' || mode === 'endless') && (
         <Suspense fallback={<div className="loading">読み込み中…</div>}>
           <QuizMode 
             items={items}
             selectedLevel={selectedLevel}
             onBack={backToList}
             onReady={() => setLoading(false)}
+            endless={mode === 'endless'}
           />
         </Suspense>
       )}
@@ -621,8 +655,9 @@ function App() {
         <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
         <a href="/terms.html" target="_blank" rel="noopener noreferrer" style={{ padding: '6px 10px', background:'#f5f7ff', borderRadius:6, textDecoration:'none' }}>利用規約</a>
       </footer>
-
+      
       <DebugPanel />
+
     </>
   )
 }

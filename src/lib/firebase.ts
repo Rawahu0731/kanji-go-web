@@ -8,6 +8,7 @@ import type { Firestore } from 'firebase/firestore';
 import type { Auth } from 'firebase/auth';
 import type { GamificationState } from '../contexts/gamification/types';
 import { toNumber } from '../utils/bigNumber';
+import { firebaseEnvironment } from '../config';
 
 // Firebase設定（環境変数から読み込み）
 // 実際に使う際は .env ファイルに以下を追加してください:
@@ -50,9 +51,17 @@ try {
 
 export const googleProvider = new GoogleAuthProvider();
 
-// Firestoreの保存先を一時的に test/root 配下に切り替えるためのヘルパー
-// 例) doc(db, ...withTestRoot('users', userId)) => test/root/users/{userId}
-const withTestRoot = (...segments: string[]) => ['test', 'root', ...segments];
+// Firestore の保存先を `test/root` に切り替えるかどうかを `src/config.ts` の
+// `firebaseEnvironment` で制御するヘルパー
+// 例) doc(db, withTestRoot('users', userId).join('/')) =>
+//   - test 時: 'test/root/users/{userId}'
+//   - prod 時: 'users/{userId}'
+const withTestRoot = (...segments: string[]) => {
+  if (firebaseEnvironment === 'test') {
+    return ['test', 'root', ...segments];
+  }
+  return segments;
+};
 
 // 認証関連
 export const signInWithGoogle = async () => {
@@ -124,6 +133,8 @@ export interface RankingEntry {
   totalXp: number;
   coins: number;
   medals: number;
+  // エンドレスモード専用の最高連続正解数
+  endlessMaxStreak?: number;
   iconUrl?: string;
   updatedAt: number;
 }
@@ -244,6 +255,8 @@ export const saveUserData = async (userId: string, data: GamificationState) => {
     totalXp: totalXpNumber,
     coins: data.coins,
     medals: data.medals,
+    // 正しいフィールド名: `endlessMaxStreak`
+    endlessMaxStreak: data?.stats?.endlessBestStreak ?? data?.stats?.endlessMaxStreak ?? 0,
     iconUrl: data.customIconUrl || data.activeIcon,
     updatedAt: Date.now()
   };
@@ -314,6 +327,22 @@ export const getRankings = async (limitCount: number = 100): Promise<RankingEntr
   return rankings;
 };
 
+// 連続正解（エンドレス専用）でのランキング取得
+export const getRankingsByMaxStreak = async (limitCount: number = 100): Promise<RankingEntry[]> => {
+  if (!db) throw new Error('Firestore not initialized');
+
+  const rankingsRef = collection(db, withTestRoot('rankings').join('/'));
+  const q = query(rankingsRef, orderBy('endlessMaxStreak', 'desc'), limit(limitCount));
+  const querySnapshot = await getDocs(q);
+
+  const rankings: RankingEntry[] = [];
+  querySnapshot.forEach((doc) => {
+    rankings.push(doc.data() as RankingEntry);
+  });
+
+  return rankings;
+};
+
 // 自分の順位を取得
 export const getUserRank = async (userId: string): Promise<number> => {
   if (!db) throw new Error('Firestore not initialized');
@@ -331,6 +360,26 @@ export const getUserRank = async (userId: string): Promise<number> => {
     }
   });
   
+  return userRank;
+};
+
+// 自分のエンドレス専用最高連続正解による順位を取得
+export const getUserRankByMaxStreak = async (userId: string): Promise<number> => {
+  if (!db) throw new Error('Firestore not initialized');
+
+  const rankingsRef = collection(db, withTestRoot('rankings').join('/'));
+  const q = query(rankingsRef, orderBy('endlessMaxStreak', 'desc'));
+  const querySnapshot = await getDocs(q);
+
+  let rank = 0;
+  let userRank = 0;
+  querySnapshot.forEach((doc) => {
+    rank++;
+    if (doc.id === userId) {
+      userRank = rank;
+    }
+  });
+
   return userRank;
 };
 

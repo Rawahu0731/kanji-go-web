@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getRankings, getUserRank, isFirebaseEnabled, getStorageDownloadUrl } from '../lib/firebase';
+import { getRankings, getUserRank, isFirebaseEnabled, getStorageDownloadUrl, getRankingsByMaxStreak, getUserRankByMaxStreak } from '../lib/firebase';
 import type { RankingEntry } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useGamification } from '../contexts/GamificationContext';
@@ -10,8 +10,11 @@ import '../styles/Ranking.css';
 export default function Ranking() {
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
   const [userRank, setUserRank] = useState<number>(0);
+  const [streakRankings, setStreakRankings] = useState<RankingEntry[]>([]);
+  const [_userStreakRank, setUserStreakRank] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const [selectedTab, setSelectedTab] = useState<'overall' | 'streak'>('overall');
   const { user } = useAuth();
   const { state } = useGamification();
 
@@ -59,10 +62,44 @@ export default function Ranking() {
         setUserRank(rank);
       }
 
+      // 連続正解ランキングはユーザーが零を所持している場合にのみ読み込む
+      const hasZero = state.characters && state.characters.some((c: any) => c?.id === 'zero');
+      if (hasZero) {
+        try {
+          const streakData = await getRankingsByMaxStreak(100);
+          setStreakRankings(streakData);
+          if (user) {
+            const sr = await getUserRankByMaxStreak(user.uid);
+            setUserStreakRank(sr);
+          }
+        } catch (e) {
+          console.warn('Failed to load streak rankings', e);
+        }
+      }
+
       setError('');
     } catch (err) {
       console.error('Failed to load rankings:', err);
       setError('ランキングの読み込みに失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStreakRankings = async () => {
+    if (!isFirebaseEnabled) return;
+    setLoading(true);
+    try {
+      const data = await getRankingsByMaxStreak(100);
+      setStreakRankings(data);
+      if (user) {
+        const r = await getUserRankByMaxStreak(user.uid);
+        setUserStreakRank(r);
+      }
+      setError('');
+    } catch (err) {
+      console.error('Failed to load streak rankings:', err);
+      setError('連続正解ランキングの読み込みに失敗しました');
     } finally {
       setLoading(false);
     }
@@ -111,6 +148,16 @@ export default function Ranking() {
         <h1>🏆 ランキング</h1>
       </header>
 
+      <div className="ranking-tabs">
+        <button className={`tab ${selectedTab === 'overall' ? 'active' : ''}`} onClick={() => setSelectedTab('overall')}>総合ランキング</button>
+        {/* エンドレス(連続正解)タブは零を入手済みのユーザーのみ表示 */}
+        {state.characters && state.characters.some((c: any) => c?.id === 'zero') ? (
+          <button className={`tab ${selectedTab === 'streak' ? 'active' : ''}`} onClick={() => { setSelectedTab('streak'); loadStreakRankings(); }}>エンドレス</button>
+        ) : (
+          <button className="tab disabled" title="零を受け取るとエンドレスランキングが閲覧できます" disabled>エンドレス: ロック中</button>
+        )}
+      </div>
+
       {!isFirebaseEnabled && (
         <div className="notice-box">
           <p>⚠️ ランキング機能を使用するにはFirebaseの設定が必要です</p>
@@ -144,62 +191,108 @@ export default function Ranking() {
           <div className="loading">読み込み中...</div>
         ) : error ? (
           <div className="error-message">{error}</div>
-        ) : rankings.length === 0 ? (
-          <div className="empty-message">まだランキングデータがありません</div>
-        ) : (
-          <div className="ranking-list">
-            <table>
-              <thead>
-                <tr>
-                  <th>順位</th>
-                  <th>プレイヤー</th>
-                  <th>レベル</th>
-                  <th>累計XP</th>
-                  <th>コイン</th>
-                  <th>メダル</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rankings.map((entry, index) => (
-                  <tr 
-                    key={entry.userId} 
-                    className={user?.uid === entry.userId ? 'current-user' : ''}
-                  >
-                    <td className="rank-cell">
-                      <span className={`rank-badge ${index < 3 ? 'top-three' : ''}`}>
-                        {getRankIcon(index + 1)}
-                      </span>
-                    </td>
-                    <td className="user-cell">
-                      <div className="user-info">
-                        <div className="user-avatar" aria-hidden>
-                          {entry.iconUrl ? (
-                            // アイコン識別子を解決（'icon_fire' 等 → 絵文字、'default' → ロゴ画像）
-                            (() => {
-                              const mapped = mapIconIdentifier(entry.iconUrl);
-                              return isImageSource(mapped) ? (
-                                <img src={mapped} alt={entry.username} className="user-icon" />
-                              ) : (
-                                <span className="avatar-emoji">{mapped}</span>
-                              );
-                            })()
-                          ) : (
-                            // フォールバック: ユーザー名の先頭1文字（日本語は1文字、英語は大文字化）
-                            <span className="avatar-fallback">{(entry.username || '').slice(0, 1).toUpperCase()}</span>
-                          )}
-                        </div>
-                        <span className="username">{entry.username}</span>
-                      </div>
-                    </td>
-                    <td className="level-cell">{entry.level}</td>
-                    <td className="xp-cell">{bigNumberToString(ensureBigNumber(entry.totalXp ?? 0))}</td>
-                    <td className="coin-cell">{(entry.coins ?? 0).toLocaleString()}</td>
-                    <td className="medal-cell">{(entry.medals ?? 0).toLocaleString()}</td>
+        ) : selectedTab === 'overall' ? (
+          rankings.length === 0 ? (
+            <div className="empty-message">まだランキングデータがありません</div>
+          ) : (
+            <div className="ranking-list">
+              <table>
+                <thead>
+                  <tr>
+                    <th>順位</th>
+                    <th>プレイヤー</th>
+                    <th>レベル</th>
+                    <th>累計XP</th>
+                    <th>コイン</th>
+                    <th>メダル</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {rankings.map((entry, index) => (
+                    <tr 
+                      key={entry.userId} 
+                      className={user?.uid === entry.userId ? 'current-user' : ''}
+                    >
+                      <td className="rank-cell">
+                        <span className={`rank-badge ${index < 3 ? 'top-three' : ''}`}>
+                          {getRankIcon(index + 1)}
+                        </span>
+                      </td>
+                      <td className="user-cell">
+                        <div className="user-info">
+                          <div className="user-avatar" aria-hidden>
+                            {entry.iconUrl ? (
+                              (() => {
+                                const mapped = mapIconIdentifier(entry.iconUrl);
+                                return isImageSource(mapped) ? (
+                                  <img src={mapped} alt={entry.username} className="user-icon" />
+                                ) : (
+                                  <span className="avatar-emoji">{mapped}</span>
+                                );
+                              })()
+                            ) : (
+                              <span className="avatar-fallback">{(entry.username || '').slice(0, 1).toUpperCase()}</span>
+                            )}
+                          </div>
+                          <span className="username">{entry.username}</span>
+                        </div>
+                      </td>
+                      <td className="level-cell">{entry.level}</td>
+                      <td className="xp-cell">{bigNumberToString(ensureBigNumber(entry.totalXp ?? 0))}</td>
+                      <td className="coin-cell">{(entry.coins ?? 0).toLocaleString()}</td>
+                      <td className="medal-cell">{(entry.medals ?? 0).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : (
+          // ストリークラランキング表示
+          streakRankings.length === 0 ? (
+            <div className="empty-message">まだ連続正解ランキングデータがありません</div>
+          ) : (
+            <div className="ranking-list">
+              <table>
+                <thead>
+                  <tr>
+                    <th>順位</th>
+                    <th>プレイヤー</th>
+                    <th>最高連続正解</th>
+                    <th>レベル</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {streakRankings.map((entry, index) => (
+                    <tr key={entry.userId} className={user?.uid === entry.userId ? 'current-user' : ''}>
+                      <td className="rank-cell"><span className={`rank-badge ${index < 3 ? 'top-three' : ''}`}>{getRankIcon(index + 1)}</span></td>
+                      <td className="user-cell">
+                        <div className="user-info">
+                          <div className="user-avatar" aria-hidden>
+                            {entry.iconUrl ? (
+                              (() => {
+                                const mapped = mapIconIdentifier(entry.iconUrl);
+                                return isImageSource(mapped) ? (
+                                  <img src={mapped} alt={entry.username} className="user-icon" />
+                                ) : (
+                                  <span className="avatar-emoji">{mapped}</span>
+                                );
+                              })()
+                            ) : (
+                              <span className="avatar-fallback">{(entry.username || '').slice(0, 1).toUpperCase()}</span>
+                            )}
+                          </div>
+                          <span className="username">{entry.username}</span>
+                        </div>
+                      </td>
+                      <td className="streak-cell">{(entry.endlessMaxStreak ?? 0).toLocaleString()}</td>
+                      <td className="level-cell">{entry.level}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         )}
       </div>
 

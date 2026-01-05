@@ -1031,18 +1031,26 @@ function Shop() {
                       animation: 'slideIn 0.3s ease-out'
                     }}
                   >
-                    <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>{char.icon}</div>
+                    <div style={{ fontSize: '3rem', marginBottom: '0.5rem', width: '100%', height: '4rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {char.icon.startsWith('/') || char.icon.startsWith('http') ? (
+                        <img src={char.icon} alt={char.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                      ) : (
+                        char.icon
+                      )}
+                    </div>
                     <div style={{ fontWeight: '700', marginBottom: '0.25rem' }}>{char.name}</div>
                     <div style={{ 
                       fontSize: '0.8rem',
-                      color: char.rarity === 'ultra' ? '#00ffff' :
+                      color: char.rarity === 'origin' ? '#ff00ff' :
+                             char.rarity === 'ultra' ? '#00ffff' :
                              char.rarity === 'mythic' ? '#ff4444' :
                              char.rarity === 'legendary' ? '#ffd700' :
                              char.rarity === 'epic' ? '#a335ee' :
                              char.rarity === 'rare' ? '#0070dd' : '#9d9d9d',
                       marginBottom: '0.5rem',
                       fontWeight: '600',
-                      textShadow: char.rarity === 'ultra' ? '0 0 10px #00ffff' : 'none'
+                      textShadow: char.rarity === 'origin' ? '0 0 10px #ff00ff' : 
+                                  char.rarity === 'ultra' ? '0 0 10px #00ffff' : 'none'
                     }}>
                       {getCharacterRarityName(char.rarity)}
                     </div>

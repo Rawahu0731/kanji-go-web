@@ -23,6 +23,9 @@ const Revolution = lazy(() => import('./pages/Revolution.tsx'))
 const Maintenance = lazy(() => import('./pages/Maintenance.tsx'))
 const PresentBox = lazy(() => import('./pages/PresentBox.tsx'))
 const Contact = lazy(() => import('./pages/Contact.tsx'))
+const TitleScreen = lazy(() => import('./TitleScreen.tsx'))
+const ChapterSelectPage = lazy(() => import('./ChapterSelectPage.tsx'))
+const Story = lazy(() => import('./Story.tsx'))
 
 // ローディングコンポーネント
 const Loading = () => (
@@ -34,7 +37,7 @@ const Loading = () => (
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Suspense fallback={<Loading />}>
-      {isMaintenance ? (
+      {isMaintenance && !(typeof window !== 'undefined' && localStorage.getItem('maintenanceBypass') === 'true') ? (
           <BrowserRouter>
             <Routes>
               <Route path="/known-issues" element={<KnownIssues />} />
@@ -62,6 +65,9 @@ createRoot(document.getElementById('root')!).render(
                     <Route path="/revolution" element={<Revolution />} />
                     <Route path="/present-box" element={<PresentBox />} />
                     <Route path="/contact" element={<Contact />} />
+                    <Route path="/title" element={<TitleScreen onStart={() => { window.location.href = '/chapter-select'; }} />} />
+                    <Route path="/chapter-select" element={<ChapterSelectPage />} />
+                    <Route path="/story" element={<Story />} />
                   </Routes>
                 </BrowserRouter>
               </ThemeProvider>

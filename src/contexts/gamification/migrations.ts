@@ -1,5 +1,5 @@
 import type { GamificationState } from './types';
-import { CURRENT_VERSION } from './utils';
+import { CURRENT_VERSION, DATA_VERSION } from './utils';
 import { fromNumber } from '../../utils/bigNumber';
 import { MAX_CHARACTER_LEVEL, MAX_CHARACTER_COUNT } from '../../data/characters';
 
@@ -187,6 +187,8 @@ export function migrateData(data: any): GamificationState {
   }
 
   data.version = CURRENT_VERSION;
+  // schema version for major incompatible changes
+  data.dataVersion = DATA_VERSION;
   
   return data;
 }

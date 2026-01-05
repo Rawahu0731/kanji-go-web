@@ -22,6 +22,7 @@ import {
   STORAGE_KEY, 
   CURRENT_VERSION, 
   INITIAL_STATE, 
+  DATA_VERSION,
   isMedalSystemEnabled,
   getXpForLevel,
   getXpForLevelBN,
@@ -30,7 +31,7 @@ import {
   rarityRank
 } from './gamification/utils';
 import { migrateData } from './gamification/migrations';
-import { showBadgeNotification, showLevelUpNotification, showCharacterLevelUpNotification } from './gamification/notifications';
+import { showBadgeNotification, showLevelUpNotification, showCharacterLevelUpNotification, showTemporaryNotification } from './gamification/notifications';
 
 const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
 
@@ -44,6 +45,10 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const prevAuthRef = useRef<typeof auth.user | null>(auth.user || null);
   const saveTimerRef = useRef<number | null>(null);
+  const firebaseSaveTimerRef = useRef<number | null>(null);
+  const remoteLoadedRef = useRef(false);
+  // 直近のリモート保存 Promise を保持してチェーン化する（同時並列保存を防ぐ）
+  const lastSavePromiseRef = useRef<Promise<any> | null>(null);
   const localLoadedRef = useRef(false);
 
   // Season2: use revolution v2 for new multipliers; v1 is removed on init.
@@ -143,11 +148,22 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        const migrated = migrateData(parsed);
-        setState(migrated);
-        // マイグレーション後のデータを保存
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+          const parsed = JSON.parse(saved);
+          // If schema/data version mismatches, ignore local saved state to avoid carrying over
+          // incompatible Season1 data into Season2.
+          if (parsed.dataVersion !== DATA_VERSION) {
+            console.log('Local gamification data has old or missing dataVersion; ignoring local state.');
+            try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+          } else {
+            const migrated = migrateData(parsed);
+            // 名前が空ならデフォルト値を設定
+            if (!migrated.username || (typeof migrated.username === 'string' && migrated.username.trim() === '')) {
+              migrated.username = INITIAL_STATE.username;
+            }
+            setState(migrated);
+            // マイグレーション後のデータを保存
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+          }
       } catch (e) {
         console.error('Failed to parse gamification state:', e);
       }
@@ -181,7 +197,9 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       const comingFromLoggedOut = !prevAuthRef.current && !!auth.user;
       // 読み込み中フラグを立ててからリモート読み込み
       setInitializing(true);
+      remoteLoadedRef.current = false;
       loadFromFirebase(auth.user.uid, comingFromLoggedOut).finally(() => {
+        remoteLoadedRef.current = true;
         setInitializing(false);
       });
     }
@@ -260,6 +278,39 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
           // フォールバック：短い遅延で実行してUI優先
           window.setTimeout(() => doSave(), 200);
         }
+        // Firebase に保存（ログイン中かつFirebase有効、かつリモート読み込み完了時のみ）
+        try {
+          if (auth.user && isFirebaseEnabled && remoteLoadedRef.current) {
+              if (firebaseSaveTimerRef.current !== null) {
+                window.clearTimeout(firebaseSaveTimerRef.current);
+              }
+              const toSaveRemote = toSave;
+              // デバウンス後に保存処理をキューに入れる。直近の保存があればその後にチェーンすることで
+              // 同時に大量の未解決書き込みが発生しないようにする。
+              firebaseSaveTimerRef.current = window.setTimeout(() => {
+                const doSave = async () => {
+                  try {
+                    const saveOp = () => saveUserData(auth.user!.uid, toSaveRemote as any);
+                    if (lastSavePromiseRef.current) {
+                      // 既存の保存が終わった後に実行されるPromiseチェーンを作る
+                      lastSavePromiseRef.current = lastSavePromiseRef.current.finally(() => saveOp());
+                    } else {
+                      // 新しいチェーンを開始
+                      lastSavePromiseRef.current = saveOp();
+                    }
+                    await lastSavePromiseRef.current;
+                  } catch (err) {
+                    console.warn('Failed to save gamification state to Firebase:', err);
+                  } finally {
+                    firebaseSaveTimerRef.current = null;
+                  }
+                };
+                void doSave();
+              }, 1000);
+            }
+        } catch (e) {
+          // ignore
+        }
       } catch (e) {
         console.warn('Failed to schedule gamification state persist:', e);
       }
@@ -317,13 +368,20 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
           correctAnswers: Math.max(migratedRemote.stats?.correctAnswers || 0, state.stats?.correctAnswers || 0),
           incorrectAnswers: Math.max(migratedRemote.stats?.incorrectAnswers || 0, state.stats?.incorrectAnswers || 0),
           currentStreak: Math.max(migratedRemote.stats?.currentStreak || 0, state.stats?.currentStreak || 0),
-          bestStreak: Math.max(migratedRemote.stats?.bestStreak || 0, state.stats?.bestStreak || 0)
+          bestStreak: Math.max(migratedRemote.stats?.bestStreak || 0, state.stats?.bestStreak || 0),
+          // エンドレスモード専用の最高連続正解数をマージ
+          endlessBestStreak: Math.max(migratedRemote.stats?.endlessBestStreak || 0, state.stats?.endlessBestStreak || 0)
         },
         activeTheme: state.activeTheme || migratedRemote.activeTheme,
         activeIcon: state.activeIcon || migratedRemote.activeIcon,
         customIconUrl: state.customIconUrl || migratedRemote.customIconUrl,
         username: migratedRemote.username && migratedRemote.username !== 'プレイヤー' ? migratedRemote.username : state.username
       };
+
+      // merged の username が空ならデフォルトを設定
+      if (!merged.username || (typeof merged.username === 'string' && merged.username.trim() === '')) {
+        merged.username = INITIAL_STATE.username;
+      }
 
       // 更新日時をセット
       // @ts-ignore - 任意フィールドとして保存
@@ -382,6 +440,29 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       const remoteTs = migratedRemote ? ((migratedRemote as any).updatedAt || 0) : 0;
       const localTs = migratedLocal ? ((migratedLocal as any).updatedAt || 0) : 0;
 
+      // サーバ側でシーズンリセット等が行われた場合、remote に season フィールドがセットされる想定。
+      // ローカルに古いシーズンのデータが残っているとリセットが適用されないため、
+      // リモートの season が存在しローカルと異なる場合はローカルを強制的にクリアしてリモートを採用する。
+      if (migratedRemote && (!migratedLocal || migratedLocal.season !== migratedRemote.season)) {
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem('presentBox_state');
+          localStorage.removeItem('microcms_last_sync');
+          localStorage.removeItem('revolution_state_v2');
+        } catch (e) {
+          // ignore
+        }
+
+        if (!migratedRemote.username || (typeof migratedRemote.username === 'string' && migratedRemote.username.trim() === '')) {
+          migratedRemote.username = INITIAL_STATE.username;
+        }
+
+        setState(migratedRemote);
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedRemote)); } catch (e) { /* ignore */ }
+        console.log('Detected server reset; cleared local data and applied remote minimal state');
+        return;
+      }
+
       // 最新の方を採用する（ただし未ログイン→ログインの場合は preferRemote フラグでリモートを優先）
       let chosen: any = null;
 
@@ -404,6 +485,11 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
           }
         } catch (e) {
           console.warn('Failed to resolve customIconUrl to download URL:', e);
+        }
+
+        // 名前が空ならデフォルトを設定
+        if (!chosen.username || (typeof chosen.username === 'string' && chosen.username.trim() === '')) {
+          chosen.username = INITIAL_STATE.username;
         }
 
         // 状態を反映してローカルに保存（ローカルが新しい場合でもサーバへ自動送信は行わない）
@@ -434,7 +520,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       }
 
       // コレクションボーナスを適用（足し算）
-      const collectionBonus = calculateCollectionBonus(prev.cardCollection);
+      const collectionBonus = calculateCollectionBonus(prev.cardCollection, prev.collectionPlus);
       bonusPercent += collectionBonus;
       // (Challenge 機能削除)
       
@@ -553,7 +639,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       }
       
       // コレクションボーナスを適用（足し算）
-      const collectionBonus = calculateCollectionBonus(prev.cardCollection);
+      const collectionBonus = calculateCollectionBonus(prev.cardCollection, prev.collectionPlus);
       bonusPercent += collectionBonus;
       // (Challenge 機能削除)
       
@@ -835,7 +921,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       // 全ての更新を1つのsetStateでまとめて処理
       
       // コレクションボーナスを1回だけ計算（最適化）
-      const collectionBonus = calculateCollectionBonus(prev.cardCollection);
+      const collectionBonus = calculateCollectionBonus(prev.cardCollection, prev.collectionPlus);
       
       // XP計算 - スキルブースト、キャラクターブースト、コレクションボーナスを適用
       // 注意: QuizModeで既にスキルブースト(xp_boost, xp_multiplier)は適用済みのため、
@@ -851,11 +937,72 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       xpBonusPercent += collectionBonus;
       // 最終的な倍率を計算（1 + ボーナス％の合計）
       const xpMultiplier = 1 + xpBonusPercent;
+      // デバッグ出力: XPブーストの内訳
+      try {
+        console.log('[Gamification DEBUG XP] baseXp:', xp, 'xpBonusPercent:', xpBonusPercent, 'collectionBonus:', collectionBonus, 'equippedChar:', prev.equippedCharacter ? getCharacterEffectValue(prev.equippedCharacter) : null, 'xpMultiplier:', xpMultiplier);
+      } catch (e) {
+        // ignore
+      }
       // BigNumberで倍率計算（大きな数値でも正確に計算）
       const xpBN = BN.fromNumber(xp);
-      const boostedXpBN = BN.multiply(xpBN, xpMultiplier);
+      let boostedXpBN = BN.multiply(xpBN, xpMultiplier);
+
+      // スキルによる確率発動 (critical_hit / double_reward / lucky_coin)
+      // prev.skillLevels を参照して、確率(%)を計算
+      let doubleChance = 0;
+      let criticalChance = 0;
+      let luckyChance = 0;
+      try {
+        for (const sl of prev.skillLevels) {
+          const skill = SKILLS.find(s => s.id === sl.skillId);
+          if (!skill) continue;
+          if (skill.effect.type === 'double_reward') doubleChance += skill.effect.value * sl.level;
+          if (skill.effect.type === 'critical_hit') criticalChance += skill.effect.value * sl.level;
+          if (skill.effect.type === 'lucky_coin') luckyChance += skill.effect.value * sl.level;
+        }
+      } catch (e) {
+        // ignore
+      }
+      doubleChance = doubleChance / 100;
+      criticalChance = criticalChance / 100;
+      luckyChance = luckyChance / 100;
+
+      // 判定 (stacking: 両方発動すると累乗的に効果が適用される)
+      const triggeredDouble = Math.random() < (doubleChance || 0);
+      const triggeredCritical = Math.random() < (criticalChance || 0);
+
+      let xpMultiplierFromChance = 1;
+      let coinMultiplierFromChance = 1;
+      if (triggeredDouble) {
+        xpMultiplierFromChance *= 2;
+        coinMultiplierFromChance *= 2;
+        idleCallback(() => showTemporaryNotification('✨ ダブル報酬！ XPとコインが2倍になりました'));
+      }
+      if (triggeredCritical) {
+        xpMultiplierFromChance *= 2;
+        idleCallback(() => showTemporaryNotification('✨ クリティカル！ XPが2倍になりました'));
+      }
+
+      const coinsBN = BN.fromNumber(coins);
+      // coinMultiplier は後で計算されるため、ここでは単にコインの BigNumber を作成する
+      let boostedCoinsBN = coinsBN;
+      // lucky coin はコイン2倍判定
+      const triggeredLucky = Math.random() < (luckyChance || 0);
+      if (triggeredLucky) {
+        coinMultiplierFromChance *= 2;
+        idleCallback(() => showTemporaryNotification('✨ ラッキーコイン！ コインが2倍になりました'));
+      }
+
+      // 確率由来の倍率を適用
+      if (xpMultiplierFromChance !== 1) {
+        boostedXpBN = BN.multiply(boostedXpBN, xpMultiplierFromChance);
+      }
+      if (coinMultiplierFromChance !== 1) {
+        boostedCoinsBN = BN.multiply(boostedCoinsBN, coinMultiplierFromChance);
+      }
+
       const boostedXp = Math.floor(BN.toNumber(boostedXpBN));
-      
+
       // コイン計算
       let coinBonusPercent = 0; // ボーナスの合計（％として）
       if (prev.equippedCharacter) {
@@ -869,8 +1016,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       // 最終的な倍率を計算（1 + ボーナス％の合計）
       const coinMultiplier = 1 + coinBonusPercent;
       // BigNumberで倍率計算（大きな数値でも正確に計算）
-      const coinsBN = BN.fromNumber(coins);
-      const boostedCoinsBN = BN.multiply(coinsBN, coinMultiplier);
+      // boostedCoinsBN は上で作成済み（確率倍率適用後）
+      boostedCoinsBN = BN.multiply(boostedCoinsBN, coinMultiplier);
       const boostedCoins = Math.floor(BN.toNumber(boostedCoinsBN));
       
       // BigNumberとして処理
@@ -1261,10 +1408,47 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     return results;
   };
 
+  // キャラクターを直接追加する（プレゼントなど特別な入手方法用）
+  const addCharacter = (characterId: string): boolean => {
+    const character = CHARACTERS[characterId];
+    if (!character) {
+      console.error(`Character ${characterId} not found`);
+      return false;
+    }
+
+    setState(prev => {
+      const newCharacters = [...prev.characters];
+      const existingIndex = newCharacters.findIndex(c => c.id === character.id);
+      
+      if (existingIndex !== -1) {
+        // 既に持っている場合はカウントを増やす
+        const currentCount = newCharacters[existingIndex].count;
+        if (currentCount < MAX_CHARACTER_COUNT) {
+          newCharacters[existingIndex] = {
+            ...newCharacters[existingIndex],
+            count: Math.min(currentCount + 1, MAX_CHARACTER_COUNT)
+          };
+        }
+      } else {
+        // 新しく追加
+        newCharacters.push({
+          ...character,
+          level: 1,
+          count: 1,
+          xp: 0
+        });
+      }
+      
+      return { ...prev, characters: newCharacters };
+    });
+
+    return true;
+  };
+
     // メダルで引くコレクション+ガチャ
     const pullCollectionPlusGacha = (count: number): KanjiCard[] => {
-      // 除外リスト: 既に+30の漢字は出現しない
-      const excluded = new Set<string>((state.collectionPlus || []).filter(e => (e.plus || 0) >= 30).map(e => e.kanji));
+      // 除外リスト: 既に+10の漢字は出現しない
+        const excluded = new Set<string>((state.collectionPlus || []).filter(e => (e.plus || 0) >= 10).map(e => e.kanji));
 
       // プール作成（常用漢字プールから除外）
       const pool = ALL_KANJI.filter(k => !excluded.has(k.kanji));
@@ -1295,7 +1479,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
           if (!existing) {
             map.set(c.kanji, { kanji: c.kanji, plus: 1, obtainedAt: Date.now() });
           } else {
-            existing.plus = Math.min(30, (existing.plus || 0) + 1);
+            existing.plus = Math.min(10, (existing.plus || 0) + 1);
             map.set(c.kanji, existing);
           }
         }
@@ -1314,7 +1498,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   };
 
   // コレクションボーナスを計算（最適化：ループを高速化）
-  const calculateCollectionBonus = (cards: KanjiCard[]): number => {
+  const calculateCollectionBonus = (cards: KanjiCard[], plusListParam?: { kanji: string; plus: number; obtainedAt?: number }[]): number => {
     if (cards.length === 0) return 0;
     
     // レアリティボーナスのマップ（switch文より高速）
@@ -1334,7 +1518,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     // collectionPlus によるボーナスを追加
     // 仕様: collectionPlus の +1 ごとに XP/コインを +100% (= +1.0) 増加させる
     const COLLECTION_PLUS_BONUS_PER_POINT = 1.0; // +1 ごとに 100%（1.0）のボーナス
-    const plusList = state.collectionPlus || [];
+    const plusList = plusListParam || state.collectionPlus || [];
     for (let i = 0; i < plusList.length; i++) {
       bonus += (plusList[i].plus || 0) * COLLECTION_PLUS_BONUS_PER_POINT;
     }
@@ -1346,7 +1530,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
 
   // コレクションボーナスを取得（外部公開用）
   const getCollectionBoost = (): number => {
-    return calculateCollectionBonus(state.cardCollection);
+    return calculateCollectionBonus(state.cardCollection, state.collectionPlus);
   };
 
   // Collection+ の合算効果を取得
@@ -1362,6 +1546,16 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     return { totalPlus, xpCoinBonusPercent, xpCoinBonusFraction, medalBoost };
   };
 
+  // 装備中キャラクターのメダル確率ボーナスを取得
+  const getCharacterMedalBoost = (): number => {
+    if (!state.equippedCharacter) return 0;
+    // 零のみメダル確率を1%アップ
+    if (state.equippedCharacter.id === 'zero') {
+      return 0.01; // 1%
+    }
+    return 0;
+  };
+
   // collection++ は削除
 
   // コレクションがコンプリートしているか判定
@@ -1372,6 +1566,68 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       return false;
     }
+  };
+
+  // コレクション+が完全にコンプリートしているか判定（すべての漢字が+10）
+  const isCollectionPlusComplete = (): boolean => {
+    try {
+      const plusList = state.collectionPlus || [];
+      // すべての漢字が存在し、かつすべてが+10である必要がある
+      if (plusList.length < ALL_KANJI.length) return false;
+      return plusList.every(e => (e.plus || 0) >= 10);
+    } catch (e) {
+      return false;
+    }
+  };
+
+  // 招待状フラグを設定
+  const setHasStoryInvitation = (value: boolean) => {
+    setState(prev => {
+      if (prev.hasStoryInvitation === value) return prev;
+      return { ...prev, hasStoryInvitation: value };
+    });
+  };
+
+  // エンドロール完了フラグを設定
+  const setHasCompletedEndroll = (value: boolean) => {
+    setState(prev => {
+      if (prev.hasCompletedEndroll === value) return prev;
+      return { ...prev, hasCompletedEndroll: value };
+    });
+  };
+
+  // ストーリー進行: シーンをアンロック
+  const unlockScene = (sceneIndex: number) => {
+    setState(prev => {
+      const arr = Array.from(new Set([...(prev.unlockedScenes || []), sceneIndex]));
+      return { ...prev, unlockedScenes: arr };
+    });
+  };
+
+  // ストーリー進行: クイズクリアを記録
+  const clearQuiz = (sceneIndex: number) => {
+    setState(prev => {
+      const arr = Array.from(new Set([...(prev.clearedQuizzes || []), sceneIndex]));
+      return { ...prev, clearedQuizzes: arr };
+    });
+  };
+
+  // ストーリー進行: 章完了を記録
+  const completeChapter = (chapterIndex: number) => {
+    setState(prev => {
+      const arr = Array.from(new Set([...(prev.completedChapters || []), chapterIndex]));
+      return { ...prev, completedChapters: arr };
+    });
+  };
+
+  // ストーリー進行をまとめて設定（配列を上書き）
+  const setStoryProgress = (progress: { unlockedScenes?: number[]; clearedQuizzes?: number[]; completedChapters?: number[] }) => {
+    setState(prev => ({
+      ...prev,
+      unlockedScenes: progress.unlockedScenes ?? prev.unlockedScenes,
+      clearedQuizzes: progress.clearedQuizzes ?? prev.clearedQuizzes,
+      completedChapters: progress.completedChapters ?? prev.completedChapters
+    }));
   };
 
   // 装備中のキャラクターのブースト効果を取得
@@ -1402,8 +1658,11 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       if (charIndex === -1) return prev;
 
       const currentChar = prev.characters[charIndex];
-      const charMax = MAX_CHARACTER_LEVEL;
-      if (currentChar.level >= charMax) return prev; // 最大レベルなら何もしない
+      // 零はレベル上限無し、それ以外は通常の上限
+      const isZero = currentChar.id === 'zero';
+      const charMax = isZero ? Number.MAX_SAFE_INTEGER : MAX_CHARACTER_LEVEL;
+      
+      if (!isZero && currentChar.level >= charMax) return prev; // 最大レベルなら何もしない
 
       let newXp = currentChar.xp + amount;
       let newLevel = currentChar.level;
@@ -1419,7 +1678,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       newCharacters[charIndex] = {
         ...currentChar,
         level: newLevel,
-        xp: newLevel >= charMax ? 0 : newXp
+        xp: (isZero || newLevel < charMax) ? newXp : 0
       };
 
       // 装備中のキャラクターも更新
@@ -1628,6 +1887,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     openCardPack,
     canOpenCardPack,
     pullCharacterGacha,
+    addCharacter,
     // チケット関係: 所持数付与 / 使用
     addTickets,
     useTicket,
@@ -1637,6 +1897,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     addCharacterXp,
     getCollectionBoost,
     getCollectionPlusEffect,
+    getCharacterMedalBoost,
     addCardsToDeck,
     removeCardFromDeck,
     upgradeCardInDeck,
@@ -1651,6 +1912,13 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       });
     },
     isCollectionComplete,
+    isCollectionPlusComplete,
+    setHasStoryInvitation,
+    setHasCompletedEndroll,
+    unlockScene,
+    clearQuiz,
+    completeChapter,
+    setStoryProgress,
     getSkillLevel,
     getSkillBoost,
     useStreakProtection,
