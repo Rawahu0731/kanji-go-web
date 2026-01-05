@@ -1,6 +1,6 @@
 import './Maintenance.css'
 import { useState } from 'react'
-import { maintenancePassword } from '../config'
+import { maintenancePassword,isBypassDisplay } from '../config'
 
 export default function Maintenance() {
   const [input, setInput] = useState('')
@@ -34,6 +34,7 @@ export default function Maintenance() {
           <a href="/announcements" style={{ marginLeft: '8px' }}>お知らせ</a>
         </p>
 
+        {isBypassDisplay && (
         <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
           <label style={{ display: 'block', marginBottom: 8 }}>メンテナンスバイパス（パスワード）</label>
           <input
@@ -48,6 +49,7 @@ export default function Maintenance() {
           </div>
           {msg && <div style={{ color: 'red', marginTop: 8 }}>{msg}</div>}
         </form>
+        )}
       </div>
     </div>
   )
