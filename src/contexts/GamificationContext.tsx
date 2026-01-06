@@ -867,6 +867,36 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
+  // --- ヒント関連 ---
+  // 指定クイズの解放済みヒント数を取得
+  const getUnlockedHints = (quizId: number): number => {
+    const key = String(quizId);
+    return (state.unlockedHints && state.unlockedHints[key]) ? state.unlockedHints[key] : 0;
+  };
+
+  // 指定クイズのヒント番号(1..3)を購入して解放する。順序通りでない購入は不可。
+  const purchaseHint = (quizId: number, hintNumber: number): boolean => {
+    if (!medalSystemEnabled) return false;
+    if (![1,2,3].includes(hintNumber)) return false;
+    const key = String(quizId);
+    const current = state.unlockedHints?.[key] ?? 0;
+    // 1つずつ順番に解放させる
+    if (current + 1 !== hintNumber) return false;
+
+    const prices = [0, 1000000, 2000000, 3000000];
+    const price = prices[hintNumber];
+    if (state.medals < price) return false;
+
+    // メダルを差し引きつつヒント解放情報を更新
+    setState(prev => {
+      const u = { ...(prev.unlockedHints || {}) } as Record<string, number>;
+      u[key] = hintNumber;
+      return { ...prev, medals: prev.medals - price, unlockedHints: u };
+    });
+
+    return true;
+  };
+
   const updateStats = (updates: Partial<GamificationState['stats']>) => {
     setState(prev => {
       const newStats = { ...prev.stats, ...updates };
@@ -1898,6 +1928,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     getCollectionBoost,
     getCollectionPlusEffect,
     getCharacterMedalBoost,
+    getUnlockedHints,
+    purchaseHint,
     addCardsToDeck,
     removeCardFromDeck,
     upgradeCardInDeck,

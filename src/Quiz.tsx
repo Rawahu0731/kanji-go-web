@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useGamification } from './contexts/GamificationContext';
 
 type Props = {
   open: boolean;
@@ -7,12 +8,16 @@ type Props = {
   onResult: (success: boolean) => void;
   imageUrl: string; // クイズ問題の画像URL
   isAlreadyCleared?: boolean; // 既にクリア済みかどうか
+  quizId?: number;
+  hints?: string[];
 };
 
-export default function Quiz({ open, correctAnswer, onClose, onResult, imageUrl, isAlreadyCleared = false }: Props) {
+export default function Quiz({ open, correctAnswer, onClose, onResult, imageUrl, isAlreadyCleared = false, quizId, hints = [] }: Props) {
   const [userInput, setUserInput] = useState('');
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
+
+  const { getUnlockedHints, purchaseHint } = useGamification();
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -100,6 +105,36 @@ export default function Quiz({ open, correctAnswer, onClose, onResult, imageUrl,
             ) : (
               '❌ 不正解...もう一度挑戦してください'
             )}
+          </div>
+        )}
+        {/* ヒント表示エリア */}
+        {typeof quizId === 'number' && (
+          <div style={{marginBottom: 12}}>
+            <div style={{fontWeight:700, marginBottom:8}}>ヒント</div>
+            <div style={{display: 'flex', gap: 8, flexDirection: 'column'}}>
+              {([1,2,3]).map((n) => {
+                const unlocked = getUnlockedHints(quizId) >= n;
+                return (
+                  <div key={n} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding: '8px', borderRadius:8, background: unlocked ? 'rgba(240,249,255,0.9)' : 'rgba(247,247,247,0.5)'}}>
+                    <div style={{flex:1}}>
+                      {unlocked ? (<span>{hints[n-1] || `ヒント${n}`}</span>) : (<span style={{opacity:0.8}}>ロック中</span>)}
+                    </div>
+                    <div style={{marginLeft: 12}}>
+                      {!unlocked && (
+                        <button onClick={() => {
+                          const ok = purchaseHint(quizId, n);
+                          if (!ok) {
+                            alert('メダルが足りないか、先に前のヒントを解放してください');
+                          }
+                        }} style={{padding: '6px 10px', borderRadius: 8, cursor: 'pointer'}}>
+                          {n === 1 ? '1000000メダル' : n === 2 ? '2000000メダル' : '3000000メダル'} を使う
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
         

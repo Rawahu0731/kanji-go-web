@@ -74,6 +74,8 @@ export const INITIAL_STATE: GamificationState = {
   unlockedScenes: [0],
   clearedQuizzes: [],
   completedChapters: [],
+  // ヒントの解放状況（クイズごと）
+  unlockedHints: {},
   hasStoryInvitation: false
 };
 

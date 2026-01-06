@@ -1010,23 +1010,23 @@ export default function VisualNovel() {
   // imageUrl: クイズ画像のパス（後で追加）
   const chapterQuizzes = [
     // 序章（index: 0）
-    { correctAnswer: '日', imageUrl: '/images/quizzes/chapter0.png' },
+    { correctAnswer: '日', imageUrl: '/images/quizzes/chapter0.png', hints: ['一般的な和同開珎パズルとは違うようです', '４つの熟語を作るわけではありません', '漢字１字を４つ作りましょう'] },
     // 第1章（index: 1）
-    { correctAnswer: '水晶', imageUrl: '/images/quizzes/chapter1.png' },
+    { correctAnswer: '水晶', imageUrl: '/images/quizzes/chapter1.png', hints: ['WとSを漢字に置き換えることで熟語ができます', 'Wは水です', 'WはWednesdayのWです'] },
     // 第2章（index: 2）
-    { correctAnswer: '枠', imageUrl: '/images/quizzes/chapter2.png' },
+    { correctAnswer: '枠', imageUrl: '/images/quizzes/chapter2.png', hints: ['数字と漢字が大切です', '助詞と数詞は無視しましょう', '数字を漢数字に直すと？'] },
     // 第3章（index: 3）
-    { correctAnswer: '蛙', imageUrl: '/images/quizzes/chapter3.png' },
+    { correctAnswer: '蛙', imageUrl: '/images/quizzes/chapter3.png', hints: ['この色の配置どこかで見たことがありませんか？', 'どこかで見たことがあるとすればそれはカレンダーです', '蟻が左側だけになってますね'] },
     // 第4章（index: 4）
-    { correctAnswer: '亜音速', imageUrl: '/images/quizzes/chapter4.png' },
+    { correctAnswer: '亜音速', imageUrl: '/images/quizzes/chapter4.png', hints: ['さっきの問題にひっぱられてませんか？', '曜日は関係ありません', '色を入れましょう'] },
     // 第5章（index: 5）
-    { correctAnswer: ['得点', '特典'], imageUrl: '/images/quizzes/chapter5.png' },
+    { correctAnswer: ['得点', '特典'], imageUrl: '/images/quizzes/chapter5.png', hints: ['ひらがなにして考えましょう', 'すべての文字が上の文章に含まれていますね', '。は句点です'] },
     // 第6章（index: 6）
-    { correctAnswer: '迂路', imageUrl: '/images/quizzes/chapter6.png' },
+    { correctAnswer: '迂路', imageUrl: '/images/quizzes/chapter6.png', hints: ['ヒントいりますか？', '最短で進むと出た文章の指示に従いましょう', '答えの単語が少し難しいかもしれませんね'] },
     // 第7章（index: 7）
-    { correctAnswer: ['クサ', '草'], imageUrl: '/images/quizzes/chapter7.png' },
+    { correctAnswer: ['クサ', '草'], imageUrl: '/images/quizzes/chapter7.png', hints: ['https://www.kanjipedia.jp/sakuin/bushu/detail/6/140#kakusuHead', '全部塗りつぶしてくださいね', 'もし文字が出ないとしたらまだ草冠を付けられる漢字があります'] },
     // 第8章（index: 8）
-    { correctAnswer: '稜線', imageUrl: '/images/quizzes/chapter8.png' },
+    { correctAnswer: '稜線', imageUrl: '/images/quizzes/chapter8.png', hints: ['緑の枠とオレンジの枠、どこかで見たことがありませんか？', '通った漢字に番号を付けていきましょう', '番号に従って漢字を入れると熟語が現れます'] },
     // 終章（index: 9）- クイズなし
     null,
   ];
@@ -1085,8 +1085,10 @@ export default function VisualNovel() {
         {quizOpen && quizTargetScene !== null && chapterQuizzes[quizTargetScene] && (
           <Quiz
             open={quizOpen}
+            quizId={quizTargetScene}
             correctAnswer={chapterQuizzes[quizTargetScene].correctAnswer}
             imageUrl={chapterQuizzes[quizTargetScene].imageUrl}
+            hints={chapterQuizzes[quizTargetScene].hints}
             isAlreadyCleared={clearedQuizzes.has(quizTargetScene)}
             onClose={() => { setQuizOpen(false); setQuizTargetScene(null); }}
             onResult={handleQuizResult}
@@ -1515,9 +1517,11 @@ export default function VisualNovel() {
       </div>
       {quizOpen && quizTargetScene !== null && chapterQuizzes[quizTargetScene] ? (
         <Quiz
+          quizId={quizTargetScene}
           open={quizOpen}
           correctAnswer={chapterQuizzes[quizTargetScene].correctAnswer}
           imageUrl={chapterQuizzes[quizTargetScene].imageUrl}
+          hints={chapterQuizzes[quizTargetScene].hints}
           isAlreadyCleared={clearedQuizzes.has(quizTargetScene)}
           onClose={() => { setQuizOpen(false); setQuizTargetScene(null); }}
           onResult={handleQuizResult}

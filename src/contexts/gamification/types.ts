@@ -54,6 +54,8 @@ export interface GamificationState {
   unlockedScenes?: number[];
   clearedQuizzes?: number[];
   completedChapters?: number[];
+  // ヒントの解放状況: キーはクイズID(文字列化)、値は解放済みの最大ヒント番号 (0..3)
+  unlockedHints?: Record<string, number>;
   // エンドロールを初めて完了してタイトルに戻ったか
   hasCompletedEndroll?: boolean;
 }
@@ -116,6 +118,10 @@ export type GamificationContextType = {
   getSkillLevel: (skillId: string) => number;
   getSkillBoost: (type: 'xp_boost' | 'coin_boost' | 'medal_boost' | 'streak_amp' | 'double_reward' | 'critical_hit' | 'lucky_coin' | 'xp_multiplier' | 'time_bonus') => number;
   useStreakProtection: () => boolean;
+  // ヒント関連: 指定クイズの解放済みヒント数を取得
+  getUnlockedHints: (quizId: number) => number;
+  // 指定クイズの指定ヒント番号(1..3)をメダルで購入して解放する。成功したら true を返す
+  purchaseHint: (quizId: number, hintNumber: number) => boolean;
   // (Challenge 機能削除)
   // デバッグ情報をセット/クリアする
   setDebugInfo: (info: Record<string, any> | null) => void;
