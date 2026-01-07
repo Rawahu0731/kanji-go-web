@@ -129,6 +129,9 @@ export type GamificationContextType = {
   loadFromFirebase: (userId: string, preferRemote?: boolean) => Promise<void>;
   // ゲームデータをリセット/削除する。引数に true を渡すと Firebase 上のデータも削除する
   deleteGameData: (deleteRemote?: boolean) => Promise<void>;
+  // 自動同期の有効/無効を切り替える
+  setAutoSyncEnabled: (enabled: boolean) => void;
+  isAutoSyncEnabled: () => boolean;
   // デバッグ用: 指定キャラクターを最大レベルにする（デバッグ用）
   debugSetCharacterLevelMax: (characterId: string) => void;
 

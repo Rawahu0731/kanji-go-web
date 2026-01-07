@@ -50,6 +50,11 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   // 直近のリモート保存 Promise を保持してチェーン化する（同時並列保存を防ぐ）
   const lastSavePromiseRef = useRef<Promise<any> | null>(null);
   const localLoadedRef = useRef(false);
+  // 自動 Firebase 同期を無効化するためのフラグ（デフォルトは無効）。
+  // 無効にしておくことで、意図しない自動書き込みによる
+  // Firebase の無料枠超過や課金リスクを防ぎます。
+  // 手動同期は `syncWithFirebase()` を呼ぶことで行えます。
+  const autoSyncRef = useRef(false);
 
   // Season2: use revolution v2 for new multipliers; v1 is removed on init.
   const REVOLUTION_STORAGE_KEY = 'revolution_state_v2';
@@ -280,7 +285,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         }
         // Firebase に保存（ログイン中かつFirebase有効、かつリモート読み込み完了時のみ）
         try {
-          if (auth.user && isFirebaseEnabled && remoteLoadedRef.current) {
+          if (auth.user && isFirebaseEnabled && remoteLoadedRef.current && autoSyncRef.current) {
               if (firebaseSaveTimerRef.current !== null) {
                 window.clearTimeout(firebaseSaveTimerRef.current);
               }
@@ -665,9 +670,9 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      return {
+      return ({
         ...prev,
-        coins: newCoins,
+    });
         lastInterestTime: crossedZero ? Date.now() : prev.lastInterestTime,
         unlockedBadges: newBadges
       };
@@ -1958,6 +1963,10 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     syncWithFirebase,
     loadFromFirebase,
     deleteGameData
+    ,
+    // 自動同期の有効/無効切替
+    setAutoSyncEnabled: (enabled: boolean) => { autoSyncRef.current = enabled; },
+    isAutoSyncEnabled: () => !!autoSyncRef.current,
   }), [
     state, 
     medalSystemEnabled,
