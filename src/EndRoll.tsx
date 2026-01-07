@@ -417,7 +417,9 @@ export default function EndRoll({ onBackToTitle }: EndRollProps) {
         {/* final centered message */}
         {showFinal && (
           <div className="endroll-final" aria-hidden>
-            <div className="endroll-final-inner">{finalMessage}</div>
+            <div className="endroll-final-inner">
+              <img src="/kanji_logo.png" alt={finalMessage} style={{ maxWidth: '400px', height: 'auto' }} />
+            </div>
             {showBackButton && onBackToTitle && (
               <button
                 onClick={handleBackToTitle}
