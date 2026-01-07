@@ -454,12 +454,12 @@ function App() {
         </div>
       )}
 
-      <h1 
+      <img 
+        src="/kanji_logo.png" 
+        alt="漢字勉強サイト"
         onClick={handleTitleTap}
-        style={{ cursor: 'default', userSelect: 'none' }}
-      >
-        漢字勉強サイト
-      </h1>
+        style={{ cursor: 'default', userSelect: 'none', maxWidth: '400px', height: 'auto' }}
+      />
       
       <div className="level-buttons">
         {levels.map(level => (
