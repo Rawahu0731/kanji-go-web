@@ -670,11 +670,10 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      return ({
+      return {
         ...prev,
-    });
         lastInterestTime: crossedZero ? Date.now() : prev.lastInterestTime,
-        unlockedBadges: newBadges
+        unlockedBadges: newBadges,
       };
     });
   };

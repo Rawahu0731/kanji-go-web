@@ -219,20 +219,41 @@ export default function VisualNovel() {
     }, 200);
   };
 
-    // Gamification state と同期: Firebase に保存された進行状況があればローカル state に反映する
-    const { state: gamState, setStoryProgress } = useGamification();
+  // Gamification state と同期: Firebase に保存された進行状況があればローカル state に反映する
+  const { state: gamState, setStoryProgress } = useGamification();
 
-    useEffect(() => {
+  // Only update local Sets when remote arrays actually differ to avoid
+  // triggering unnecessary setState -> render cycles that can lead to
+  // maximum update depth errors.
+  useEffect(() => {
+    try {
       if (Array.isArray(gamState.unlockedScenes)) {
-        try { setUnlockedScenes(new Set(gamState.unlockedScenes)); } catch (e) {}
+        const remote = new Set<number>(gamState.unlockedScenes as number[]);
+        const local = unlockedScenes;
+        const equal = remote.size === local.size && Array.from(remote).every(n => local.has(n));
+        if (!equal) setUnlockedScenes(new Set(remote));
       }
+    } catch (e) { /* ignore */ }
+
+    try {
       if (Array.isArray(gamState.clearedQuizzes)) {
-        try { setClearedQuizzes(new Set(gamState.clearedQuizzes)); } catch (e) {}
+        const remote = new Set<number>(gamState.clearedQuizzes as number[]);
+        const local = clearedQuizzes;
+        const equal = remote.size === local.size && Array.from(remote).every(n => local.has(n));
+        if (!equal) setClearedQuizzes(new Set(remote));
       }
+    } catch (e) { /* ignore */ }
+
+    try {
       if (Array.isArray(gamState.completedChapters)) {
-        try { setCompletedChapters(new Set(gamState.completedChapters)); } catch (e) {}
+        const remote = new Set<number>(gamState.completedChapters as number[]);
+        const local = completedChapters;
+        const equal = remote.size === local.size && Array.from(remote).every(n => local.has(n));
+        if (!equal) setCompletedChapters(new Set(remote));
       }
-    }, [gamState.unlockedScenes, gamState.clearedQuizzes, gamState.completedChapters]);
+    } catch (e) { /* ignore */ }
+  // include local sets in deps so equality checks see latest values
+  }, [gamState.unlockedScenes, gamState.clearedQuizzes, gamState.completedChapters, unlockedScenes, clearedQuizzes, completedChapters]);
 
   // ChapterSelectPageからの章選択・クイズ開始を処理
   useEffect(() => {
