@@ -1119,24 +1119,39 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       
       if (prev.equippedCharacter && characterXp > 0) {
         const char = { ...prev.equippedCharacter };
-        char.xp += characterXp;
 
-        // レベルアップ判定: plus は必要XP計算に入れないのでベースの最大レベルで判定する
-        while (char.level < MAX_CHARACTER_LEVEL) {
-          const xpNeeded = getXpForCharacterLevel(char.level);
-          if (char.xp >= xpNeeded) {
-            char.level++;
-            char.xp -= xpNeeded;
-          } else {
-            break;
+        // 零 (id === 'zero') は特別扱い: 一問正解ごとにレベルを1上げる
+        if (char.id === 'zero') {
+          const newLevel = (char.level || 0) + 1;
+          char.level = newLevel;
+          // XPはリセットしておく（表示用に0でOK）
+          char.xp = 0;
+
+          updatedEquippedCharacter = char;
+          updatedCharacters = prev.characters.map(c => c.id === char.id ? char : c);
+
+          // 通知は非同期で行う
+          setTimeout(() => showCharacterLevelUpNotification(char, newLevel), 0);
+        } else {
+          char.xp += characterXp;
+
+          // レベルアップ判定: plus は必要XP計算に入れないのでベースの最大レベルで判定する
+          while (char.level < MAX_CHARACTER_LEVEL) {
+            const xpNeeded = getXpForCharacterLevel(char.level);
+            if (char.xp >= xpNeeded) {
+              char.level++;
+              char.xp -= xpNeeded;
+            } else {
+              break;
+            }
           }
-        }
-        updatedEquippedCharacter = char;
+          updatedEquippedCharacter = char;
 
-        // キャラクターリストも更新
-        updatedCharacters = prev.characters.map(c => 
-          c.id === char.id ? char : c
-        );
+          // キャラクターリストも更新
+          updatedCharacters = prev.characters.map(c => 
+            c.id === char.id ? char : c
+          );
+        }
       }
       
       // stats更新
