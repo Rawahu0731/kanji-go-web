@@ -427,6 +427,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
 
   // Firebaseからデータを読み込み
   const loadFromFirebase = async (userId: string, preferRemote: boolean = false) => {
+    void preferRemote;
     if (!isFirebaseEnabled) return;
     
     try {
