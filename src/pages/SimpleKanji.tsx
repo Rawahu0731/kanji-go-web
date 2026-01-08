@@ -249,8 +249,8 @@ export default function SimpleKanji() {
   return (
     <div className="simple-kanji-root">
       <header className="simple-header">
-        <h1>シンプル漢字学習</h1>
-        <p>ゲーミフィケーション要素なしの漢字学習ページです</p>
+        <h1>漢字学習</h1>
+        <p>メンテナンス中はこちらで学習を行ってください</p>
       </header>
 
       {viewMode === 'list' ? (
