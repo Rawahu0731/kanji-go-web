@@ -429,6 +429,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const loadFromFirebase = async (userId: string, preferRemote: boolean = false) => {
     void preferRemote;
     if (!isFirebaseEnabled) return;
+    void preferRemote;
     
     try {
       const data = await loadUserData(userId);
@@ -1386,7 +1387,9 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     });
     
     // 全キャラクターから上限に達したものを除外
+    // 注意: `zero` はガチャから絶対に出ないようにする（プレゼント限定）
     Object.keys(CHARACTERS).forEach(id => {
+      if (id === 'zero') return;
       if (!maxedOutCharacterIds.has(id)) {
         availableCharacterIds.add(id);
       }
