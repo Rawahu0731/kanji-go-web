@@ -26,6 +26,7 @@ const Contact = lazy(() => import('./pages/Contact.tsx'))
 const TitleScreen = lazy(() => import('./TitleScreen.tsx'))
 const ChapterSelectPage = lazy(() => import('./ChapterSelectPage.tsx'))
 const Story = lazy(() => import('./Story.tsx'))
+const SimpleKanji = lazy(() => import('./pages/SimpleKanji.tsx'))
 
 // ローディングコンポーネント
 const Loading = () => (
@@ -42,6 +43,7 @@ createRoot(document.getElementById('root')!).render(
             <Routes>
               <Route path="/known-issues" element={<KnownIssues />} />
               <Route path="/announcements" element={<Announcements />} />
+              <Route path="/simple" element={<SimpleKanji />} />
               <Route path="*" element={<Maintenance />} />
             </Routes>
           </BrowserRouter>
@@ -55,6 +57,7 @@ createRoot(document.getElementById('root')!).render(
                     <Route path="/" element={<App />} />
                     <Route path="/known-issues" element={<KnownIssues />} />
                     <Route path="/announcements" element={<Announcements />} />
+                    <Route path="/simple" element={<SimpleKanji />} />
                     <Route path="/shop" element={<Shop />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/collection" element={<CardCollection />} />

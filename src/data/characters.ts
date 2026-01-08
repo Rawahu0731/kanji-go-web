@@ -260,6 +260,8 @@ export const isCharacterUnlocked = (character: Character): boolean => {
 export const getAvailableCharacters = (): Record<string, Character> => {
   const available: Record<string, Character> = {};
   for (const [id, char] of Object.entries(CHARACTERS)) {
+    // 零（zero）はガチャから除外（プレゼント限定）
+    if (id === 'zero') continue;
     if (isCharacterUnlocked(char)) {
       available[id] = char;
     }

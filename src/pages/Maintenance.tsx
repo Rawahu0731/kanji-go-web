@@ -30,7 +30,8 @@ export default function Maintenance() {
         <h1>メンテナンス中</h1>
         <p>ただいまサービスを一時停止しています。ご不便をおかけして申し訳ありません。復旧までお待ちください。</p>
         <p>
-          <a href="/known-issues">不具合情報</a> |
+          <a href="/simple">漢字学習</a> |
+          <a href="/known-issues" style={{ marginLeft: '8px' }}>不具合情報</a> |
           <a href="/announcements" style={{ marginLeft: '8px' }}>お知らせ</a>
         </p>
 

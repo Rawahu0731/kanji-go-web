@@ -432,23 +432,13 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     try {
       const data = await loadUserData(userId);
 
-      // ローカルに保存されているデータ（updatedAt を含む可能性あり）を取得
-      const localRaw = localStorage.getItem(STORAGE_KEY);
-      let localParsed: any = null;
-      if (localRaw) {
-        try { localParsed = JSON.parse(localRaw); } catch (e) { localParsed = null; }
-      }
-
+      // サーバー側のデータをマイグレーション
       const migratedRemote = data ? migrateData(data) : null;
-      const migratedLocal = localParsed ? migrateData(localParsed) : null;
 
-      const remoteTs = migratedRemote ? ((migratedRemote as any).updatedAt || 0) : 0;
-      const localTs = migratedLocal ? ((migratedLocal as any).updatedAt || 0) : 0;
-
-      // サーバ側でシーズンリセット等が行われた場合、remote に season フィールドがセットされる想定。
-      // ローカルに古いシーズンのデータが残っているとリセットが適用されないため、
-      // リモートの season が存在しローカルと異なる場合はローカルを強制的にクリアしてリモートを採用する。
-      if (migratedRemote && (!migratedLocal || migratedLocal.season !== migratedRemote.season)) {
+      // サーバー側でシーズンリセット等が行われた場合、remote に season フィールドがセットされる想定。
+      // ローカルデータは無視して、サーバー側のデータを常に優先する。
+      if (migratedRemote) {
+        // ローカルキャッシュをクリア（サーバーが常に正とする）
         try {
           localStorage.removeItem(STORAGE_KEY);
           localStorage.removeItem('presentBox_state');
@@ -462,50 +452,41 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
           migratedRemote.username = INITIAL_STATE.username;
         }
 
-        setState(migratedRemote);
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedRemote)); } catch (e) { /* ignore */ }
-        console.log('Detected server reset; cleared local data and applied remote minimal state');
-        return;
-      }
-
-      // 最新の方を採用する（ただし未ログイン→ログインの場合は preferRemote フラグでリモートを優先）
-      let chosen: any = null;
-
-      if (preferRemote && migratedRemote) {
-        chosen = migratedRemote;
-      } else if (migratedRemote && remoteTs > localTs) {
-        chosen = migratedRemote;
-      } else if (migratedLocal && localTs >= remoteTs) {
-        chosen = migratedLocal;
-      } else if (migratedRemote) {
-        chosen = migratedRemote;
-      }
-
-      if (chosen) {
         // If customIconUrl references Cloud Storage (gs://...), resolve to a downloadable URL
         try {
-          if (chosen.customIconUrl && typeof chosen.customIconUrl === 'string' && chosen.customIconUrl.startsWith('gs://')) {
-            const resolved = await getStorageDownloadUrl(chosen.customIconUrl);
-            chosen.customIconUrl = resolved;
+          if (migratedRemote.customIconUrl && typeof migratedRemote.customIconUrl === 'string' && migratedRemote.customIconUrl.startsWith('gs://')) {
+            const resolved = await getStorageDownloadUrl(migratedRemote.customIconUrl);
+            migratedRemote.customIconUrl = resolved;
           }
         } catch (e) {
           console.warn('Failed to resolve customIconUrl to download URL:', e);
         }
 
+        setState(migratedRemote);
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedRemote)); } catch (e) { /* ignore */ }
+        console.log('Loaded data from server (server is always preferred)');
+        return;
+      }
+
+      // サーバー側にデータがない場合のみローカルデータを使用
+      const localRaw = localStorage.getItem(STORAGE_KEY);
+      let localParsed: any = null;
+      if (localRaw) {
+        try { localParsed = JSON.parse(localRaw); } catch (e) { localParsed = null; }
+      }
+
+      const migratedLocal = localParsed ? migrateData(localParsed) : null;
+
+      if (migratedLocal) {
         // 名前が空ならデフォルトを設定
-        if (!chosen.username || (typeof chosen.username === 'string' && chosen.username.trim() === '')) {
-          chosen.username = INITIAL_STATE.username;
+        if (!migratedLocal.username || (typeof migratedLocal.username === 'string' && migratedLocal.username.trim() === '')) {
+          migratedLocal.username = INITIAL_STATE.username;
         }
 
-        // 状態を反映してローカルに保存（ローカルが新しい場合でもサーバへ自動送信は行わない）
-        setState(chosen);
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(chosen)); } catch (e) { /* ignore */ }
-
-        if (migratedLocal && localTs >= remoteTs) {
-          console.log('Local data is newer; keeping local state and not pushing to Firebase');
-        } else {
-          console.log('Data loaded from Firebase (remote chosen)');
-        }
+        // 状態を反映してローカルに保存
+        setState(migratedLocal);
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedLocal)); } catch (e) { /* ignore */ }
+        console.log('No server data found; using local data');
       }
     } catch (error) {
       console.error('Failed to load from Firebase:', error);
