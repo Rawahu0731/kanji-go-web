@@ -229,31 +229,34 @@ export default function VisualNovel() {
     try {
       if (Array.isArray(gamState.unlockedScenes)) {
         const remote = new Set<number>(gamState.unlockedScenes as number[]);
-        const local = unlockedScenes;
-        const equal = remote.size === local.size && Array.from(remote).every(n => local.has(n));
-        if (!equal) setUnlockedScenes(new Set(remote));
+        setUnlockedScenes(prev => {
+          const equal = remote.size === prev.size && Array.from(remote).every(n => prev.has(n));
+          return equal ? prev : remote;
+        });
       }
     } catch (e) { /* ignore */ }
 
     try {
       if (Array.isArray(gamState.clearedQuizzes)) {
         const remote = new Set<number>(gamState.clearedQuizzes as number[]);
-        const local = clearedQuizzes;
-        const equal = remote.size === local.size && Array.from(remote).every(n => local.has(n));
-        if (!equal) setClearedQuizzes(new Set(remote));
+        setClearedQuizzes(prev => {
+          const equal = remote.size === prev.size && Array.from(remote).every(n => prev.has(n));
+          return equal ? prev : remote;
+        });
       }
     } catch (e) { /* ignore */ }
 
     try {
       if (Array.isArray(gamState.completedChapters)) {
         const remote = new Set<number>(gamState.completedChapters as number[]);
-        const local = completedChapters;
-        const equal = remote.size === local.size && Array.from(remote).every(n => local.has(n));
-        if (!equal) setCompletedChapters(new Set(remote));
+        setCompletedChapters(prev => {
+          const equal = remote.size === prev.size && Array.from(remote).every(n => prev.has(n));
+          return equal ? prev : remote;
+        });
       }
     } catch (e) { /* ignore */ }
-  // include local sets in deps so equality checks see latest values
-  }, [gamState.unlockedScenes, gamState.clearedQuizzes, gamState.completedChapters, unlockedScenes, clearedQuizzes, completedChapters]);
+  // Removed local sets from deps to prevent infinite loop
+  }, [gamState.unlockedScenes, gamState.clearedQuizzes, gamState.completedChapters]);
 
   // ChapterSelectPageからの章選択・クイズ開始を処理
   useEffect(() => {
@@ -327,19 +330,14 @@ export default function VisualNovel() {
       const data = Array.from(unlockedScenes);
       localStorage.setItem('unlockedScenes', JSON.stringify(data));
       console.log('💾 Saved unlockedScenes:', data);
-      try {
-        // Firebaseへ保存が必要なら gamification に反映する（差分のみ）
-        const remote = new Set(gamState.unlockedScenes || []);
-        const equal = data.length === (gamState.unlockedScenes || []).length && data.every(d => remote.has(d));
-        if (!equal && typeof setStoryProgress === 'function') {
-          setStoryProgress({ unlockedScenes: data });
-        }
-      } catch (e) {
-        // ignore
+      // Firebaseへも保存
+      if (typeof setStoryProgress === 'function') {
+        setStoryProgress({ unlockedScenes: data });
       }
     } catch (e) {
       console.error('❌ Error saving unlockedScenes:', e);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unlockedScenes]);
 
   // clearedQuizzes を保存
@@ -348,16 +346,14 @@ export default function VisualNovel() {
       const data = Array.from(clearedQuizzes);
       localStorage.setItem('clearedQuizzes', JSON.stringify(data));
       console.log('💾 Saved clearedQuizzes:', data);
-      try {
-        const remote = new Set(gamState.clearedQuizzes || []);
-        const equal = data.length === (gamState.clearedQuizzes || []).length && data.every(d => remote.has(d));
-        if (!equal && typeof setStoryProgress === 'function') {
-          setStoryProgress({ clearedQuizzes: data });
-        }
-      } catch (e) {}
+      // Firebaseへも保存
+      if (typeof setStoryProgress === 'function') {
+        setStoryProgress({ clearedQuizzes: data });
+      }
     } catch (e) {
       console.error('❌ Error saving clearedQuizzes:', e);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clearedQuizzes]);
 
   // completedChapters を保存
@@ -366,16 +362,14 @@ export default function VisualNovel() {
       const data = Array.from(completedChapters);
       localStorage.setItem('completedChapters', JSON.stringify(data));
       console.log('💾 Saved completedChapters:', data);
-      try {
-        const remote = new Set(gamState.completedChapters || []);
-        const equal = data.length === (gamState.completedChapters || []).length && data.every(d => remote.has(d));
-        if (!equal && typeof setStoryProgress === 'function') {
-          setStoryProgress({ completedChapters: data });
-        }
-      } catch (e) {}
+      // Firebaseへも保存
+      if (typeof setStoryProgress === 'function') {
+        setStoryProgress({ completedChapters: data });
+      }
     } catch (e) {
       console.error('❌ Error saving completedChapters:', e);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completedChapters]);
 
   // ページ全体のスクロールを無効化する（コンポーネントマウント時）
@@ -474,7 +468,8 @@ export default function VisualNovel() {
   const openChapterSelect = () => {
     if (pendingChapterSelectRef.current) return;
     pendingChapterSelectRef.current = true;
-                  openChapterSelect();
+    stopAllAudio();
+    setShowChapterSelect(true);
     // clear the flag after a short window
     setTimeout(() => { pendingChapterSelectRef.current = false; }, 500);
   };

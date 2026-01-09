@@ -1656,22 +1656,21 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   };
 
   // ストーリー進行をまとめて設定（配列を上書き）
-  const setStoryProgress = (progress: { unlockedScenes?: number[]; clearedQuizzes?: number[]; completedChapters?: number[] }) => {
+  const setStoryProgress = useCallback((progress: { unlockedScenes?: number[]; clearedQuizzes?: number[]; completedChapters?: number[] }) => {
     setState(prev => ({
       ...prev,
       unlockedScenes: progress.unlockedScenes ?? prev.unlockedScenes,
       clearedQuizzes: progress.clearedQuizzes ?? prev.clearedQuizzes,
       completedChapters: progress.completedChapters ?? prev.completedChapters
     }));
-  };
+  }, []);
 
   // 装備中のキャラクターのブースト効果を取得
   const getCharacterBoost = (type: 'xp' | 'coin'): number => {
     if (!state.equippedCharacter) return 1;
-    
     const char = state.equippedCharacter;
     const effectValue = getCharacterEffectValue(char);
-    
+
     if (char.effect.type === 'both_boost') {
       return effectValue;
     } else if (char.effect.type === 'xp_boost' && type === 'xp') {
@@ -1679,7 +1678,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     } else if (char.effect.type === 'coin_boost' && type === 'coin') {
       return effectValue;
     }
-    
+
     return 1;
   };
 
