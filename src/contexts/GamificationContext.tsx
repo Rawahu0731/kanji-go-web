@@ -1401,8 +1401,9 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     }
     
     // 利用可能なキャラクターのみでガチャを引く
+    // 追加の安全策: ここでも zero を明示的に除外
     const availableCharacters = Object.fromEntries(
-      Object.entries(CHARACTERS).filter(([id]) => availableCharacterIds.has(id))
+      Object.entries(CHARACTERS).filter(([id]) => availableCharacterIds.has(id) && id !== 'zero')
     ) as Record<string, Character>;
     
     const results = pullGacha(count, guaranteedRarity, availableCharacters);

@@ -244,7 +244,11 @@ export const GACHA_RATES = {
 
 // レアリティごとのキャラクターリストを取得
 export const getCharactersByRarity = (rarity: CharacterRarity, characterPool: Record<string, Character> = CHARACTERS): Character[] => {
-  return Object.values(characterPool).filter(char => char.rarity === rarity && isCharacterUnlocked(char));
+  return Object.values(characterPool).filter(char => 
+    char.rarity === rarity && 
+    isCharacterUnlocked(char) && 
+    char.id !== 'zero'  // 零はガチャから除外（プレゼント限定）
+  );
 };
 
 // キャラクターが解放されているかチェック
@@ -299,7 +303,9 @@ export const pullGacha = (count: number = 1, guaranteedRarity?: CharacterRarity,
     
     // 選択したレアリティにキャラクターがいない場合は、他のレアリティから選択
     if (charactersOfRarity.length === 0) {
-      const allAvailable = Object.values(availablePool).filter(char => isCharacterUnlocked(char));
+      const allAvailable = Object.values(availablePool).filter(char => 
+        isCharacterUnlocked(char) && char.id !== 'zero'  // 零はガチャから除外（プレゼント限定）
+      );
       if (allAvailable.length === 0) continue;
       const randomChar = allAvailable[Math.floor(Math.random() * allAvailable.length)];
       results.push(randomChar);
@@ -318,7 +324,9 @@ export const pullGacha = (count: number = 1, guaranteedRarity?: CharacterRarity,
     if (!hasGuaranteed) {
       // 確定レアリティ以上のキャラクターをランダムに選択
       const guaranteedChars = Object.values(availablePool).filter(char => 
-        RARITY_ORDER[char.rarity] >= RARITY_ORDER[guaranteedRarity] && isCharacterUnlocked(char)
+        RARITY_ORDER[char.rarity] >= RARITY_ORDER[guaranteedRarity] && 
+        isCharacterUnlocked(char) &&
+        char.id !== 'zero'  // 零はガチャから除外（プレゼント限定）
       );
       if (guaranteedChars.length > 0) {
         const guaranteedChar = guaranteedChars[Math.floor(Math.random() * guaranteedChars.length)];
