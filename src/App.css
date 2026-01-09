@@ -1125,6 +1125,46 @@ h1 {
   font-size: 1.1em;
 }
 
+.extra-char {
+  display: inline-block;
+  padding: 2px 4px;
+  margin: 0 1px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.extra-char:hover {
+  background: rgba(255, 235, 59, 0.18);
+}
+
+.selected-char {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  border: 1px solid #f0c420;
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
+.wrong-highlight {
+  background: rgba(255, 108, 108, 0.18);
+  color: #c92a2a;
+  font-weight: 700;
+  padding: 0 2px;
+  border-radius: 4px;
+}
+
+.user-selected-wrong {
+  outline: 2px dashed rgba(255, 108, 108, 0.5);
+  border-radius: 4px;
+}
+
+.correction-correct {
+  background: rgba(255, 108, 108, 0.08);
+  color: #c92a2a;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
 .extra-answer {
   background: #f8f9fa;
   color: #1a1a1a;

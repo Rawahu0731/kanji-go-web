@@ -116,22 +116,23 @@ function App() {
       console.warn('microCMS sync failed on App mount:', err);
     });
   }, [syncFromMicroCMS]);
-
+  // 調査中の不具合を取得
   useEffect(() => {
     async function fetchInvestigatingIssues() {
       try {
         const issues = await getKnownIssues();
+        // status が investigating のものだけフィルタ
         const investigating = issues.filter(issue => {
           const status = Array.isArray(issue.status) ? issue.status[0] : issue.status;
           return status === 'investigating';
         });
         setInvestigatingIssues(investigating);
-        
+
         // LocalStorageから閉じた状態を復元
         const DISMISSED_ISSUES_KEY = 'dismissed_issue_banners';
         const dismissedStr = localStorage.getItem(DISMISSED_ISSUES_KEY);
         const dismissed = dismissedStr ? JSON.parse(dismissedStr) : [];
-        
+
         // すべての調査中の不具合が閉じられている場合のみバナーを非表示
         const allDismissed = investigating.every(issue => dismissed.includes(issue.id));
         if (allDismissed && investigating.length > 0) {
@@ -141,7 +142,7 @@ function App() {
         console.error('不具合情報の取得に失敗:', error);
       }
     }
-    
+
     fetchInvestigatingIssues();
   }, []);
 
@@ -522,7 +523,7 @@ function App() {
                   marginTop: '4px',
                   fontWeight: 'bold'
                 }}>
-                  ⏰ 期間限定: 2025/11/21 00:00 〜 2025/12/5 23:59
+                  ⏰ 期間限定: 2026/01/13 00:00 〜 2026/01/26 23:59
                 </span>
               )}
             </p>

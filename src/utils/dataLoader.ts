@@ -2,15 +2,15 @@ import { type Item, type Level } from '../types/kanji';
 import { parseCSVLine } from './kanjiUtils';
 
 export async function loadKanjiData(selectedLevel: Level): Promise<Item[]> {
-  // エクストラの期間限定チェック
+  // エクストラは指定期間のみ利用可能にする
   if (selectedLevel === 'extra') {
     const urlParams = new URLSearchParams(window.location.search);
     const debugDateStr = urlParams.get('debugDate');
     const now = debugDateStr ? new Date(debugDateStr) : new Date();
-    
-    const startDate = new Date('2025-11-21T00:00:00+09:00');
-    const endDate = new Date('2025-12-05T23:59:59+09:00');
-    
+
+    const startDate = new Date('2026-01-13T00:00:00+09:00');
+    const endDate = new Date('2026-01-26T23:59:59+09:00');
+
     if (now < startDate || now > endDate) {
       throw new Error('エクストラモードは現在利用できません');
     }
@@ -48,15 +48,33 @@ export async function loadKanjiData(selectedLevel: Level): Promise<Item[]> {
   let mapped: Item[];
   
   if (selectedLevel === 'extra') {
-    mapped = data.map(d => ({
-      filename: d.answer || '',
-      reading: d.answer || '',
-      meaning: '',
-      imageUrl: '',
-      sentence: d.sentence || '',
-      katakana: d.katakana || '',
-      answer: d.answer || '',
-    } as Item));
+    mapped = data.map(d => {
+      const hasAnswer2 = (d.answer2 || '').trim() !== '';
+      if (hasAnswer2) {
+        // 誤字訂正問題: sentence に誤字が含まれており、answer に誤字、answer2 に正しい字が入る
+        return {
+          filename: '',
+          reading: '',
+          meaning: '',
+          imageUrl: '',
+          sentence: d.sentence || '',
+          answer: d.answer || '', // 誤字（文章中に出ている文字）
+          answer2: d.answer2 || '', // 正しい字
+          questionType: 'correction'
+        } as Item;
+      }
+
+      // 読み問題（answer2 が空）: sentence に語（または単語）が入り、answer は読み
+      return {
+        filename: '',
+        reading: d.answer || '',
+        meaning: '',
+        imageUrl: '',
+        sentence: d.sentence || '',
+        answer: d.answer || '',
+        questionType: 'reading'
+      } as Item;
+    });
   } else {
     const filenameField = header.includes('path') ? 'path' : (header.includes('filename') ? 'filename' : header[0]);
     const kanjiField = header.includes('kanji') ? 'kanji' : null;

@@ -205,16 +205,23 @@ const ListMode = memo(({
               <div 
                 style={{ marginBottom: '12px', fontSize: '20px', lineHeight: '1.8' }}
                 dangerouslySetInnerHTML={{
-                  __html: it.sentence?.replace(
-                    it.katakana || '',
-                    `<span class="katakana-highlight">${it.katakana}</span>`
-                  ) || ''
+                  __html: (() => {
+                    const s = it.sentence || '';
+                    if (it.katakana && it.katakana.trim()) {
+                      return s.replace(it.katakana, `<span class="katakana-highlight">${it.katakana}</span>`);
+                    }
+                    return s;
+                  })() || ''
                 }}
               />
               {studyMode ? (
                 isRevealed ? (
                   <div style={{ color: '#667eea', fontWeight: 'bold', fontSize: '22px', marginTop: '8px' }}>
-                    答え: {it.answer}
+                    {it.answer2 ? (
+                      <span>答え: {it.answer} → {it.answer2}</span>
+                    ) : (
+                      <span>答え: {it.answer}</span>
+                    )}
                   </div>
                 ) : (
                   <div style={{ color: '#999', fontSize: '18px', fontStyle: 'italic' }}>
@@ -223,7 +230,14 @@ const ListMode = memo(({
                 )
               ) : (
                 <div style={{ color: '#667eea', fontWeight: 'bold', fontSize: '22px', marginTop: '8px' }}>
-                  {it.katakana} → {it.answer}
+                  {it.answer2 ? (
+                    <span>{it.answer} → {it.answer2}</span>
+                  ) : (it.questionType === 'reading' ? (
+                    // 読み問題はクォートを外して表示（赤い送り仮名は formatReadingWithOkurigana が担当）
+                    <span>読み: {formatReadingWithOkurigana(it.reading || it.answer || '')}</span>
+                  ) : (
+                    <span>{it.katakana} → {it.answer}</span>
+                  ))}
                 </div>
               )}
             </div>

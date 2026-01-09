@@ -57,6 +57,7 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
   const [quizItems, setQuizItems] = useState<Item[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
+  const [selectedCharIndex, setSelectedCharIndex] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [score, setScore] = useState({ correct: 0, incorrect: 0 });
@@ -97,6 +98,7 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
     setCurrentIndex(0);
     setScore({ correct: 0, incorrect: 0 });
     setCurrentStreak(0);
+    setSelectedCharIndex(null);
 
     // エンドレス開始演出
     if (endless) {
@@ -199,7 +201,21 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
     let correct = false;
     
     if (selectedLevel === 'extra') {
-      correct = userInput === quizItems[currentIndex].answer;
+      const item = quizItems[currentIndex];
+      if (item.questionType === 'correction') {
+        const sentence = item.sentence || '';
+        const selectedChar = (selectedCharIndex !== null && sentence.length > selectedCharIndex) ? sentence[selectedCharIndex] : '';
+        correct = !!(selectedChar && item.answer && (selectedChar === item.answer) && (userInput === (item.answer2 || '')));
+      } else {
+        const correctReading = item.reading || item.answer || '';
+        const correctOptions = correctReading.split('、').map(o => o.trim()).filter(Boolean);
+        const normalizedInput = userInput.replace(/\s+/g, '');
+        correct = correctOptions.some(option => {
+          const core = extractReadingCore(option);
+          const full = readingWithoutQuotes(option);
+          return normalizedInput === core || normalizedInput === full;
+        });
+      }
     } else {
       const correctReading = quizItems[currentIndex].reading;
       const correctOptions = correctReading.split('、');
@@ -349,6 +365,7 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
       setCurrentIndex(nextIndex);
       setUserAnswer('');
       setShowResult(false);
+      setSelectedCharIndex(null);
       setXpDebugInfo(null); // デバッグ情報をクリア
     } else {
       if (endless) {
@@ -359,6 +376,7 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
         setCurrentIndex(nextIndex);
         setUserAnswer('');
         setShowResult(false);
+        setSelectedCharIndex(null);
         setXpDebugInfo(null);
       } else {
         alert(`問題終了！\n正解: ${score.correct}問\n不正解: ${score.incorrect}問`);
@@ -578,30 +596,67 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
       <div className="quiz-card">
         {selectedLevel === 'extra' ? (
           <div className="extra-quiz-content">
-            <div 
-              className="extra-quiz-sentence"
-              dangerouslySetInnerHTML={{ 
-                __html: quizItems[currentIndex].sentence?.replace(
-                  quizItems[currentIndex].katakana || '',
-                  `<span class="katakana-highlight-large">${quizItems[currentIndex].katakana}</span>`
-                ) || '' 
-              }}
-            />
-            <div className="quiz-input-container">
-              <label className="quiz-label">
-                ハイライトされたカタカナを漢字に変換してください
-              </label>
-              <input
-                ref={inputRef}
-                type="text"
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                disabled={showResult}
-                className="quiz-input"
-                placeholder="漢字で入力"
-                autoFocus
-              />
-            </div>
+            {(() => {
+              const item = quizItems[currentIndex];
+              if (item.questionType === 'correction') {
+                const sentence = item.sentence || '';
+                return (
+                  <>
+                    <div className="extra-quiz-sentence">
+                      {Array.from(sentence).map((ch, i) => (
+                        <span
+                          key={i}
+                          className={`extra-char ${selectedCharIndex === i ? 'selected-char' : ''}`}
+                          onClick={() => { if (!showResult) setSelectedCharIndex(i); }}
+                          role="button"
+                          aria-label={`文字${i + 1}`}
+                        >
+                          {ch}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="quiz-input-container">
+                      <label className="quiz-label">
+                        間違っている漢字を選択して、正しい漢字を入力してください
+                      </label>
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={userAnswer}
+                        onChange={(e) => setUserAnswer(e.target.value)}
+                        disabled={showResult}
+                        className="quiz-input"
+                        placeholder="正しい漢字を入力"
+                        autoFocus
+                      />
+                    </div>
+                  </>
+                );
+              }
+
+              return (
+                <>
+                  <div className="extra-quiz-sentence">
+                    <span className="extra-word">{item.sentence}</span>
+                  </div>
+                  <div className="quiz-input-container">
+                    <label className="quiz-label">
+                      この語の読みを答えてください
+                    </label>
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={userAnswer}
+                      onChange={(e) => setUserAnswer(e.target.value)}
+                      disabled={showResult}
+                      className="quiz-input"
+                      placeholder="ひらがなで入力"
+                      autoFocus
+                    />
+                  </div>
+                </>
+              );
+            })()}
           </div>
         ) : (
           <>
@@ -659,7 +714,15 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
           <div className="quiz-buttons">
             <button
               onClick={checkAnswer}
-              disabled={!userAnswer.trim()}
+              disabled={(() => {
+                if (selectedLevel === 'extra') {
+                  const item = quizItems[currentIndex];
+                  if (item?.questionType === 'correction') {
+                    return !(userAnswer.trim() && selectedCharIndex !== null);
+                  }
+                }
+                return !userAnswer.trim();
+              })()}
               className="submit-button"
             >
               解答する
@@ -685,10 +748,40 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
             {/* デバッグ表示は無効化 */}
             <div className="correct-answer">
               {selectedLevel === 'extra' ? (
-                <>
-                  {isCorrect ? '答え: ' : '正解: '}
-                  <span className="correct-answer-text">{quizItems[currentIndex].answer}</span>
-                </>
+                (() => {
+                  const item = quizItems[currentIndex];
+                  if (item.questionType === 'correction') {
+                    const sentence = item.sentence || '';
+                    return (
+                      <>
+                        <div className="extra-quiz-sentence" style={{ marginBottom: '12px' }}>
+                          {Array.from(sentence).map((ch, i) => {
+                            const isWrongChar = item.answer && ch === item.answer;
+                            const isUserSelected = selectedCharIndex === i;
+                            const classNames = [isWrongChar ? 'wrong-highlight' : '', isUserSelected && ch !== item.answer ? 'user-selected-wrong' : '', selectedCharIndex === i ? 'selected-char' : ''].filter(Boolean).join(' ');
+                            return (
+                              <span key={i} className={classNames}>
+                                {ch}
+                              </span>
+                            );
+                          })}
+                        </div>
+                        <div>
+                          {isCorrect ? '答え: ' : '正解: '}
+                          <span className="correction-correct">{item.answer2}</span>
+                        </div>
+                      </>
+                    );
+                  }
+
+                  // reading
+                  return (
+                    <>
+                      {isCorrect ? '答え: ' : '正解: '}
+                      <span className="correct-answer-text">{formatReadingWithOkurigana(item.reading || item.answer || '')}</span>
+                    </>
+                  );
+                })()
               ) : (
                 <>
                   {isCorrect ? '読み方: ' : '正解: '}
