@@ -11,10 +11,9 @@ type Props = {
   onSelectChapter: (chapterIndex: number) => void;
   onStartQuiz: (chapterIndex: number) => void;
   onBack: () => void;
-  onStartEndroll?: () => void;
 };
 
-export default function ChapterSelect({ chapters, onSelectChapter, onStartQuiz, onBack, onStartEndroll }: Props) {
+export default function ChapterSelect({ chapters, onSelectChapter, onStartQuiz, onBack }: Props) {
   
   return (
     <div style={{
@@ -29,14 +28,7 @@ export default function ChapterSelect({ chapters, onSelectChapter, onStartQuiz, 
       overflowY: 'auto',
       padding: '40px 20px'
     }}>
-      {onStartEndroll && (
-        <button
-          onClick={onStartEndroll}
-          style={{ position: 'fixed', left: 18, bottom: 18, zIndex: 999, padding: '8px 10px', borderRadius: 6, background: 'rgba(0,0,0,0.6)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer' }}
-        >
-          エンドロールを再生
-        </button>
-      )}
+      {/* エンドロール再生ボタンは UI から削除 */}
       <div style={{maxWidth: '1000px', width: '100%'}}>
         <h1 style={{fontSize: 32, textAlign: 'center', marginBottom: 6, color: '#0b2545'}}>意味を持たないままで</h1>
         <p style={{textAlign: 'center', opacity: 0.8, marginBottom: 28, color: '#64748b'}}>読みたい章を選んでください</p>
@@ -132,24 +124,7 @@ export default function ChapterSelect({ chapters, onSelectChapter, onStartQuiz, 
                       {chapter.isQuizCleared ? '✓ クイズを見る' : chapter.isCompleted ? '📝 クイズに挑戦' : '🔒 章を読んで解放'}
                     </button>
                   )}
-                  {chapter.index === chapters.length - 1 && chapter.isCompleted && onStartEndroll && (
-                    <button
-                      onClick={() => onStartEndroll()}
-                      style={{
-                        flex: 1,
-                        padding: '10px 16px',
-                        fontSize: 14,
-                        borderRadius: 10,
-                        cursor: 'pointer',
-                        background: '#0b6cff',
-                        color: '#fff',
-                        border: 'none',
-                        boxShadow: '0 6px 18px rgba(11,108,255,0.12)'
-                      }}
-                    >
-                      🎬 エンドロールを見る
-                    </button>
-                  )}
+                  {/* 終章のエンドロールボタンは削除 */}
                 </div>
               )}
             </div>

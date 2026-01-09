@@ -1091,17 +1091,7 @@ export default function VisualNovel() {
             setShowTitle(true);
             setShowChapterSelect(false);
           }}
-          onStartEndroll={() => {
-            console.log('🎬 onStartEndroll called from button');
-            setShowChapterSelect(false);
-            stopAllAudio();
-            if (!pendingEndroll && !showEndroll) {
-              setPendingEndroll(true);
-              setTimeout(() => {
-                setShowEndroll(true);
-              }, ENDROLL_FADE_MS);
-            }
-          }}
+          
         />
         {quizOpen && quizTargetScene !== null && chapterQuizzes[quizTargetScene] && (
           <Quiz
