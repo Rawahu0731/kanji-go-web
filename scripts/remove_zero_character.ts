@@ -13,13 +13,13 @@
  * WARNING: This script performs destructive updates when not run with `--dryRun`.
  */
 
-import admin from 'firebase-admin';
+import * as admin from 'firebase-admin';
 import fs from 'fs';
 import path from 'path';
 import minimist from 'minimist';
 
 interface Args {
-  serviceAccount?: string;
+  serviceAccount?: string
   dryRun?: boolean;
 }
 
@@ -43,9 +43,16 @@ if (!fs.existsSync(keyPath)) {
 const serviceAccountJson = fs.readFileSync(keyPath, 'utf-8');
 const serviceAccount = JSON.parse(serviceAccountJson);
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+try {
+  console.log('Loaded serviceAccount keys:', Object.keys(serviceAccount).slice(0, 3).join(', '));
+  console.log('admin.credential present:', typeof (admin as any).credential);
+  admin.initializeApp({
+    credential: (admin as any).credential.cert(serviceAccount)
+  });
+} catch (err) {
+  console.error('Failed to initialize firebase-admin:', err);
+  process.exit(1);
+}
 
 const db = admin.firestore();
 

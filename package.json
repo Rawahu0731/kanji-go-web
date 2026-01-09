@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build --logLevel=warn",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "remove-zero:dry": "node --loader ts-node/esm scripts/remove_zero_character.ts --dryRun --serviceAccount=./secrets/kanji-study-50c28-firebase-adminsdk-fbsvc-5267decc62.json",
+    "remove-zero": "node --loader ts-node/esm scripts/remove_zero_character.ts --serviceAccount=./secrets/kanji-study-50c28-firebase-adminsdk-fbsvc-5267decc62.json"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
