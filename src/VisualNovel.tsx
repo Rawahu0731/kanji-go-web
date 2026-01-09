@@ -291,7 +291,7 @@ export default function VisualNovel() {
         setQuizTargetScene(chapterIndex);
         setQuizOpen(true);
         setShowTitle(false);
-        setShowChapterSelect(true); // クイズ中は章選択画面を表示したまま
+        openChapterSelect(); // クイズ中は章選択画面を表示したまま
       }
       localStorage.removeItem('quizChapter');
       localStorage.removeItem('startQuiz');
@@ -469,6 +469,15 @@ export default function VisualNovel() {
   const pendingAdvanceTimeoutRef = React.useRef<number | null>(null);
   // timeout id for auto-advancing from chapter title
   const pendingTitleTimeoutRef = React.useRef<number | null>(null);
+  // prevent rapid toggling of chapter select which can cause UI thrash
+  const pendingChapterSelectRef = React.useRef(false);
+  const openChapterSelect = () => {
+    if (pendingChapterSelectRef.current) return;
+    pendingChapterSelectRef.current = true;
+                  openChapterSelect();
+    // clear the flag after a short window
+    setTimeout(() => { pendingChapterSelectRef.current = false; }, 500);
+  };
   // keep latest indices in refs so async handlers can verify current position
   const currentSceneIndexRef = React.useRef(currentSceneIndex);
   const currentDialogueIndexRef = React.useRef(currentDialogueIndex);
@@ -784,7 +793,7 @@ export default function VisualNovel() {
                 } else {
                   console.log('🎬 Returning to chapter select');
                   setCompletedChapters((prev) => new Set(Array.from(prev).concat([localScene])));
-                  setShowChapterSelect(true);
+                  openChapterSelect();
                 }
               }
             }
@@ -934,7 +943,7 @@ export default function VisualNovel() {
         setUnlockedScenes((prev) => new Set(Array.from(prev).concat([nextScene])));
       }
       // 章選択画面に戻る
-      setShowChapterSelect(true);
+      openChapterSelect();
     }
     setQuizTargetScene(null);
     setQuizOpen(false);
@@ -984,7 +993,7 @@ export default function VisualNovel() {
       // 章の終わりに到達 → 章を読了済みとしてマーク
       setCompletedChapters((prev) => new Set(Array.from(prev).concat([currentSceneIndex])));
       // 章選択画面に戻る
-      setShowChapterSelect(true);
+      openChapterSelect();
     }
   };
 
@@ -1021,7 +1030,7 @@ export default function VisualNovel() {
   if (showTitle) {
     return <TitleScreen onStart={() => {
       setShowTitle(false);
-      setShowChapterSelect(true);
+      openChapterSelect();
     }} />;
   }
 
@@ -1464,7 +1473,7 @@ export default function VisualNovel() {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setShowChapterSelect(true);
+            openChapterSelect();
           }}
           style={{padding: '6px 8px', borderRadius: 4, cursor: 'pointer', marginLeft: 8}}
         >
