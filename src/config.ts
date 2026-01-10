@@ -2,7 +2,7 @@
 
 // メンテナンスを有効にするかどうか。
 // 優先順位: 環境変数 `VITE_MAINTENANCE` が設定されていればそれを使用。
-export const isMaintenance = false;
+export const isMaintenance = true;
 
 // メンテナンスバイパス用のパスワード。Vite の環境変数を利用してください。
 // .env に `VITE_MAINTENANCE_PASSWORD=yourpassword` を設定すると有効になります。
