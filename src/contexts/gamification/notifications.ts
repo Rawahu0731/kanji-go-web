@@ -4,6 +4,12 @@ import type { OwnedCharacter } from '../../data/characters';
 // 通知表示用のヘルパー関数
 export function showCharacterLevelUpNotification(character: OwnedCharacter, newLevel: number) {
   const notification = document.createElement('div');
+  // icon が画像パスかどうかを判定して適切にレンダリングする
+  const isImage = typeof character.icon === 'string' && (character.icon.startsWith('/') || character.icon.startsWith('http') || /\.(png|jpe?g|gif|webp|svg)$/i.test(character.icon));
+  const iconMarkup = isImage
+    ? `<img src="${character.icon}" alt="${character.name}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;" loading="lazy"/>`
+    : `<div style="font-size: 1.75rem;">${character.icon}</div>`;
+
   notification.innerHTML = `
     <div style="
       position: fixed;
@@ -23,7 +29,7 @@ export function showCharacterLevelUpNotification(character: OwnedCharacter, newL
       align-items: center;
       min-width: 220px;
     ">
-      <div style="font-size: 1.75rem;">${character.icon}</div>
+      ${iconMarkup}
       <div>
         <div style="font-weight:700;">${character.name}</div>
         <div style="font-size:0.9rem; opacity:0.95;">Lv.${newLevel}</div>

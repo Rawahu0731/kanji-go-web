@@ -18,6 +18,13 @@ const STORY_BACKGROUNDS = [
   'bg_classroom.jpg'
 ];
 
+// エンドロールのスクロール速度（ピクセル/秒）
+// この値を変更すると流れる速度が変わります
+const ENDROLL_SCROLL_SPEED_PX_PER_SEC = 50;
+
+// 最終メッセージが表示されるまでの時間（秒）
+const ENDROLL_FINAL_MESSAGE_DELAY_SEC = 320;
+
 // Support both array-style import and object-style import
 const normalizeEndroll = (raw: any) => {
   // Handle case where JSON root is an array wrapping an object: [{ lines: [...] }]
@@ -35,16 +42,6 @@ const normalizeEndroll = (raw: any) => {
   return { lines: [], finalMessage: '漢字勉強サイト', gapBeforeFinal: 8 };
 };
 
-// Component will fetch JSON at runtime from the public folder and normalize it into state.
-
-// Configure the full-scroll duration (seconds) here as a variable.
-// Change this value to adjust speed (e.g. 300 for 5 minutes).
-export const ENDROLL_DURATION_SEC =320;
-
-// Multiplier to adjust visual speed. Setting to 2 makes the movement half as fast
-// (animation duration = ENDROLL_DURATION_SEC * SCROLL_DURATION_MULTIPLIER).
-const SCROLL_DURATION_MULTIPLIER = 1.9;
-
 type EndRollProps = {
   onBackToTitle?: () => void;
 };
@@ -53,10 +50,8 @@ export default function EndRoll({ onBackToTitle }: EndRollProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const gamification = useGamification();
   const presentBox = usePresentBox();
-  // Use variable-defined duration (seconds). To change speed, edit
-  // `ENDROLL_DURATION_SEC` at top of this file.
-  const rollDurationSec = ENDROLL_DURATION_SEC;
-  const effectiveRollDuration = rollDurationSec * SCROLL_DURATION_MULTIPLIER;
+  // アニメーション時間は速度から計算される
+  const [effectiveRollDuration, setEffectiveRollDuration] = useState(320);
   const startOffsetSec = 0; // Start from the beginning of the audio
   const [showFinal, setShowFinal] = useState(false);
   const [showBackButton, setShowBackButton] = useState(false);
@@ -258,68 +253,61 @@ export default function EndRoll({ onBackToTitle }: EndRollProps) {
   // the first pass completes and the final message is shown once.
   const longCredits = Array.from(lines);
 
-  // Detect the last visible credit line: when it has entered the viewport once
-  // and then becomes non-intersecting (left the viewport), we treat that as
-  // the official end of the roll and reveal the final message.
   const lastLineRef = useRef<HTMLParagraphElement | null>(null);
-
-  // Track the credits container so we can compute a precise animation
-  // distance: move the credits up by (creditsHeight + viewportHeight).
   const creditsRef = useRef<HTMLDivElement | null>(null);
 
+  // 速度から時間を計算してアニメーションを設定
   useEffect(() => {
+    console.log('🎬 Endroll useEffect triggered, audioReady:', audioReady);
+    if (!audioReady) {
+      console.log('⏸️ Audio not ready yet');
+      return;
+    }
     const creditsEl = creditsRef.current;
-    if (!creditsEl) return;
-    if (showFinal) return; // avoid recalculation once final shown
-    const computeAndSet = () => {
-      const creditsHeight = creditsEl.scrollHeight;
+    console.log('🎬 creditsEl:', creditsEl);
+    if (!creditsEl) {
+      console.log('❌ creditsEl is null');
+      return;
+    }
+    if (showFinal) {
+      console.log('⏭️ showFinal is true, skipping');
+      return;
+    }
+    
+    const setAnimation = () => {
+      console.log('🎬 setAnimation called');
       const vh = window.innerHeight || document.documentElement.clientHeight;
-      // Pause animation, set vars, then resume to ensure vars take effect before animation runs
+      const creditsHeight = creditsEl.scrollHeight;
+      
+      // 移動距離 = 画面の高さ + コンテンツの高さ
+      const totalDistance = vh + creditsHeight;
+      
+      // 時間 = 距離 ÷ 速度
+      const duration = totalDistance / ENDROLL_SCROLL_SPEED_PX_PER_SEC;
+      
+      console.log('🎬 Endroll Animation Settings:');
+      console.log('  Speed:', ENDROLL_SCROLL_SPEED_PX_PER_SEC, 'px/s');
+      console.log('  Distance:', totalDistance, 'px');
+      console.log('  Duration:', duration, 's');
+      
+      setEffectiveRollDuration(duration);
+      
       creditsEl.style.animationPlayState = 'paused';
-      // start: place the credits fully below the viewport so they scroll up into view
-      creditsEl.style.setProperty('--start', `${creditsHeight}px`);
-
-      // Compute a precise end translation so that the bottom of the last line
-      // is exactly at or above the top of the viewport when the animation ends.
-      const last = lastLineRef.current;
-      let endPx = -vh; // fallback
-      if (last) {
-        const lastTop = last.offsetTop;
-        const lastBottom = lastTop + last.offsetHeight;
-        // Based on layout where credits top = (vh - creditsHeight), the
-        // last line bottom on screen after translateY(X) is:
-        //   (vh - creditsHeight) + lastBottom + X
-        // We want that to be 0 at animation end, so solve for X:
-        //   X = - (vh - creditsHeight + lastBottom)
-        endPx = - (vh - creditsHeight + lastBottom);
-      }
-      creditsEl.style.setProperty('--end', `${endPx}px`);
-
-      // Ensure CSS uses the intended duration via a CSS variable as well
-      creditsEl.style.setProperty('--roll-duration', `${effectiveRollDuration}s`);
-      // Ensure the animation duration is applied after vars are set to avoid
-      // browsers starting the animation with a stale duration value.
-      creditsEl.style.animationDuration = `${effectiveRollDuration}s`;
-      // Force reflow then resume animation so the computed vars are used from the first frame
+      // 開始位置: 画面下の外側（コンテンツ全体が見えない位置）
+      creditsEl.style.setProperty('--start', `${vh}px`);
+      // 終了位置: 画面上の外側（コンテンツ全体が画面外に出る位置）
+      creditsEl.style.setProperty('--end', `${-creditsHeight}px`);
+      creditsEl.style.setProperty('--roll-duration', `${duration}s`);
+      creditsEl.style.animationDuration = `${duration}s`;
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       creditsEl.offsetHeight;
       creditsEl.style.animationPlayState = 'running';
     };
-    computeAndSet();
-    // Recompute after fonts have loaded (font metrics can change scrollHeight)
-    if ((document as any).fonts && typeof (document as any).fonts.ready?.then === 'function') {
-      (document as any).fonts.ready.then(() => {
-        setTimeout(computeAndSet, 50);
-      }).catch(()=>{});
-    }
-    // recompute if window resizes
-    window.addEventListener('resize', computeAndSet);
-    return () => window.removeEventListener('resize', computeAndSet);
-  }, [longCredits.length, rollDurationSec]);
+    
+    setAnimation();
+  }, [audioReady, showFinal]);
 
-  // Ensure the final message appears at the original configured duration
-  // (`rollDurationSec`) even if the visible credits animation runs longer
-  // (e.g. when `SCROLL_DURATION_MULTIPLIER` slows the visual movement).
+  // 固定時間後に最終メッセージを表示（計算なし）
   useEffect(() => {
     if (!audioReady) return;
     if (showFinal) return; // already shown
@@ -327,17 +315,17 @@ export default function EndRoll({ onBackToTitle }: EndRollProps) {
     t = window.setTimeout(() => {
       // guard to avoid redundant state updates
       setShowFinal((prev) => prev || true);
-    }, rollDurationSec * 1000);
+    }, ENDROLL_FINAL_MESSAGE_DELAY_SEC * 1000);
     return () => clearTimeout(t);
-  }, [audioReady, rollDurationSec]);
+  }, [audioReady]);
 
   // showFinal/ended will be set when the CSS animation ends (onAnimationEnd below)
 
   return (
     <div className="endroll-root" style={{position: 'fixed', inset: 0, zIndex: 200}}>
       <style>{`
-            .endroll-viewport{ position:relative; height:100vh; width:100%; overflow:hidden; background:#000; color:#fff; display:flex; align-items:flex-end; }
-            .endroll-credits{ width:100%; text-align:center; font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; font-size:20px; line-height:1; padding:40px 20px; animation: endrollScroll var(--roll-duration, ${effectiveRollDuration}s) linear forwards; position:relative; z-index:3; }
+            .endroll-viewport{ position:relative; height:100vh; width:100%; overflow:hidden; background:#000; color:#fff; display:flex; align-items:flex-start; }
+            .endroll-credits{ width:100%; text-align:center; font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; font-size:20px; line-height:1; padding:40px 20px; animation: endrollScroll var(--roll-duration, ${effectiveRollDuration}s) linear forwards; position:absolute; top:0; left:0; right:0; z-index:3; }
           .endroll-credits p{ display:block; margin:0 0 24px 0; line-height:2.6 !important; opacity:0.95; position:static !important; height:auto !important; white-space:normal !important; }
         .endroll-fade-top, .endroll-fade-bottom{ position:absolute; left:0; right:0; height:12vh; pointer-events:none; z-index:4 }
         .endroll-fade-top{ top:0; background:linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,0)); }

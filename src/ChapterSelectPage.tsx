@@ -29,6 +29,23 @@ export default function ChapterSelectPage() {
     })
   }, [])
 
+  // タイトル画面から直接遷移してきた場合、SPAs の状態が不整合になることがあるため
+  // 1回だけページをリロードして状態をリセットする（無限リロード対策に sessionStorage を使用）
+  useEffect(() => {
+    try {
+      const ref = document.referrer || ''
+      const cameFromTitle = ref.includes('/title') || ref.endsWith('/title')
+      const alreadyReloaded = sessionStorage.getItem('chapterSelectReloadedFromTitle') === 'true'
+      if (cameFromTitle && !alreadyReloaded) {
+        sessionStorage.setItem('chapterSelectReloadedFromTitle', 'true')
+        // 直ちに完全リロード
+        window.location.reload()
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [])
+
   // ストーリー進行は GamificationContext の状態を優先して参照する（未設定時は localStorage をフォールバック）
   const { state: gamState } = useGamification()
 

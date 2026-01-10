@@ -157,7 +157,7 @@ export default function VisualNovel() {
     const urls = new Set<string>();
 
     // include BGM (第8章は /BGM2.mp3 を使用)
-    if (chapterIndex === 7) {
+    if (chapterIndex === 8) {
       urls.add('/BGM2.mp3');
     } else {
       urls.add('/BGM.mp3');
@@ -514,7 +514,7 @@ export default function VisualNovel() {
           const bgm = new Audio();
           bgm.loop = true;
           bgm.preload = 'auto';
-          bgm.src = currentSceneIndex === 7 ? '/BGM2.mp3' : '/BGM.mp3';
+          bgm.src = currentSceneIndex === 8 ? '/BGM2.mp3' : '/BGM.mp3';
           // BGMを控えめにする（ボイスを相対的に聞きやすくするため）
           bgm.volume = 0.4;
           bgmRef.current = bgm;
@@ -1485,7 +1485,6 @@ export default function VisualNovel() {
         >
           {autoAdvanceEnabled ? '自動: ON' : '自動: OFF'}
         </button>
-        {/* エンドロールへボタンは不要のため削除 */}
         {showTranscript && (
           (() => {
             // 表示済み台詞を計算: 先頭シーンから現在のシーン/台詞まで
