@@ -366,6 +366,11 @@ export const MAX_CHARACTER_COUNT = 301;
 // キャラクターに適用される実効最大レベルを返す。
 // ベースの最大レベルに所持数による+分を加算する（最大で MAX_CHARACTER_COUNT-1 まで）。
 export const getEffectiveCharacterMaxLevel = (character: OwnedCharacter): number => {
+  // `zero` はレベル上限無しの特別キャラクター
+  if (character.id === 'zero') {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
   const plus = Math.max(0, (character.count || 1) - 1);
   const maxPlus = Math.max(0, MAX_CHARACTER_COUNT - 1);
   return Math.min(MAX_CHARACTER_LEVEL + plus, MAX_CHARACTER_LEVEL + maxPlus);

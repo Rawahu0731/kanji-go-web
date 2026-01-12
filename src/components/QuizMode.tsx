@@ -99,7 +99,10 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
     setScore({ correct: 0, incorrect: 0 });
     setCurrentStreak(0);
     setSelectedCharIndex(null);
-
+    // エンドレス時は四択を無効化して入力形式に固定
+    if (endless) {
+      setQuizFormat('input');
+    }
     // エンドレス開始演出
     if (endless) {
       setShowEndlessIntro(true);
@@ -579,17 +582,19 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
           >
             入力形式
           </button>
-          <button
-            onClick={() => {
-              setQuizFormat('choice');
-              setUserAnswer('');
-              setShowResult(false);
-              nextQuestion();
-            }}
-            className={`format-button ${quizFormat === 'choice' ? 'active' : ''}`}
-          >
-            四択形式
-          </button>
+            {!endless && (
+              <button
+                onClick={() => {
+                  setQuizFormat('choice');
+                  setUserAnswer('');
+                  setShowResult(false);
+                  nextQuestion();
+                }}
+                className={`format-button ${quizFormat === 'choice' ? 'active' : ''}`}
+              >
+                四択形式
+              </button>
+            )}
         </div>
       )}
 

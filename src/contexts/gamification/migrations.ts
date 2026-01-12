@@ -135,11 +135,12 @@ export function migrateData(data: any): GamificationState {
       if (!ch) continue;
       ch.count = typeof ch.count === 'number' ? ch.count : 1;
       ch.level = typeof ch.level === 'number' ? ch.level : 1;
-      if (ch.level > MAX_CHARACTER_LEVEL) {
-        const excess = ch.level - MAX_CHARACTER_LEVEL;
-        ch.level = MAX_CHARACTER_LEVEL;
-        ch.count = Math.min(MAX_CHARACTER_COUNT, (ch.count || 1) + excess);
-      }
+        // 零 (zero) はレベル上限無しの特別扱いなので変換対象外
+        if (ch.id !== 'zero' && ch.level > MAX_CHARACTER_LEVEL) {
+          const excess = ch.level - MAX_CHARACTER_LEVEL;
+          ch.level = MAX_CHARACTER_LEVEL;
+          ch.count = Math.min(MAX_CHARACTER_COUNT, (ch.count || 1) + excess);
+        }
     }
   }
 
@@ -148,7 +149,8 @@ export function migrateData(data: any): GamificationState {
     const ec = data.equippedCharacter as any;
     ec.count = typeof ec.count === 'number' ? ec.count : 1;
     ec.level = typeof ec.level === 'number' ? ec.level : 1;
-    if (ec.level > MAX_CHARACTER_LEVEL) {
+    // 装備中キャラクターも同様。ただし零は無制限なのでスキップ
+    if (ec.id !== 'zero' && ec.level > MAX_CHARACTER_LEVEL) {
       const excess = ec.level - MAX_CHARACTER_LEVEL;
       ec.level = MAX_CHARACTER_LEVEL;
       ec.count = Math.min(MAX_CHARACTER_COUNT, (ec.count || 1) + excess);
