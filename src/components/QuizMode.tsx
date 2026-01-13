@@ -208,7 +208,12 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
       if (item.questionType === 'correction') {
         const sentence = item.sentence || '';
         const selectedChar = (selectedCharIndex !== null && sentence.length > selectedCharIndex) ? sentence[selectedCharIndex] : '';
-        correct = !!(selectedChar && item.answer && (selectedChar === item.answer) && (userInput === (item.answer2 || '')));
+        const answerOptions = (item.answer || '').split('、').map(s => s.trim()).filter(Boolean);
+        const answer2Options = (item.answer2 || '').split('、').map(s => s.trim()).filter(Boolean);
+        const normalizedInput = userInput.trim();
+        const selectedMatches = !!(selectedChar && answerOptions.some(a => selectedChar === a));
+        const inputMatches = answer2Options.length > 0 ? answer2Options.some(a => normalizedInput === a) : normalizedInput === (item.answer2 || '').trim();
+        correct = !!(selectedMatches && inputMatches);
       } else {
         const correctReading = item.reading || item.answer || '';
         const correctOptions = correctReading.split('、').map(o => o.trim()).filter(Boolean);
@@ -761,9 +766,10 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
                       <>
                         <div className="extra-quiz-sentence" style={{ marginBottom: '12px' }}>
                           {Array.from(sentence).map((ch, i) => {
-                            const isWrongChar = item.answer && ch === item.answer;
+                            const answerOptions = (item.answer || '').split('、').map(s => s.trim()).filter(Boolean);
+                            const isWrongChar = answerOptions.length > 0 ? answerOptions.includes(ch) : (item.answer && ch === item.answer);
                             const isUserSelected = selectedCharIndex === i;
-                            const classNames = [isWrongChar ? 'wrong-highlight' : '', isUserSelected && ch !== item.answer ? 'user-selected-wrong' : '', selectedCharIndex === i ? 'selected-char' : ''].filter(Boolean).join(' ');
+                            const classNames = [isWrongChar ? 'wrong-highlight' : '', isUserSelected && !isWrongChar ? 'user-selected-wrong' : '', selectedCharIndex === i ? 'selected-char' : ''].filter(Boolean).join(' ');
                             return (
                               <span key={i} className={classNames}>
                                 {ch}
