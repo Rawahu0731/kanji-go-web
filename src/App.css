@@ -198,6 +198,16 @@ h1 {
   letter-spacing: -0.02em;
 }
 
+/* サイトロゴ（レスポンシブ対応） */
+.site-logo {
+  display: block;
+  margin: 0.6rem auto;
+  width: min(400px, 100%);
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
 /* レベル選択ボタン */
 .level-buttons {
   display: flex;

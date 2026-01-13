@@ -455,11 +455,14 @@ function App() {
         </div>
       )}
 
-      <img 
-        src="/kanji_logo.png" 
+      <img
+        src="/kanji_logo.png"
         alt="漢字勉強サイト"
         onClick={handleTitleTap}
-        style={{ cursor: 'default', userSelect: 'none', maxWidth: '400px', height: 'auto' }}
+        className="site-logo"
+        loading="lazy"
+        decoding="async"
+        style={{ cursor: 'default', userSelect: 'none' }}
       />
       
       <div className="level-buttons">
