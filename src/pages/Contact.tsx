@@ -48,7 +48,7 @@ export default function Contact() {
 
     setStatus('sending');
     try {
-      await saveInquiry(name.trim(), email.trim(), message.trim(), replyRequested);
+      await saveInquiry(name.trim(), email.trim(), message.trim(), replyRequested, user?.uid || null);
       setStatus('success');
       setMessage('');
     } catch (err: any) {

@@ -449,7 +449,7 @@ export const deleteUserData = async (userId: string) => {
 };
 
 // 問い合わせを保存するヘルパー
-export const saveInquiry = async (name: string, email: string, message: string, replyRequested: boolean = false) => {
+export const saveInquiry = async (name: string, email: string, message: string, replyRequested: boolean = false, uid: string | null = null) => {
   if (!db) throw new Error('Firestore not initialized');
 
   const id = `inquiry_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
@@ -458,6 +458,7 @@ export const saveInquiry = async (name: string, email: string, message: string, 
   const payload = {
     name: name || null,
     email: email || null,
+    userId: uid || null,
     message: message || null,
     replyRequested: !!replyRequested,
     createdAt: Date.now()
@@ -486,6 +487,7 @@ export const saveInquiry = async (name: string, email: string, message: string, 
           id,
           name: name || '',
           email: email || '',
+          uid: uid || '',
           // 本文は切り詰め発生時は空にする
           message: safeMessage,
           truncated: truncatedFlag,
