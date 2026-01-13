@@ -569,7 +569,7 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
         </div>
       )}
 
-      {selectedLevel !== 'extra' && (
+      {selectedLevel !== 'extra' && !endless && (
         <div className="quiz-format-selector">
           <button
             onClick={() => {
