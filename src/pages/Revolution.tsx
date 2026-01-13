@@ -940,6 +940,13 @@ function App() {
           setAutoPrestigeMultiplier(typeof remote.autoPrestigeMultiplier === 'number' || typeof remote.autoPrestigeMultiplier === 'string' ? String(remote.autoPrestigeMultiplier) : '2')
           setAutoPrestigeMinTime(typeof remote.autoPrestigeMinTime === 'number' || typeof remote.autoPrestigeMinTime === 'string' ? String(remote.autoPrestigeMinTime) : '600')
           setAutoPromoMaxLevel(typeof remote.autoPromoMaxLevel === 'number' || typeof remote.autoPromoMaxLevel === 'string' ? String(remote.autoPromoMaxLevel) : '')
+          // challengesCompleted をリモートから復元
+          if (Array.isArray(remote.challengesCompleted) && remote.challengesCompleted.length === 9) {
+            setChallengesCompleted(remote.challengesCompleted)
+          } else {
+            // 明示的に無ければ初期化
+            setChallengesCompleted(Array(9).fill(false))
+          }
         } else {
           // normal behavior: merge remote into local state (preserve unspecified local fields)
           if (Array.isArray(remote.rotValues)) {
@@ -978,6 +985,20 @@ function App() {
           if (typeof remote.autoPrestigeMultiplier === 'number' || typeof remote.autoPrestigeMultiplier === 'string') setAutoPrestigeMultiplier(String(remote.autoPrestigeMultiplier))
           if (typeof remote.autoPrestigeMinTime === 'number' || typeof remote.autoPrestigeMinTime === 'string') setAutoPrestigeMinTime(String(remote.autoPrestigeMinTime))
           if (typeof remote.autoPromoMaxLevel === 'number' || typeof remote.autoPromoMaxLevel === 'string') setAutoPromoMaxLevel(String(remote.autoPromoMaxLevel))
+          // マージモードでもリモートにチャレンジ情報があれば反映する（未指定フィールドはローカル維持）
+          if (Array.isArray(remote.challengesCompleted)) {
+            setChallengesCompleted(prev => {
+              try {
+                const next = [...prev]
+                for (let i = 0; i < Math.min(9, remote.challengesCompleted.length); i++) {
+                  if (typeof remote.challengesCompleted[i] === 'boolean') next[i] = remote.challengesCompleted[i]
+                }
+                return next
+              } catch (e) {
+                return prev
+              }
+            })
+          }
         }
       } catch (e) {
         console.warn('Failed to load revolution state from Firebase:', e)

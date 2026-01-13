@@ -10,7 +10,7 @@ import type { Character, OwnedCharacter } from '../data/characters';
 import { CHARACTERS, pullGacha, getCharacterEffectValue, getXpForCharacterLevel, MAX_CHARACTER_COUNT, MAX_CHARACTER_LEVEL } from '../data/characters';
 import { getKanjiAttributes } from '../data/kanjiAttributes';
 import { SKILLS } from '../data/skillTree';
-import { saveUserData, loadUserData, isFirebaseEnabled, getStorageDownloadUrl, deleteUserData } from '../lib/firebase';
+import { saveUserData, loadUserData, isFirebaseEnabled, getStorageDownloadUrl, deleteUserData, updateDisplayName } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 import { computeNewBadges } from '../utils/badgeUtils';
 import * as BN from '../utils/bigNumber';
@@ -709,35 +709,51 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
 
   const addMedals = (amount: number) => {
     if (!isMedalSystemEnabled()) return; // メダルシステムが無効な場合は何もしない
-    // コレクションコンプリートでない場合はメダル付与を無効化
-    const isCollectionCompleteLocal = (new Set(state.cardCollection.map(c => c.kanji)).size) >= ALL_KANJI.length;
-    if (!isCollectionCompleteLocal) return;
-    // Apply optional multiplier from Revolution's Infinity Upgrade node (node14)
-    let finalAmount = amount
-    // Season2: apply revolution v2 multiplier if available (new progress only)
-    if (REVOLUTION_MEDAL_MULTIPLIER_ENABLED) {
-      try {
-        const raw = localStorage.getItem(REVOLUTION_STORAGE_KEY);
-        if (raw) {
-          const rev = JSON.parse(raw);
-          const ipUp = rev?.ipUpgrades || {};
-          const hasNode14 = (ipUp.node14 || 0) >= 1;
-          if (hasNode14) {
-            const n = Number(rev.infinityPoints || 0);
-            if (isFinite(n) && n >= 0) {
-              const mul = Math.floor(Math.sqrt(n));
-              if (mul >= 1) {
-                finalAmount = Math.floor(amount * mul);
+
+    // setState の prev を使って安全に判定・付与する（クロージャによる stale state を防ぐ）
+    setState(prev => {
+      // コレクションコンプリートでない場合はメダル付与を無効化
+      const isCollectionCompleteLocal = (new Set(prev.cardCollection.map(c => c.kanji)).size) >= ALL_KANJI.length;
+      if (!isCollectionCompleteLocal) return prev;
+
+      // Apply optional multiplier from Revolution's Infinity Upgrade node (node14)
+      let finalAmount = amount;
+      if (REVOLUTION_MEDAL_MULTIPLIER_ENABLED) {
+        try {
+          const raw = localStorage.getItem(REVOLUTION_STORAGE_KEY);
+          if (raw) {
+            const rev = JSON.parse(raw);
+            const ipUp = rev?.ipUpgrades || {};
+            const hasNode14 = (ipUp.node14 || 0) >= 1;
+            if (hasNode14) {
+              const n = Number(rev.infinityPoints || 0);
+              if (isFinite(n) && n >= 0) {
+                const mul = Math.floor(Math.sqrt(n));
+                if (mul >= 1) {
+                  finalAmount = Math.floor(amount * mul);
+                }
               }
             }
           }
+        } catch (e) {
+          // ignore parse errors and fall back to base amount
         }
-      } catch (e) {
-        // ignore parse errors and fall back to base amount
       }
-    }
-    if (finalAmount <= 0) return
-    setState(prev => ({ ...prev, medals: prev.medals + finalAmount }));
+
+      if (finalAmount <= 0) return prev;
+
+      // デバッグログ: 入力値と最終付与量の内訳
+      try {
+        const skillMedalBoost = getSkillBoost('medal_boost');
+        const coll = getCollectionPlusEffect();
+        const charBoost = getCharacterMedalBoost();
+        console.log('[Gamification DEBUG addMedals] input:', amount, 'finalAmount(after rev):', finalAmount, 'isCollectionComplete:', isCollectionCompleteLocal, 'skillBoost:', skillMedalBoost, 'collectionMedalBoost:', coll?.medalBoost, 'charBoost:', charBoost);
+      } catch (e) {
+        // ignore logging errors
+      }
+
+      return { ...prev, medals: prev.medals + finalAmount };
+    });
   };
 
   const setMedals = (amount: number) => {
@@ -1081,7 +1097,17 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       const isCollectionCompleteLocal = (new Set(prev.cardCollection.map(c => c.kanji)).size) >= ALL_KANJI.length;
       if (isCollectionCompleteLocal && medals > 0) {
         finalMedals = medals;
-        
+
+        // デバッグログ: メダル入力と各種ブーストの値を出力
+        try {
+          const skillMedalBoost = getSkillBoost('medal_boost');
+          const coll = getCollectionPlusEffect();
+          const charBoost = getCharacterMedalBoost();
+          console.log('[Gamification DEBUG addQuizRewards] incoming medals:', medals, 'isCollectionComplete:', isCollectionCompleteLocal, 'skillBoost:', skillMedalBoost, 'collectionMedalBoost:', coll?.medalBoost, 'charBoost:', charBoost);
+        } catch (e) {
+          // ignore
+        }
+
         // node14の倍率を適用
         if (REVOLUTION_MEDAL_MULTIPLIER_ENABLED) {
           try {
@@ -1209,6 +1235,29 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     // Firebaseへの保存は state の変更を監視するデバウンス同期に任せる（過剰な書き込みを防ぐ）
     const updatedState = { ...state, username: cleaned };
     setState(updatedState);
+
+    // ユーザーがログインしていて Firebase が有効なら、認証表示名と Firestore 側のユーザードキュメントも更新する。
+    const user = auth.user;
+    if (isFirebaseEnabled && user) {
+      (async () => {
+        try {
+          try {
+            await updateDisplayName(user, cleaned);
+          } catch (e) {
+            console.warn('updateDisplayName failed:', e);
+          }
+
+          try {
+            // saveUserData は merge=true で部分更新するため、ここで username を確実にサーバに保存する
+            await saveUserData(user.uid, updatedState as any);
+          } catch (e) {
+            console.warn('Failed to save username to Firebase user document:', e);
+          }
+        } catch (err) {
+          console.warn('Failed to persist username to server:', err);
+        }
+      })();
+    }
   };
 
   const getXpForNextLevel = () => {
