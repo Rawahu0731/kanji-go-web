@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import type { Scene } from './storyParser';
 import { loadStory } from './storyParser';
@@ -9,6 +9,8 @@ import CenterScrollText from './CenterScrollText';
 import Quiz from './Quiz';
 import TitleScreen from './TitleScreen';
 import ChapterSelect from './ChapterSelect';
+import RtaResult from './RtaResult';
+import { startRta, endRta } from './utils/rtaTimer';
 
 const CHARACTER_IMAGES: Record<string, string> = {
   '太郎': '/images/man.png',
@@ -97,6 +99,9 @@ export default function VisualNovel() {
   const [pendingEndroll, setPendingEndroll] = useState(false);
   const [showEndroll, setShowEndroll] = useState(false);
   const ENDROLL_FADE_MS = 2000;
+  const rtaStartedRef = useRef(false);
+  const [showRtaResult, setShowRtaResult] = useState(false);
+  const [rtaResult, setRtaResult] = useState<{startIso:string; endIso:string; elapsedMs:number} | null>(null);
   // video-only: use /images/zero.mp4 (looped)
   // ログ表示機能
   // ログ表示機能（内部 state を使わずコンソール出力のみ）
@@ -927,6 +932,38 @@ export default function VisualNovel() {
     };
   }, [showChapterTitle, autoAdvanceEnabled]);
 
+  // Start RTA when chapter title closes for the first time (actual story begins)
+  useEffect(() => {
+    const shouldStart = !showChapterTitle && !showTitle && !showChapterSelect && !rtaStartedRef.current;
+    if (shouldStart) {
+      rtaStartedRef.current = true;
+      (async () => {
+        try {
+          const info = await startRta();
+          console.log('⏱️ RTA started (server anchor):', info);
+        } catch (e) {
+          console.warn('⏱️ RTA start failed (fallback used):', e);
+        }
+      })();
+    }
+  }, [showChapterTitle, showTitle, showChapterSelect]);
+
+  // Also start RTA when game data becomes initialized (first access or after profile deletion)
+  useEffect(() => {
+    const handler = async () => {
+      if (rtaStartedRef.current) return;
+      rtaStartedRef.current = true;
+      try {
+        const info = await startRta();
+        console.log('⏱️ RTA started from gameDataInitialized:', info);
+      } catch (e) {
+        console.warn('⏱️ RTA start failed from event:', e);
+      }
+    };
+    window.addEventListener('gameDataInitialized', handler);
+    return () => { window.removeEventListener('gameDataInitialized', handler); };
+  }, []);
+
   // クイズの結果ハンドラ
   const handleQuizResult = (success: boolean) => {
     if (quizTargetScene === null) {
@@ -1136,11 +1173,25 @@ export default function VisualNovel() {
     currentDialogueIndex === currentScene.dialogues.length - 1;
 
   if (showEndroll) {
-    return <EndRoll onBackToTitle={() => {
-      setShowEndroll(false);
-      setPendingEndroll(false);
-      setShowTitle(true);
-      setShowChapterSelect(false);
+    return <EndRoll onGameClear={async () => {
+      try {
+        const result = await endRta();
+        if (result) {
+          setRtaResult(result);
+          setShowRtaResult(true);
+        } else {
+          try { alert('RTAタイマーが開始されていませんでした'); } catch (e) { console.log('RTA not started'); }
+          // fallback to title
+          setShowTitle(true);
+        }
+      } catch (e) {
+        console.warn('RTA end error', e);
+        setShowTitle(true);
+      } finally {
+        setShowEndroll(false);
+        setPendingEndroll(false);
+        setShowChapterSelect(false);
+      }
     }} />;
   }
 
@@ -1158,6 +1209,12 @@ export default function VisualNovel() {
         .end-fade-overlay{ position:fixed; inset:0; background:#000; pointer-events:none; opacity:0; transition:opacity 2000ms linear; z-index:150 }
         .end-fade-overlay.active{ opacity:1 }
       `}</style>
+      {showRtaResult && (
+        <RtaResult result={rtaResult} onClose={() => {
+          setShowRtaResult(false);
+          setShowTitle(true);
+        }} />
+      )}
       {/* 背景エリア */}
       <div className={`background ${bgClass}`}>
         <div className={`background-brighten ${needBrighten ? 'active' : ''}`}></div>

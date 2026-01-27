@@ -4,29 +4,26 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import { GamificationProvider } from './contexts/GamificationContext.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
-import { PresentBoxProvider } from './contexts/PresentBoxContext.tsx'
 import { ThemeProvider } from './components/ThemeProvider.tsx'
 import { isMaintenance } from './config'
 
 // 動的インポートでコード分割
 const App = lazy(() => import('./App.tsx'))
-const KnownIssues = lazy(() => import('./pages/KnownIssues.tsx'))
-const Announcements = lazy(() => import('./pages/Announcements.tsx'))
 const Shop = lazy(() => import('./pages/Shop.tsx'))
 const Profile = lazy(() => import('./pages/Profile.tsx'))
 const CardCollection = lazy(() => import('./pages/CardCollection.tsx'))
 const CollectionPlus = lazy(() => import('./pages/CollectionPlus.tsx'))
 const Characters = lazy(() => import('./pages/Characters.tsx'))
-const Ranking = lazy(() => import('./pages/Ranking.tsx'))
+// Ranking page removed (local-only mode)
 const SkillTree = lazy(() => import('./pages/SkillTree.tsx'))
 const Revolution = lazy(() => import('./pages/Revolution.tsx'))
 const Maintenance = lazy(() => import('./pages/Maintenance.tsx'))
-const PresentBox = lazy(() => import('./pages/PresentBox.tsx'))
-const Contact = lazy(() => import('./pages/Contact.tsx'))
+// PresentBox removed — no longer importing
 const TitleScreen = lazy(() => import('./TitleScreen.tsx'))
 const ChapterSelectPage = lazy(() => import('./ChapterSelectPage.tsx'))
 const Story = lazy(() => import('./Story.tsx'))
 const SimpleKanji = lazy(() => import('./pages/SimpleKanji.tsx'))
+const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'))
 
 // ローディングコンポーネント
 const Loading = () => (
@@ -41,8 +38,6 @@ createRoot(document.getElementById('root')!).render(
       {isMaintenance && !(typeof window !== 'undefined' && localStorage.getItem('maintenanceBypass') === 'true') ? (
           <BrowserRouter>
             <Routes>
-              <Route path="/known-issues" element={<KnownIssues />} />
-              <Route path="/announcements" element={<Announcements />} />
               <Route path="/simple" element={<SimpleKanji />} />
               <Route path="*" element={<Maintenance />} />
             </Routes>
@@ -50,31 +45,28 @@ createRoot(document.getElementById('root')!).render(
         ) : (
         <AuthProvider>
           <GamificationProvider>
-            <PresentBoxProvider>
               <ThemeProvider>
                 <BrowserRouter>
                   <Routes>
                     <Route path="/" element={<App />} />
-                    <Route path="/known-issues" element={<KnownIssues />} />
-                    <Route path="/announcements" element={<Announcements />} />
+                    {/* KnownIssues and Announcements removed */}
                     <Route path="/simple" element={<SimpleKanji />} />
                     <Route path="/shop" element={<Shop />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/collection" element={<CardCollection />} />
-                    <Route path="/collection-plus" element={<CollectionPlus />} />
+                    <Route path="/collection-plus" element={<ProtectedRoute require="collection-plus" element={<CollectionPlus />} />} />
                     <Route path="/characters" element={<Characters />} />
-                    <Route path="/ranking" element={<Ranking />} />
-                    <Route path="/skill-tree" element={<SkillTree />} />
-                    <Route path="/revolution" element={<Revolution />} />
-                    <Route path="/present-box" element={<PresentBox />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/title" element={<TitleScreen onStart={() => { window.location.href = '/chapter-select'; }} />} />
-                    <Route path="/chapter-select" element={<ChapterSelectPage />} />
-                    <Route path="/story" element={<Story />} />
+                    {/* Ranking route removed */}
+                    <Route path="/skill-tree" element={<ProtectedRoute require="skill-tree" element={<SkillTree />} />} />
+                    <Route path="/revolution" element={<ProtectedRoute require="revolution" element={<Revolution />} />} />
+                    {/* PresentBox route removed */}
+                    {/* Contact page removed */}
+                    <Route path="/title" element={<ProtectedRoute require="title" element={<TitleScreen onStart={() => { window.location.href = '/chapter-select'; }} />} />} />
+                    <Route path="/chapter-select" element={<ProtectedRoute require="story" element={<ChapterSelectPage />} />} />
+                    <Route path="/story" element={<ProtectedRoute require="story" element={<Story />} />} />
                   </Routes>
                 </BrowserRouter>
               </ThemeProvider>
-            </PresentBoxProvider>
           </GamificationProvider>
         </AuthProvider>
       )}

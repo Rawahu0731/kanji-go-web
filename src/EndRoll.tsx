@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGamification } from './contexts/GamificationContext';
-import { usePresentBox } from './contexts/PresentBoxContext';
 
 // Background images used in the story
 const STORY_BACKGROUNDS = [
@@ -44,12 +43,12 @@ const normalizeEndroll = (raw: any) => {
 
 type EndRollProps = {
   onBackToTitle?: () => void;
+  onGameClear?: () => void; // called when player clicks the game-clear button
 };
 
-export default function EndRoll({ onBackToTitle }: EndRollProps) {
+export default function EndRoll({ onBackToTitle, onGameClear }: EndRollProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const gamification = useGamification();
-  const presentBox = usePresentBox();
   // アニメーション時間は速度から計算される
   const [effectiveRollDuration, setEffectiveRollDuration] = useState(320);
   const startOffsetSec = 0; // Start from the beginning of the audio
@@ -228,25 +227,7 @@ export default function EndRoll({ onBackToTitle }: EndRollProps) {
     }
   }, [showFinal]);
 
-  // エンドロール完了後、初回タイトル戻りで零をプレゼント
-  const handleBackToTitle = () => {
-    // 初回完了でなければプレゼントを追加
-    if (!gamification.state.hasCompletedEndroll) {
-      presentBox.addPresent({
-        title: '新キャラクター「零」',
-        description: '零を添えて題を押すとき、沈黙は報われる。',
-        rewards: [{ type: 'character', characterId: 'zero' }],
-        createdAt: Date.now()
-      }).then(() => {
-        gamification.setHasCompletedEndroll(true);
-      });
-    }
-    
-    // タイトルに戻る
-    if (onBackToTitle) {
-      onBackToTitle();
-    }
-  };
+  // エンドロール完了後、ボタン押下時は onGameClear (優先) を呼び出します
 
   // Use the lines once (no duplication) — final blank gap is added in the JSX below.
   // Duplicating lines caused the visible loop (repeating credits). Keep a single set so
@@ -408,24 +389,33 @@ export default function EndRoll({ onBackToTitle }: EndRollProps) {
             <div className="endroll-final-inner">
               <img src="/kanji_logo.png" alt={finalMessage} style={{ maxWidth: '400px', height: 'auto' }} />
             </div>
-            {showBackButton && onBackToTitle && (
+            {showBackButton && (onGameClear || onBackToTitle) && (
               <button
-                onClick={handleBackToTitle}
+                onClick={() => {
+                  // grant zero and mark completed as before
+                  if (!gamification.state.hasCompletedEndroll) {
+                    try { gamification.addCharacter('zero'); } catch (e) { console.warn('Failed to add character zero directly:', e); }
+                    gamification.setHasCompletedEndroll(true);
+                  }
+                  // prefer onGameClear, fallback to onBackToTitle
+                  if (onGameClear) { onGameClear(); } else if (onBackToTitle) { onBackToTitle(); }
+                }}
                 className="endroll-back-button"
                 style={{
                   marginTop: '40px',
                   padding: '12px 24px',
                   fontSize: '18px',
                   borderRadius: '8px',
-                  background: 'rgba(255,255,255,0.1)',
-                  color: '#fff',
-                  border: '2px solid rgba(255,255,255,0.3)',
+                  background: 'linear-gradient(90deg,#ffd27a,#ff8aa1)',
+                  color: '#0b1720',
+                  border: 'none',
                   cursor: 'pointer',
                   animation: 'buttonFadeIn 800ms ease-out forwards',
-                  opacity: 0
+                  opacity: 0,
+                  fontWeight: 700
                 }}
               >
-                タイトルに戻る
+                ゲームクリア
               </button>
             )}
           </div>

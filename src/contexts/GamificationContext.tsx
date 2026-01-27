@@ -151,6 +151,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   // 初期化：localStorageから読み込み
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
+    let hadSaved = Boolean(saved);
     if (saved) {
       try {
           const parsed = JSON.parse(saved);
@@ -159,6 +160,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
           if (parsed.dataVersion !== DATA_VERSION) {
             console.log('Local gamification data has old or missing dataVersion; ignoring local state.');
             try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+            hadSaved = false;
           } else {
             const migrated = migrateData(parsed);
             // 名前が空ならデフォルト値を設定
@@ -174,6 +176,10 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       }
     }
     localLoadedRef.current = true;
+    // If there was no saved data (初めてアクセス) then dispatch an initialization event
+    if (!hadSaved) {
+      try { window.dispatchEvent(new Event('gameDataInitialized')); } catch (e) { /* ignore */ }
+    }
     // Remove any leftover local revolution v1 state so Season1 data won't affect Season2
     try {
       localStorage.removeItem('revolution_state_v1');
@@ -329,6 +335,45 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     };
   }, [state]);
 
+  // ページが隠れる・リロードされる直前に状態を同期的にフラッシュする
+  //（デバウンスや requestIdleCallback による遅延保存で、リロード時に最新状態が書き込まれない問題を防ぐ）
+  useEffect(() => {
+    const flushNow = () => {
+      try {
+        const toSave = { ...state, updatedAt: Date.now() } as any;
+        try {
+          // 同期的に localStorage に書き込む
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+        } catch (e) {
+          console.warn('Failed to flush gamification state to localStorage on unload:', e);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    const onBeforeUnload = () => {
+      flushNow();
+      // 何も返さない（標準的な unload ハンドリング）
+      return undefined;
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushNow();
+    };
+
+    window.addEventListener('beforeunload', onBeforeUnload);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    // pagehide は一部ブラウザで unload より確実に呼ばれる
+    window.addEventListener('pagehide', flushNow as any);
+
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pagehide', flushNow as any);
+    };
+  }, [state]);
+
   // Firebaseへの同期
   const syncWithFirebase = async (userId: string) => {
     if (!isFirebaseEnabled || isSyncing) return;
@@ -425,7 +470,6 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Firebaseからデータを読み込み
   const loadFromFirebase = async (userId: string, preferRemote: boolean = false) => {
     void preferRemote;
     if (!isFirebaseEnabled) return;

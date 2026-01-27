@@ -1,35 +1,33 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useGamification } from '../contexts/GamificationContext';
-import { usePresentBox } from '../contexts/PresentBoxContext';
 import { ALL_KANJI } from '../data/allKanji';
 import '../styles/CollectionPlus.css';
 
 type SortKey = 'plus' | 'kanji' | 'obtained';
 
 export default function CollectionPlus() {
-  const { state, getCollectionPlusEffect, isCollectionPlusComplete } = useGamification();
-  const { addPresent } = usePresentBox();
+  const gamification = useGamification();
+  const { state, getCollectionPlusEffect, isCollectionPlusComplete } = gamification;
   const list = state.collectionPlus || [];
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortKey>('plus');
   const [showOnlyMaxed, setShowOnlyMaxed] = useState(false);
   const invitationSentRef = useRef(false);
 
-  // コレクション+が完全にコンプリートした時に招待状をプレゼントボックスに送る
+  // コレクション+が完全にコンプリートした時に即時ストーリー解放フラグを立てる
   useEffect(() => {
     if (isCollectionPlusComplete() && !invitationSentRef.current) {
       invitationSentRef.current = true;
-      addPresent({
-        title: '文霊世界への招待状',
-        description: '文霊世界を、、、、、救って、、、、、',
-        rewards: [{ type: 'xp', amount: 0 }], // ダミー報酬
-        createdAt: Date.now()
-      }).catch(err => {
-        console.error('Failed to add story invitation:', err);
-      });
+      try {
+        // プレゼントボックスを廃止したため、即時にストーリー招待フラグを立てる
+        // これによりストーリーはユーザーが受け取る前に解放されます
+        gamification.setHasStoryInvitation(true);
+      } catch (err) {
+        console.error('Failed to set story invitation:', err);
+      }
     }
-  }, [isCollectionPlusComplete, addPresent]);
+  }, [isCollectionPlusComplete]);
 
   const filtered = useMemo(() => {
     // Only include kanji that have + >= 1

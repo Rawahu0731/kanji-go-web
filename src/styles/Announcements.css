@@ -168,13 +168,5 @@
   .announcement-header {
     flex-direction: column;
     gap: 0.5rem;
-  }
+/* Announcements styles removed (page retired) */
 
-  .announcement-title {
-    font-size: 1.2rem;
-  }
-
-  .announcement-date {
-    align-self: flex-start;
-  }
-}
