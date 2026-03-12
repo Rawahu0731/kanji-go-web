@@ -28,10 +28,13 @@ export default function Maintenance() {
   return (
     <div className="maintenance-root">
       <div className="maintenance-card">
+        <img src="/kanji_logo.png" alt="漢字勉強サイト" className="maintenance-logo" />
         <h1>長らくのご愛顧、ありがとうございました</h1>
         <p>漢字勉強サイトはサービスを終了しました。これまでご利用いただき、心より感謝申し上げます。</p>
         <p>このサイトで学んだ漢字をこれからも生活に生かしていってください。</p>
+        <p>運営チーム一同、心より御礼申し上げます。</p>
         <p>漢字勉強サイト運営チーム</p>
+        <p className="since">Since October 24, 2025</p>
 
         {isBypassDisplay && a && (
         <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>

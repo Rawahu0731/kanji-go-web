@@ -26,3 +26,15 @@
   color: #334155;
   text-decoration: underline;
 }
+
+.maintenance-logo {
+  width: 220px;
+  max-width: 60%;
+  height: auto;
+  margin-bottom: 16px;
+}
+
+.maintenance-card .since {
+  color: rgba(51, 65, 85, 0.6);
+  font-size: 13px;
+}
