@@ -4,6 +4,7 @@ import ChapterSelect from './ChapterSelect'
 import { loadStory } from './storyParser'
 import type { Scene } from './storyParser'
 import { useGamification } from './contexts/GamificationContext'
+import RequireCondition from './components/RequireCondition'
 
 type Chapter = {
   index: number
@@ -13,7 +14,7 @@ type Chapter = {
   isCompleted: boolean
 }
 
-export default function ChapterSelectPage() {
+function ChapterSelectPageContent() {
   const navigate = useNavigate()
   const [scenes, setScenes] = useState<Scene[]>([])
   const [loading, setLoading] = useState(true)
@@ -176,5 +177,14 @@ export default function ChapterSelectPage() {
         onBack={handleBack}
       />
     </>
+  )
+}
+
+export default function ChapterSelectPage() {
+  const { state } = useGamification()
+  return (
+    <RequireCondition check={() => !!state.hasStoryInvitation} message="ストーリーの招待がありません。コレクション+などを確認してください。">
+      <ChapterSelectPageContent />
+    </RequireCondition>
   )
 }

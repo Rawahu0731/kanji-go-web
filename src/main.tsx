@@ -2,9 +2,9 @@ import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
-import { GamificationProvider } from './contexts/GamificationContext.tsx'
-import { AuthProvider } from './contexts/AuthContext.tsx'
-import { ThemeProvider } from './components/ThemeProvider.tsx'
+import { GamificationProvider } from './contexts/GamificationContext'
+import { AuthProvider } from './contexts/AuthContext'
+import { ThemeProvider } from './components/ThemeProvider'
 import { isMaintenance } from './config'
 
 // 動的インポートでコード分割
@@ -23,7 +23,7 @@ const TitleScreen = lazy(() => import('./TitleScreen.tsx'))
 const ChapterSelectPage = lazy(() => import('./ChapterSelectPage.tsx'))
 const Story = lazy(() => import('./Story.tsx'))
 const SimpleKanji = lazy(() => import('./pages/SimpleKanji.tsx'))
-const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'))
+// ProtectedRoute no longer used here; pages enforce their own checks
 
 // ローディングコンポーネント
 const Loading = () => (
@@ -54,16 +54,16 @@ createRoot(document.getElementById('root')!).render(
                     <Route path="/shop" element={<Shop />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/collection" element={<CardCollection />} />
-                    <Route path="/collection-plus" element={<ProtectedRoute require="collection-plus" element={<CollectionPlus />} />} />
+                    <Route path="/collection-plus" element={<CollectionPlus />} />
                     <Route path="/characters" element={<Characters />} />
                     {/* Ranking route removed */}
-                    <Route path="/skill-tree" element={<ProtectedRoute require="skill-tree" element={<SkillTree />} />} />
-                    <Route path="/revolution" element={<ProtectedRoute require="revolution" element={<Revolution />} />} />
+                    <Route path="/skill-tree" element={<SkillTree />} />
+                    <Route path="/revolution" element={<Revolution />} />
                     {/* PresentBox route removed */}
                     {/* Contact page removed */}
-                    <Route path="/title" element={<ProtectedRoute require="title" element={<TitleScreen onStart={() => { window.location.href = '/chapter-select'; }} />} />} />
-                    <Route path="/chapter-select" element={<ProtectedRoute require="story" element={<ChapterSelectPage />} />} />
-                    <Route path="/story" element={<ProtectedRoute require="story" element={<Story />} />} />
+                    <Route path="/title" element={<TitleScreen onStart={() => { window.location.href = '/chapter-select'; }} />} />
+                    <Route path="/chapter-select" element={<ChapterSelectPage />} />
+                    <Route path="/story" element={<Story />} />
                   </Routes>
                 </BrowserRouter>
               </ThemeProvider>

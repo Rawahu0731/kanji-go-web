@@ -52,19 +52,53 @@ export default function RtaResult({ result, onClose }: Props) {
     // Footer: url + timestamps
     ctx.font = '20px Meiryo, sans-serif';
     ctx.fillStyle = '#021018';
-    const url = location.href.split('#')[0];
+    // Remove '/story' from the URL when present
+    const loc = new URL(location.href);
+    loc.hash = '';
+    loc.pathname = loc.pathname.replace(/^\/story(?=\/|$)/, '/');
+    const url = loc.toString().replace(/#.*$/, '');
     ctx.fillText(url, w/2, h*0.86);
     ctx.fillText(`${formatJstIso(result.startIso)} → ${formatJstIso(result.endIso)}`, w/2, h*0.92);
 
-    const dataUrl = canvas.toDataURL('image/png');
-    setImgUrl(dataUrl);
-    // attach to DOM canvasRef for potential download
-    if (!canvasRef.current) canvasRef.current = canvas;
+    // Draw site logo on the image (bottom-right) then finalize
+    (async () => {
+      try {
+        const logo = new Image();
+        // Use same-origin path for the bundled logo
+        logo.src = '/kanji_logo.png';
+        await new Promise<void>((resolve) => {
+          logo.onload = () => resolve();
+          logo.onerror = () => resolve();
+        });
+        // Draw logo with margin
+        const margin = 32;
+        const maxLogoW = 240;
+        const scale = Math.min(1, maxLogoW / (logo.width || maxLogoW));
+        const logoW = (logo.width || maxLogoW) * scale;
+        const logoH = (logo.height || (logoW / 3)) * scale;
+        ctx.globalAlpha = 0.95;
+        ctx.drawImage(logo, w - logoW - margin, h - logoH - margin, logoW, logoH);
+        ctx.globalAlpha = 1;
+      } catch (e) {
+        // ignore logo drawing failures
+        console.warn('Logo draw failed', e);
+      }
+
+      const dataUrl = canvas.toDataURL('image/png');
+      setImgUrl(dataUrl);
+      // attach to DOM canvasRef for potential download
+      if (!canvasRef.current) canvasRef.current = canvas;
+    })();
   }, [result]);
 
   const handleShare = async () => {
     if (!result) return;
-    const text = `漢字ストーリー クリアタイム: ${formatElapsed(result.elapsedMs)}\n${location.href.split('#')[0]}`;
+    // Prepare URL without /story for sharing
+    const shareLoc = new URL(location.href);
+    shareLoc.hash = '';
+    shareLoc.pathname = shareLoc.pathname.replace(/^\/story(?=\/|$)/, '/');
+    const shareUrl = shareLoc.toString().replace(/#.*$/, '');
+    const text = `漢字ストーリー クリアタイム: ${formatElapsed(result.elapsedMs)}\n${shareUrl}`;
 
     // Try Web Share with files (most mobile browsers)
     try {
@@ -81,10 +115,13 @@ export default function RtaResult({ result, onClose }: Props) {
       console.warn('Web Share failed', e);
     }
 
-    // Fallback: open Twitter intent (cannot attach image automatically). Provide download link.
-    const tweet = encodeURIComponent(`漢字ストーリー クリアタイム: ${formatElapsed(result.elapsedMs)}\n${location.href.split('#')[0]}`);
-    const url = `https://twitter.com/intent/tweet?text=${tweet}`;
-    window.open(url, '_blank', 'noopener');
+    // Web Intent cannot attach images. As a friendly fallback we prefill a fun tweet and include the URL.
+    const elapsedText = formatElapsed(result.elapsedMs);
+    const tweetText = `🎉 漢字ストーリー クリア！\nタイム: ${elapsedText} ⏱️\n漢字力、見せつけたぜ！🔥`;
+    // Build intent URL with both text and url params (helps create a link preview)
+    const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}&hashtags=${encodeURIComponent('漢字ストーリー,クリアタイム')}`;
+    // Open intent in new window/tab
+    window.open(intent, '_blank', 'noopener');
   };
 
   return (

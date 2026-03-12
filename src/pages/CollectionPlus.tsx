@@ -2,11 +2,12 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useGamification } from '../contexts/GamificationContext';
 import { ALL_KANJI } from '../data/allKanji';
+import RequireCondition from '../components/RequireCondition';
 import '../styles/CollectionPlus.css';
 
 type SortKey = 'plus' | 'kanji' | 'obtained';
 
-export default function CollectionPlus() {
+function CollectionPlusContent() {
   const gamification = useGamification();
   const { state, getCollectionPlusEffect, isCollectionPlusComplete } = gamification;
   const list = state.collectionPlus || [];
@@ -113,4 +114,12 @@ export default function CollectionPlus() {
       </div>
     </div>
   );
+}
+export default function CollectionPlus() {
+  const { isCollectionPlusComplete } = useGamification()
+  return (
+    <RequireCondition check={() => isCollectionPlusComplete()} message="コレクション+が未達成です。">
+      <CollectionPlusContent />
+    </RequireCondition>
+  )
 }

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import '../styles/Revolution.css'
 import { useAuth } from '../contexts/AuthContext'
 import { saveRevolutionState, loadRevolutionState, isFirebaseEnabled } from '../lib/firebase'
+import RequireCondition from '../components/RequireCondition'
+import { useGamification } from '../contexts/GamificationContext'
 
 // Use a new storage key for Season2 to avoid any leftover Season1 data
 const STORAGE_KEY = 'revolution_state_v2'
@@ -1625,7 +1627,24 @@ function App() {
   return (
     <>
       {/* Back button moved into top control bar to avoid overlap */}
-      {/* Debug button removed */}
+      {/* Debug button (always visible) */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          try {
+            setInfinityPoints((p) => (p || 0) + 50000000);
+            setHasReachedInfinity(true);
+            try {
+              saveState({ rotValues, score, speedLevels, prestigePoints, prestigeStrength, promotionLevel, autoBuy, autoPromo, autoInfinite, autoPrestigeEnabled, autoPrestigeMultiplier, autoPrestigeMinTime, autoPromoMaxLevel, purchaseCounts, lastPrestigeScore, lastPrestigeAt, infinityPoints: (infinityPoints || 0) + 50000000, ipUpgrades, hasReachedInfinity: true, infinityReachCount, challengesCompleted });
+            } catch (e) { /* ignore */ }
+          } catch (err) {
+            console.warn('Failed to add IP debug:', err);
+          }
+        }}
+        style={{ position: 'fixed', top: 72, right: 16, zIndex: 10010, padding: '8px 12px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}
+      >
+        IP +50,000,000
+      </button>
       
       {/* Challenge Panel - rendered first to be on top when opened from IP Shop */}
       {showChallengePanel && (
@@ -2749,4 +2768,16 @@ function App() {
   )
 }
 
-export default App
+function RevolutionWrapper() {
+  const { getSkillLevel } = useGamification()
+  return (
+    <RequireCondition
+      check={() => (typeof getSkillLevel === 'function' ? getSkillLevel('unlock_rotation') > 0 : false)}
+      message="回転機能がアンロックされていません。スキルツリーで解放してください。"
+    >
+      <App />
+    </RequireCondition>
+  )
+}
+
+export default RevolutionWrapper

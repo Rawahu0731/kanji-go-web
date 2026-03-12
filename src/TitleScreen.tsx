@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
+import RequireCondition from './components/RequireCondition';
+import { useGamification } from './contexts/GamificationContext';
 
 type Props = {
   onStart: () => void;
 };
 
-export default function TitleScreen({ onStart }: Props) {
+function TitleScreenContent({ onStart }: Props) {
   return (
     <div style={{position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(180deg,#ffffff,#f5f7fb)', color: '#0f1720', zIndex: 150, padding: 24}}>
       <div style={{textAlign: 'center', background: '#fff', padding: '36px 48px', borderRadius: 16, boxShadow: '0 8px 30px rgba(15,23,32,0.08)', maxWidth: 720, width: '100%'}}>
@@ -17,4 +19,13 @@ export default function TitleScreen({ onStart }: Props) {
       </div>
     </div>
   );
+}
+
+export default function TitleScreen(props: Props) {
+  const { state } = useGamification()
+  return (
+    <RequireCondition check={() => !!state.hasStoryInvitation} message="ストーリーの招待がありません。コレクション+などを確認してください。">
+      <TitleScreenContent {...props} />
+    </RequireCondition>
+  )
 }

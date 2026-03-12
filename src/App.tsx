@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 // microCMS integration removed (banners and present box disabled)
 import { useGamification } from './contexts/GamificationContext'
 import AuthButton from './components/AuthButton'
@@ -11,6 +11,7 @@ import * as BN from './utils/bigNumber'
 
 const QuizMode = lazy(() => import('./components/QuizMode'));
 const ListMode = lazy(() => import('./components/ListMode'));
+import KanjiTitle from './KanjiTitle';
 
 // アニメーション定義
 if (typeof document !== 'undefined' && !document.getElementById('reward-animations')) {
@@ -89,6 +90,35 @@ function App() {
   
   const [mode, setMode] = useState<Mode>('list');
   const [studyMode, setStudyMode] = useState(false);
+
+  
+
+  const [showKanjiTitle, setShowKanjiTitle] = useState<boolean>(false);
+
+  
+
+  useEffect(() => {
+    // If there is no RTA start anchor, show the Kanji title screen (separate from story title)
+    try {
+      const raw = localStorage.getItem('rta_start_v1');
+      if (!raw) setShowKanjiTitle(true);
+    } catch (e) {
+      // ignore
+    }
+
+    const onDeleted = () => {
+      // When profile/game data deleted, ensure we show the Kanji title and do not auto-start
+      setShowKanjiTitle(true);
+    };
+    window.addEventListener('gameDataDeleted', onDeleted as EventListener);
+
+    return () => {
+      window.removeEventListener('gameDataDeleted', onDeleted as EventListener);
+    };
+  }, []);
+  useEffect(() => {
+    // export/import UI removed
+  }, []);
   
   // Issue/announcement banners removed
 
@@ -101,6 +131,69 @@ function App() {
     initializing,
     isCollectionComplete
   } = useGamification();
+  const { addCharacter, setHasCompletedEndroll } = useGamification();
+  const navigate = useNavigate();
+
+  const handleDebugGameClear = () => {
+    try {
+      if (!gamificationState.hasCompletedEndroll) {
+        try { addCharacter('zero'); } catch (e) { console.warn('addCharacter failed', e); }
+        try { setHasCompletedEndroll(true); } catch (e) { console.warn('setHasCompletedEndroll failed', e); }
+      }
+    } catch (e) {
+      console.error('Debug game clear failed', e);
+    }
+    // navigate to title (do not start endroll)
+    try { navigate('/title'); } catch (e) { /* ignore */ }
+  };
+
+  const handleDebugGameClearWithResult = () => {
+    try {
+      // seed a fake RTA start so endRta() returns a result for debugging
+      try {
+        const perf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        const serverMs = Date.now() - 60000; // started 60s ago
+        const startObj = { serverTimeMs: serverMs, perfStart: perf - 60000, serverIso: new Date(serverMs).toISOString() };
+        try { localStorage.setItem('rta_start_v1', JSON.stringify(startObj)); } catch (e) { /* ignore */ }
+      } catch (e) { /* ignore */ }
+
+      if (!gamificationState.hasCompletedEndroll) {
+        try { addCharacter('zero'); } catch (e) { console.warn('addCharacter failed', e); }
+        try { setHasCompletedEndroll(true); } catch (e) { console.warn('setHasCompletedEndroll failed', e); }
+      }
+    } catch (e) {
+      console.error('Debug game clear (with result) failed', e);
+    }
+    // navigate to story and auto-start endroll then auto-finish RTA
+    try { navigate('/story', { state: { startEndroll: true, autoFinishRta: true } }); } catch (e) { /* ignore */ }
+  };
+
+  const handleDebugShowResultOnly = () => {
+    try {
+      // seed fake RTA start so endRta() returns a result
+      try {
+        const perf = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        const serverMs = Date.now() - 45000; // started 45s ago
+        const startObj = { serverTimeMs: serverMs, perfStart: perf - 45000, serverIso: new Date(serverMs).toISOString() };
+        try { localStorage.setItem('rta_start_v1', JSON.stringify(startObj)); } catch (e) { /* ignore */ }
+      } catch (e) { /* ignore */ }
+
+      if (!gamificationState.hasCompletedEndroll) {
+        try { addCharacter('zero'); } catch (e) { console.warn('addCharacter failed', e); }
+        try { setHasCompletedEndroll(true); } catch (e) { console.warn('setHasCompletedEndroll failed', e); }
+      }
+    } catch (e) {
+      console.error('Debug show result only failed', e);
+    }
+    try {
+      const now = Date.now();
+      const elapsedMs = 45000;
+      const startIso = new Date(now - elapsedMs).toISOString();
+      const endIso = new Date(now).toISOString();
+      const rtaResult = { startIso, endIso, elapsedMs };
+      navigate('/story', { state: { showRtaOnly: true, rtaResult } });
+    } catch (e) { /* ignore */ }
+  };
 
   // microCMS sync removed (PresentBox removed)
   // 調査中の不具合を取得
@@ -320,6 +413,11 @@ function App() {
           {gamificationState.hasStoryInvitation && (
             <Link to="/title" className="nav-link">ストーリー</Link>
           )}
+          {/* Debug: replicate EndRoll game-clear button behavior */}
+          <button onClick={handleDebugGameClear} className="nav-link" style={{ cursor: 'pointer' }}>ゲームクリア(デバッグ)</button>
+          <button onClick={handleDebugGameClearWithResult} className="nav-link" style={{ cursor: 'pointer' }}>ゲームクリア(結果表示)</button>
+          <button onClick={handleDebugShowResultOnly} className="nav-link" style={{ cursor: 'pointer' }}>結果のみ表示(デバッグ)</button>
+          {/* Export/Import removed */}
           {/* ランキング機能を削除しました */}
         </div>
         <div className="auth-section">
@@ -338,6 +436,7 @@ function App() {
         decoding="async"
         style={{ cursor: 'default', userSelect: 'none' }}
       />
+      {showKanjiTitle && <KanjiTitle onStarted={() => setShowKanjiTitle(false)} />}
       
       <div className="level-buttons">
         {levels.map(level => (
@@ -524,6 +623,7 @@ function App() {
         {/* Footer links removed */}
       </footer>
       
+      {/* import file input removed */}
       <DebugPanel />
 
     </>

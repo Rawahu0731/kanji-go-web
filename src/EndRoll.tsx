@@ -236,6 +236,7 @@ export default function EndRoll({ onBackToTitle, onGameClear }: EndRollProps) {
 
   const lastLineRef = useRef<HTMLParagraphElement | null>(null);
   const creditsRef = useRef<HTMLDivElement | null>(null);
+  const rollStartedAtRef = useRef<number | null>(null);
 
   // 速度から時間を計算してアニメーションを設定
   useEffect(() => {
@@ -283,6 +284,8 @@ export default function EndRoll({ onBackToTitle, onGameClear }: EndRollProps) {
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       creditsEl.offsetHeight;
       creditsEl.style.animationPlayState = 'running';
+      // record animation start time to avoid immediate onAnimationEnd races
+      try { rollStartedAtRef.current = Date.now(); } catch (e) { rollStartedAtRef.current = null; }
     };
     
     setAnimation();
@@ -354,6 +357,14 @@ export default function EndRoll({ onBackToTitle, onGameClear }: EndRollProps) {
           aria-hidden
           style={{ animationDuration: `${effectiveRollDuration}s`, animationIterationCount: 1 as any }}
           onAnimationEnd={() => {
+            // ignore spurious immediate animationend events that happen
+            // when the animation was effectively 0ms or the element wasn't measured yet.
+            const started = rollStartedAtRef.current;
+            const now = Date.now();
+            if (started && now - started < 800) {
+              console.log('⏭️ Ignoring immediate animationend (too fast)', { deltaMs: now - started });
+              return;
+            }
             if (!showFinal) setShowFinal(true);
           }}
         >

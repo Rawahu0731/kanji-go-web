@@ -49,7 +49,7 @@ export async function startRta(): Promise<{serverTimeMs:number; serverIso:string
   }
 }
 
-export async function endRta(): Promise<{startIso: string; endIso: string; elapsedMs: number} | null> {
+export async function endRta(keepStart: boolean = false): Promise<{startIso: string; endIso: string; elapsedMs: number} | null> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
@@ -59,10 +59,14 @@ export async function endRta(): Promise<{startIso: string; endIso: string; elaps
     const endServerMs = (start.serverTimeMs || Date.now()) + elapsed;
     const startIso = (start.serverIso) ? new Date(start.serverTimeMs).toISOString() : new Date(start.serverTimeMs).toISOString();
     const endIso = new Date(endServerMs).toISOString();
-    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    if (!keepStart) {
+      try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    }
     return { startIso, endIso, elapsedMs: Math.round(elapsed) };
   } catch (e) {
-    try { localStorage.removeItem(STORAGE_KEY); } catch (err) {}
+    if (!keepStart) {
+      try { localStorage.removeItem(STORAGE_KEY); } catch (err) {}
+    }
     return null;
   }
 }

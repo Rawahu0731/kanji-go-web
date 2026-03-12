@@ -92,6 +92,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem('microcms_last_sync');
           // Revolution v2 は初期化処理でも削除されるが念のため
           localStorage.removeItem('revolution_state_v2');
+          // RTA 開始情報も一緒に削除する
+          localStorage.removeItem('rta_start_v1');
         } catch (e) {
           // ignore
         }
@@ -125,6 +127,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       // ignore
     }
+    // ユーザーをトップに誘導（タイトル画面を表示させるため）
+    try { window.location.href = '/'; } catch (e) { /* ignore */ }
   }, [auth.user]);
 
   // URLパラメータの変化を監視してメダルシステムの有効状態を更新
@@ -155,6 +159,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     if (saved) {
       try {
           const parsed = JSON.parse(saved);
+          try { console.log('[Gamification] found local saved data, dataVersion=', parsed && parsed.dataVersion); } catch (e) { /* ignore */ }
+          try { console.log('[Gamification] parsed saved preview -> level=', parsed && parsed.level, 'coins=', parsed && parsed.coins, 'xpType=', parsed && typeof parsed.xp); } catch (e) { /* ignore */ }
           // If schema/data version mismatches, ignore local saved state to avoid carrying over
           // incompatible Season1 data into Season2.
           if (parsed.dataVersion !== DATA_VERSION) {
@@ -163,11 +169,13 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
             hadSaved = false;
           } else {
             const migrated = migrateData(parsed);
+            try { console.log('[Gamification] migrated local data, setting state'); } catch (e) { /* ignore */ }
             // 名前が空ならデフォルト値を設定
             if (!migrated.username || (typeof migrated.username === 'string' && migrated.username.trim() === '')) {
               migrated.username = INITIAL_STATE.username;
             }
             setState(migrated);
+            try { console.log('[Gamification] applied migrated state -> level=', migrated.level, 'coins=', migrated.coins); } catch (e) { /* ignore */ }
             // マイグレーション後のデータを保存
             localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
           }
@@ -186,20 +194,15 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       // ignore
     }
-    // Also proactively remove any accidental stale v2 entries older than reset (keep optional)
-    try {
-      const raw = localStorage.getItem(REVOLUTION_STORAGE_KEY);
-      if (raw) {
-        // If present, remove to ensure a clean Season2 start (server will write new state when appropriate)
-        localStorage.removeItem(REVOLUTION_STORAGE_KEY);
-      }
-    } catch (e) {
-      // ignore
-    }
+    // Keep any existing Revolution v2 local state rather than proactively removing it here.
+    // Previously we removed `revolution_state_v2` at startup which caused exports to omit
+    // the revolution data. Do not remove it so users can export/import the current state.
     // Firebase が有効かつユーザーがログインしている場合はリモート読み込みを待つ
     if (!isFirebaseEnabled || !auth.user) {
       setInitializing(false);
     }
+
+    // import feature removed — no external import handler
   }, []);
 
   // ログイン時にFirebaseからデータを読み込み
@@ -263,12 +266,18 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
 
   // 状態変更時は localStorage にのみ保存する（デバウンス処理で最適化）
   useEffect(() => {
+    // 初回ローカル読み込みが完了するまでは保存を行わない。
+    // これにより、マウント直後の初期状態（INITIAL_STATE）が
+    // 後から読み込まれるインポート済みデータやリモートデータによって
+    // 上書きされるのを防ぎます。
+    if (!localLoadedRef.current) return;
     // 既存のタイマーをクリア
     if (saveTimerRef.current !== null) {
       window.clearTimeout(saveTimerRef.current);
     }
     
     // 100ms後に保存（連続した状態更新を1回にまとめる）
+    try { console.log('[Gamification] scheduling local save -> level=', state.level, 'coins=', state.coins); } catch (e) { /* ignore */ }
     saveTimerRef.current = window.setTimeout(() => {
       try {
         const toSave = { ...state, updatedAt: Date.now() } as any;
@@ -277,6 +286,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         const doSave = () => {
           try {
             const serialized = JSON.stringify(toSave);
+            try { console.log('[Gamification] performing local save -> len=', serialized.length, 'level=', toSave.level, 'coins=', toSave.coins); } catch (e) { /* ignore */ }
             localStorage.setItem(STORAGE_KEY, serialized);
           } catch (err) {
             console.warn('Failed to persist gamification state to localStorage:', err);

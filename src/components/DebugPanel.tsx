@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGamification } from '../contexts/GamificationContext';
+import { ALL_KANJI } from '../data/allKanji';
 import { toNumber } from '../utils/bigNumber';
 import './DebugPanel.css';
 
@@ -14,7 +15,7 @@ export function DebugPanel() {
   const [medalsInput, setMedalsInput] = useState('');
   const [error, setError] = useState('');
   
-  const { state, setXp, setCoins, setMedals, addMedals, setDebugInfo } = useGamification();
+  const { state, setXp, setCoins, setMedals, addMedals, setDebugInfo, addCardToCollection, addToCollectionPlus, unlockScene, setHasStoryInvitation } = useGamification();
 
   // 裏コマンド用のグローバルイベントリスナーを設定
   useEffect(() => {
@@ -97,6 +98,51 @@ export function DebugPanel() {
     setError('');
   };
 
+  const handleFillCollection = () => {
+    try {
+      ALL_KANJI.forEach(k => {
+        addCardToCollection({
+          id: `debug-${k.kanji}-${Date.now()}-${Math.random()}`,
+          kanji: k.kanji,
+          reading: k.reading,
+          meaning: k.meaning,
+          level: k.level,
+          rarity: 'legendary',
+          imageUrl: `/kanji/level-${k.level}/images/${k.kanji}.png`
+        });
+      });
+      setError('');
+    } catch (e) {
+      setError('コレクションの埋め込みに失敗しました');
+    }
+  };
+
+  const handleCompleteCollectionPlus = () => {
+    try {
+      ALL_KANJI.forEach(k => addToCollectionPlus(k.kanji, 10));
+      setError('');
+    } catch (e) {
+      setError('コレクション+の更新に失敗しました');
+    }
+  };
+
+  const handleUnlockAllStory = async () => {
+    try {
+      const resp = await fetch('/story.json');
+      if (!resp.ok) throw new Error('failed to load story.json');
+      const json = await resp.json();
+      const chapters = Array.isArray(json.chapters) ? json.chapters.length : 0;
+      for (let i = 0; i < chapters; i++) {
+        try { unlockScene(i); } catch (e) { /* ignore per-item errors */ }
+      }
+      try { setHasStoryInvitation(true); } catch (e) {}
+      setError('');
+    } catch (e) {
+      console.error('Failed to unlock story:', e);
+      setError('ストーリーの開放に失敗しました');
+    }
+  };
+
   // デバッグボタンは表示しない（裏コマンドでのみ起動）
   if (!isOpen) {
     return null;
@@ -155,7 +201,16 @@ export function DebugPanel() {
               </div>
             </div>
 
-            <div className="debug-controls-section">
+              <div className="debug-controls-section">
+                <h3>コレクション操作（デバッグ）</h3>
+                <div className="debug-input-group">
+                  <button onClick={handleFillCollection} className="debug-set-btn">コレクションを埋める</button>
+                  <button onClick={handleCompleteCollectionPlus} className="debug-set-btn">コレクション+をコンプリート</button>
+                  <button onClick={handleUnlockAllStory} className="debug-set-btn">ストーリーを全開放</button>
+                </div>
+              </div>
+
+              <div className="debug-controls-section">
               <h3>XP設定</h3>
               <div className="debug-input-group">
                 <input

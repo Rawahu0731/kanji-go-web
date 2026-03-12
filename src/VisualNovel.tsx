@@ -102,6 +102,8 @@ export default function VisualNovel() {
   const rtaStartedRef = useRef(false);
   const [showRtaResult, setShowRtaResult] = useState(false);
   const [rtaResult, setRtaResult] = useState<{startIso:string; endIso:string; elapsedMs:number} | null>(null);
+  // When true, suppress story/BGM/dialogue playback (used while RTA result modal is open)
+  const [suppressStory, setSuppressStory] = useState(false);
   // video-only: use /images/zero.mp4 (looped)
   // ログ表示機能
   // ログ表示機能（内部 state を使わずコンソール出力のみ）
@@ -311,9 +313,33 @@ export default function VisualNovel() {
 
   }, [scenes]);
 
+  
+
   // テスト用: ChapterSelectPage からエンドロールを直接開始するフラグを監視（location.state 経由）
   useEffect(() => {
     const state = location.state as any;
+    // showRtaOnly: 直接結果画面を表示（エンドロールは開始しない）
+    if (state?.showRtaOnly === true) {
+      console.log('🎬 showRtaOnly flag detected from navigation state');
+      stopAllAudio();
+      // If a synthesized rtaResult is provided in navigation state, use it directly.
+      if (state.rtaResult) {
+        try {
+          setRtaResult(state.rtaResult as any);
+          // suppress story playback while showing the result modal
+          setSuppressStory(true);
+          setShowRtaResult(true);
+        } catch (e) {
+          console.warn('Failed to apply rtaResult from state', e);
+        }
+      } else {
+        // fallback: call existing handler which uses endRta()
+        try { handleGameClear(); } catch (e) { console.warn('showRtaOnly handler failed', e); }
+      }
+      try { window.history.replaceState({}, document.title); } catch (e) {}
+      return;
+    }
+
     if (state?.startEndroll === true) {
       console.log('🎬 startEndroll flag detected from navigation state');
       // タイトルや章選択がまだ表示されている場合は解除してから遷移
@@ -326,12 +352,44 @@ export default function VisualNovel() {
         setPendingEndroll(true);
         setTimeout(() => {
           setShowEndroll(true);
+          // autoFinishRta オプションがあれば、少し遅らせてクリア処理を実行
+          if (state?.autoFinishRta) {
+            setTimeout(() => {
+              try { handleGameClear(); } catch (e) { console.warn('autoFinishRta handler failed', e); }
+            }, 300);
+          }
         }, ENDROLL_FADE_MS);
       }
       // Clear the state to prevent re-triggering
       window.history.replaceState({}, document.title);
     }
   }, [location]);
+
+  // エンドロール上のゲームクリア処理を共通化（EndRoll のボタンや外部トリガーから呼べる）
+  const handleGameClear = async () => {
+    try {
+      const result = await endRta(true);
+      if (result) {
+        setRtaResult(result);
+        // suppress story playback while showing the result modal
+        setSuppressStory(true);
+        setShowRtaResult(true);
+      } else {
+        try { alert('RTAタイマーが開始されていませんでした'); } catch (e) { console.log('RTA not started'); }
+        // fallback to title
+        setShowTitle(true);
+      }
+    } catch (e) {
+      console.warn('RTA end error', e);
+      setShowTitle(true);
+    } finally {
+      // 再生中の音声を停止して、エンドロール状態をリセット
+      try { stopAllAudio(); } catch (e) { /* ignore */ }
+      setShowEndroll(false);
+      setPendingEndroll(false);
+      setShowChapterSelect(false);
+    }
+  };
 
   // unlockedScenes を保存
   useEffect(() => {
@@ -512,7 +570,7 @@ export default function VisualNovel() {
 
   // BGM: play when entering story screen (not title, not chapter select, not endroll)
   useEffect(() => {
-    const inStory = !showTitle && !showChapterSelect && !showEndroll && !loading;
+    const inStory = !showTitle && !showChapterSelect && !showEndroll && !loading && !suppressStory;
     if (inStory) {
       if (!bgmRef.current) {
         try {
@@ -584,7 +642,7 @@ export default function VisualNovel() {
         try { bgmRef.current.pause(); bgmRef.current = null; } catch (e) {}
       }
     };
-  }, [showTitle, showChapterSelect, showEndroll, loading, currentSceneIndex]);
+  }, [showTitle, showChapterSelect, showEndroll, loading, currentSceneIndex, suppressStory]);
 
   // 一度だけフレームをプリロード
   useEffect(() => {
@@ -719,6 +777,11 @@ export default function VisualNovel() {
 
   // 台詞が表示された瞬間に対応する voice ファイルを再生する
   useEffect(() => {
+    // If story playback is suppressed (e.g., result modal open), do nothing
+    if (suppressStory) {
+      stopAllAudio();
+      return;
+    }
     // 章タイトル表示中は音声を再生しない
     if (showChapterTitle) {
       stopAllAudio();
@@ -766,8 +829,8 @@ export default function VisualNovel() {
             // only auto-advance if still at the same dialogue
             if (currentSceneIndexRef.current === localScene && currentDialogueIndexRef.current === localDialogue) {
               // do not auto-advance when quiz or chapter title/select/endroll is active
-              console.log('⏱️ Checking conditions:', { quizOpen, showChapterTitle, showChapterSelect, pendingEndroll, showEndroll });
-              if (quizOpen || showChapterTitle || showChapterSelect || pendingEndroll || showEndroll) {
+              console.log('⏱️ Checking conditions:', { quizOpen, showChapterTitle, showChapterSelect, pendingEndroll, showEndroll, suppressStory });
+              if (quizOpen || showChapterTitle || showChapterSelect || pendingEndroll || showEndroll || suppressStory) {
                 console.log('⏱️ Auto-advance blocked by active UI state');
                 return;
               }
@@ -889,7 +952,7 @@ export default function VisualNovel() {
     return () => {
       stopAllAudio();
     };
-  }, [currentSceneIndex, currentDialogueIndex, scenes, showChapterTitle, quizOpen, showChapterSelect, pendingEndroll, showEndroll, autoAdvanceEnabled]);
+  }, [currentSceneIndex, currentDialogueIndex, scenes, showChapterTitle, quizOpen, showChapterSelect, pendingEndroll, showEndroll, autoAdvanceEnabled, suppressStory]);
 
   // コンポーネントアンマウント時に音声停止
   useEffect(() => {
@@ -1173,26 +1236,8 @@ export default function VisualNovel() {
     currentDialogueIndex === currentScene.dialogues.length - 1;
 
   if (showEndroll) {
-    return <EndRoll onGameClear={async () => {
-      try {
-        const result = await endRta();
-        if (result) {
-          setRtaResult(result);
-          setShowRtaResult(true);
-        } else {
-          try { alert('RTAタイマーが開始されていませんでした'); } catch (e) { console.log('RTA not started'); }
-          // fallback to title
-          setShowTitle(true);
-        }
-      } catch (e) {
-        console.warn('RTA end error', e);
-        setShowTitle(true);
-      } finally {
-        setShowEndroll(false);
-        setPendingEndroll(false);
-        setShowChapterSelect(false);
-      }
-    }} />;
+    // 共通のクリア処理を呼び出す
+    return <EndRoll onGameClear={handleGameClear} />;
   }
 
   const bgClass = (currentDialogue as any)?.background || '';
@@ -1212,6 +1257,8 @@ export default function VisualNovel() {
       {showRtaResult && (
         <RtaResult result={rtaResult} onClose={() => {
           setShowRtaResult(false);
+          // allow story playback again
+          setSuppressStory(false);
           setShowTitle(true);
         }} />
       )}
