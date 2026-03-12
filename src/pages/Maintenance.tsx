@@ -5,6 +5,7 @@ import { maintenancePassword,isBypassDisplay } from '../config'
 export default function Maintenance() {
   const [input, setInput] = useState('')
   const [msg, setMsg] = useState('')
+  const a = false;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,15 +28,12 @@ export default function Maintenance() {
   return (
     <div className="maintenance-root">
       <div className="maintenance-card">
-        <h1>メンテナンス中</h1>
-        <p>ただいまサービスを一時停止しています。ご不便をおかけして申し訳ありません。復旧までお待ちください。</p>
-        <p>
-          <a href="/simple">漢字学習</a> |
-          <a href="/known-issues" style={{ marginLeft: '8px' }}>不具合情報</a> |
-          <a href="/announcements" style={{ marginLeft: '8px' }}>お知らせ</a>
-        </p>
+        <h1>長らくのご愛顧、ありがとうございました</h1>
+        <p>漢字勉強サイトはサービスを終了しました。これまでご利用いただき、心より感謝申し上げます。</p>
+        <p>このサイトで学んだ漢字をこれからも生活に生かしていってください。</p>
+        <p>漢字勉強サイト運営チーム</p>
 
-        {isBypassDisplay && (
+        {isBypassDisplay && a && (
         <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
           <label style={{ display: 'block', marginBottom: 8 }}>メンテナンスバイパス（パスワード）</label>
           <input
