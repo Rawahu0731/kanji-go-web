@@ -1,6 +1,12 @@
 import { type Item, type Level } from '../types/kanji';
 import { parseCSVLine } from './kanjiUtils';
 
+function encodeImageUrl(path: string): string {
+  // 静的ホスティングによっては、実ファイル名のカンマを %2C として
+  // 解決できないため、URL全体をエンコードしてカンマはそのまま残す。
+  return encodeURI(path);
+}
+
 export async function loadKanjiData(selectedLevel: Level): Promise<Item[]> {
   // エクストラは指定期間のみ利用可能にする
   if (selectedLevel === 'extra') {
@@ -82,7 +88,8 @@ export async function loadKanjiData(selectedLevel: Level): Promise<Item[]> {
     mapped = data.map(d => {
       const fname = d[filenameField];
       const kanjiChar = kanjiField ? d[kanjiField] : null;
-      const imageUrl = fname?.startsWith('/') ? fname : `/kanji/level-${selectedLevel}/${fname}`;
+      const imagePath = fname?.startsWith('/') ? fname : `/kanji/level-${selectedLevel}/${fname}`;
+      const imageUrl = imagePath ? encodeImageUrl(imagePath) : '';
       
       return {
         filename: fname || kanjiChar || '',

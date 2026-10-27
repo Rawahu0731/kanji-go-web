@@ -1,10 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { Link } from 'react-router-dom'
-import { getKnownIssues, getPatchNotes } from './lib/microcms'
-import type { Article } from './lib/microcms'
 import { useGamification } from './contexts/GamificationContext'
-import { usePresentBox } from './contexts/PresentBoxContext'
-import AuthButton from './components/AuthButton'
 import { DebugPanel } from './components/DebugPanel'
 import './App.css'
 import { type Item, type Level, type Mode } from './types/kanji'
@@ -92,12 +88,6 @@ function App() {
   const [mode, setMode] = useState<Mode>('list');
   const [studyMode, setStudyMode] = useState(false);
   
-  const [investigatingIssues, setInvestigatingIssues] = useState<Article[]>([]);
-  const [showIssueBanner, setShowIssueBanner] = useState(true);
-  
-  const [latestAnnouncement, setLatestAnnouncement] = useState<Article | null>(null);
-  const [showAnnouncementBanner, setShowAnnouncementBanner] = useState(false);
-
   const { 
     getSkillLevel,
     state: gamificationState,
@@ -108,66 +98,6 @@ function App() {
     isCollectionComplete
   } = useGamification();
   
-  const { unclaimedCount, syncFromMicroCMS } = usePresentBox();
-
-  useEffect(() => {
-    // マウント時に常に microCMS から同期を行う
-    syncFromMicroCMS().catch(err => {
-      console.warn('microCMS sync failed on App mount:', err);
-    });
-  }, [syncFromMicroCMS]);
-  // 調査中の不具合を取得
-  useEffect(() => {
-    async function fetchInvestigatingIssues() {
-      try {
-        const issues = await getKnownIssues();
-        // status が investigating のものだけフィルタ
-        const investigating = issues.filter(issue => {
-          const status = Array.isArray(issue.status) ? issue.status[0] : issue.status;
-          return status === 'investigating';
-        });
-        setInvestigatingIssues(investigating);
-
-        // LocalStorageから閉じた状態を復元
-        const DISMISSED_ISSUES_KEY = 'dismissed_issue_banners';
-        const dismissedStr = localStorage.getItem(DISMISSED_ISSUES_KEY);
-        const dismissed = dismissedStr ? JSON.parse(dismissedStr) : [];
-
-        // すべての調査中の不具合が閉じられている場合のみバナーを非表示
-        const allDismissed = investigating.every(issue => dismissed.includes(issue.id));
-        if (allDismissed && investigating.length > 0) {
-          setShowIssueBanner(false);
-        }
-      } catch (error) {
-        console.error('不具合情報の取得に失敗:', error);
-      }
-    }
-
-    fetchInvestigatingIssues();
-  }, []);
-
-  useEffect(() => {
-    async function checkUnreadAnnouncements() {
-      try {
-        const announcements = await getPatchNotes(1);
-        if (announcements.length > 0) {
-          const latest = announcements[0];
-          const LAST_READ_KEY = 'last_read_announcement';
-          const lastReadId = localStorage.getItem(LAST_READ_KEY);
-          
-          if (lastReadId !== latest.id) {
-            setLatestAnnouncement(latest);
-            setShowAnnouncementBanner(true);
-          }
-        }
-      } catch (error) {
-        console.error('お知らせの取得に失敗:', error);
-      }
-    }
-    
-    checkUnreadAnnouncements();
-  }, []);
-
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       const onLoad = () => {
@@ -365,28 +295,6 @@ function App() {
         <div className="nav-links">
           <Link to="/profile" className="nav-link">プロフィール</Link>
           <Link to="/characters" className="nav-link">⭐ キャラクター</Link>
-          <Link to="/present-box" className="nav-link" style={{ position: 'relative' }}>
-            🎁 プレゼント
-            {unclaimedCount > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-4px',
-                right: '-4px',
-                background: '#ef4444',
-                color: 'white',
-                borderRadius: '50%',
-                width: '20px',
-                height: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '11px',
-                fontWeight: 'bold'
-              }}>
-                {unclaimedCount > 99 ? '99+' : unclaimedCount}
-              </span>
-            )}
-          </Link>
           <Link to="/shop" className="nav-link">ショップ</Link>
           {isCollectionComplete() && (
             <Link to="/skill-tree" className="nav-link">🌳 スキルツリー</Link>
@@ -401,59 +309,8 @@ function App() {
           {gamificationState.hasStoryInvitation && (
             <Link to="/title" className="nav-link">ストーリー</Link>
           )}
-          <Link to="/ranking" className="nav-link">🏆 ランキング</Link>
-        </div>
-        <div className="auth-section">
-          <AuthButton />
         </div>
       </div>
-
-      {showAnnouncementBanner && latestAnnouncement && (
-        <div className="issue-banner">
-          <div className="issue-banner-content">
-            <span className="issue-icon">📢</span>
-            <span className="issue-text">
-              新しいお知らせがあります：{latestAnnouncement.title}
-              <Link to="/announcements" style={{ color: '#fff', textDecoration: 'underline', marginLeft: '0.5rem' }}>詳細を見る</Link>
-            </span>
-            <button
-              className="issue-close"
-              onClick={() => {
-                setShowAnnouncementBanner(false);
-                localStorage.setItem('last_read_announcement', latestAnnouncement.id);
-              }}
-              aria-label="閉じる"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-
-      {investigatingIssues.length > 0 && showIssueBanner && (
-        <div className="issue-banner">
-          <div className="issue-banner-content">
-            <span className="issue-icon">⚠️</span>
-            <span className="issue-text">
-              現在{investigatingIssues.length}件の不具合が発生しています。詳細は
-              <Link to="/known-issues" style={{ color: '#fff', textDecoration: 'underline', marginLeft: '0.3rem' }}>こちら</Link>
-            </span>
-            <button
-              className="issue-close"
-              onClick={() => {
-                setShowIssueBanner(false);
-                // すべての調査中の不具合IDをlocalStorageに保存
-                const DISMISSED_ISSUES_KEY = 'dismissed_issue_banners';
-                const issueIds = investigatingIssues.map(issue => issue.id);
-                localStorage.setItem(DISMISSED_ISSUES_KEY, JSON.stringify(issueIds));
-              }}
-              aria-label="閉じる"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
 
       <img
         src="/kanji_logo.png"
@@ -647,15 +504,9 @@ function App() {
       )}
 
       <footer className="app-footer" style={{ marginTop: '2.5rem' }}>
-        <Link to="/announcements">お知らせ</Link>
-        <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
         <a href="/disclaimer.html" target="_blank" rel="noopener noreferrer">免責事項</a>
         <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
         <a href="/patch-notes.html" target="_blank" rel="noopener noreferrer">パッチノート</a>
-        <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
-        <Link to="/known-issues">不具合情報</Link>
-        <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
-        <Link to="/contact">お問い合わせ</Link>
         <span style={{ margin: '0 8px', color: '#c8ccd8' }}>|</span>
         <a href="/terms.html" target="_blank" rel="noopener noreferrer" style={{ padding: '6px 10px', background:'#f5f7ff', borderRadius:6, textDecoration:'none' }}>利用規約</a>
       </footer>

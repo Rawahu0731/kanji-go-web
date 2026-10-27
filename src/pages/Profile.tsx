@@ -210,15 +210,15 @@ function Profile() {
         <div className="stats-card">
           <h2>データ管理</h2>
           <p style={{ textAlign: 'center', color: '#a0a0c0', padding: '0.5rem' }}>
-            ゲーム内の進行状況・所持品・統計などを消去します。アカウント情報は残ります。
+          ゲーム内の進行状況・所持品・統計などをlocalStorageから消去します。
           </p>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <button
               onClick={async () => {
-                const ok = window.confirm('本当にゲームデータを完全に削除しますか？ アカウント情報は残ります。Firebase上のデータも削除されます。');
+                const ok = window.confirm('本当にローカルのゲームデータを完全に削除しますか？');
                 if (!ok) return;
                 try {
-                  await deleteGameData(true);
+                  await deleteGameData();
                   alert('ゲームデータを削除しました。');
                 } catch (e) {
                   console.error('Failed to delete game data:', e);

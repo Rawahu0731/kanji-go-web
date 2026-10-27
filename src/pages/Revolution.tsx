@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../styles/Revolution.css'
-import { useAuth } from '../contexts/AuthContext'
-import { saveRevolutionState, loadRevolutionState, isFirebaseEnabled } from '../lib/firebase'
 
 // Use a new storage key for Season2 to avoid any leftover Season1 data
 const STORAGE_KEY = 'revolution_state_v2'
@@ -40,10 +38,6 @@ function App() {
 
   // whether the player has ever reached Infinity (used to gate IP UI)
   
-  const auth = useAuth()
-
-  const prevAuthRef = useRef<typeof auth.user | null>(auth.user || null)
-
   // primary gameplay state
   const [rotValues, setRotValues] = useState<number[]>(() => {
     const s = _saved
@@ -124,7 +118,7 @@ function App() {
     if (s && (typeof s.autoPromoMaxLevel === 'number' || typeof s.autoPromoMaxLevel === 'string')) return String(s.autoPromoMaxLevel)
     return ''
   })
-  // Debug mode: enabled when URL contains "DebugMode" (no local/Firebase save in this mode)
+  // Debug mode: enabled when URL contains "DebugMode" (no local save in this mode)
   const [debugMode] = useState<boolean>(() => {
     try {
       return typeof window !== 'undefined' && window.location.href.includes('DebugMode')
@@ -846,7 +840,7 @@ function App() {
   const lastPrestigeAtRef = useRef<number | null>(lastPrestigeAt)
   useEffect(() => { lastPrestigeAtRef.current = lastPrestigeAt }, [lastPrestigeAt])
 
-  // Manual sync helper: save localStorage and optionally push to Firestore only when user requests
+  // Manual local save helper
   const handleManualSync = async () => {
     if (debugModeRef.current) {
       setSyncStatus('DebugMode: 保存はスキップされます')
@@ -857,157 +851,9 @@ function App() {
     // always save to localStorage (already done by other effect, but ensure freshness)
     saveState(toSave)
 
-    if (!auth.user) {
-      console.warn('Not signed in — local save only')
-      return
-    }
-    if (!isFirebaseEnabled) {
-      console.warn('Firebase not enabled — local save only')
-      return
-    }
-
-    // show temporary UI feedback for success/failure
-    setSyncStatus(null)
-    try {
-      // include auto-prestige settings in remote save
-      const remoteSave = { ...toSave, autoPrestigeEnabled, autoPrestigeMultiplier, autoPrestigeMinTime, autoPromoMaxLevel }
-      await saveRevolutionState(auth.user!.uid, remoteSave)
-      console.log('Revolution state synced to Firebase')
-      setSyncStatus('保存に成功しました')
-      setTimeout(() => setSyncStatus(null), 3000)
-    } catch (e) {
-      console.warn('Failed to save revolution state to Firebase:', e)
-      setSyncStatus('保存に失敗しました')
-      setTimeout(() => setSyncStatus(null), 3000)
-    }
+    setSyncStatus('保存しました')
+    setTimeout(() => setSyncStatus(null), 3000)
   }
-
-  // Load Revolution state from Firestore when user signs in
-  useEffect(() => {
-    if (!isFirebaseEnabled) return
-    if (debugModeRef.current) return // don't load remote state in debug mode
-
-    // detect transition from logged-out -> logged-in using prevAuthRef
-    const comingFromLoggedOut = prevAuthRef.current == null && auth.user != null
-    // update prevAuthRef for next render
-    prevAuthRef.current = auth.user || null
-
-    let cancelled = false
-    const load = async () => {
-      try {
-        const remote = await loadRevolutionState(auth.user!.uid)
-        if (!remote || cancelled) return
-
-        if (comingFromLoggedOut) {
-          // Overwrite local state fully with remote values (apply sensible defaults)
-          try { saveState(remote) } catch (e) { /* ignore */ }
-
-          // Replace whole pieces of state where remote provides values,
-          // but fall back to defaults for missing fields to keep UI stable.
-          if (Array.isArray(remote.rotValues)) {
-            const arr = Array(numberOfRings).fill(1)
-            for (let i = 0; i < Math.min(remote.rotValues.length, numberOfRings); i++) arr[i] = remote.rotValues[i]
-            setRotValues(arr)
-          }
-          setScore(typeof remote.score === 'number' ? remote.score : 0)
-          if (Array.isArray(remote.speedLevels)) {
-            const arr = Array(numberOfRings).fill(0)
-            for (let i = 0; i < Math.min(remote.speedLevels.length, numberOfRings); i++) arr[i] = remote.speedLevels[i]
-            setSpeedLevels(arr)
-          }
-          setPrestigePoints(typeof remote.prestigePoints === 'number' ? remote.prestigePoints : 0)
-          setPrestigeStrength(typeof remote.prestigeStrength === 'number' ? remote.prestigeStrength : 0)
-          setPromotionLevel(typeof remote.promotionLevel === 'number' ? remote.promotionLevel : 0)
-          setAutoBuy(typeof remote.autoBuy === 'boolean' ? remote.autoBuy : false)
-          setAutoPromo(typeof remote.autoPromo === 'boolean' ? remote.autoPromo : false)
-          setAutoInfinite(typeof remote.autoInfinite === 'boolean' ? remote.autoInfinite : false)
-          setInfinityPoints(typeof remote.infinityPoints === 'number' ? remote.infinityPoints : 0)
-          setHasReachedInfinity(typeof remote.hasReachedInfinity === 'boolean' ? remote.hasReachedInfinity : false)
-          setInfinityReachCount(typeof remote.infinityReachCount === 'number' ? remote.infinityReachCount : 0)
-          if (remote.ipUpgrades && typeof remote.ipUpgrades === 'object') {
-            const ip: any = {}
-            for (const k of Object.keys(remote.ipUpgrades)) ip[k] = remote.ipUpgrades[k] || 0
-            setIpUpgrades(ip)
-          }
-          if (Array.isArray(remote.purchaseCounts)) {
-            const arr = Array(numberOfRings).fill(0)
-            for (let i = 0; i < Math.min(remote.purchaseCounts.length, numberOfRings); i++) arr[i] = remote.purchaseCounts[i]
-            setPurchaseCounts(arr)
-          }
-          setLastPrestigeScore(typeof remote.lastPrestigeScore === 'number' ? remote.lastPrestigeScore : 0)
-          setLastPrestigeAt(typeof remote.lastPrestigeAt === 'number' ? remote.lastPrestigeAt : null)
-          setAutoPrestigeEnabled(typeof remote.autoPrestigeEnabled === 'boolean' ? remote.autoPrestigeEnabled : false)
-          setAutoPrestigeMultiplier(typeof remote.autoPrestigeMultiplier === 'number' || typeof remote.autoPrestigeMultiplier === 'string' ? String(remote.autoPrestigeMultiplier) : '2')
-          setAutoPrestigeMinTime(typeof remote.autoPrestigeMinTime === 'number' || typeof remote.autoPrestigeMinTime === 'string' ? String(remote.autoPrestigeMinTime) : '600')
-          setAutoPromoMaxLevel(typeof remote.autoPromoMaxLevel === 'number' || typeof remote.autoPromoMaxLevel === 'string' ? String(remote.autoPromoMaxLevel) : '')
-          // challengesCompleted をリモートから復元
-          if (Array.isArray(remote.challengesCompleted) && remote.challengesCompleted.length === 9) {
-            setChallengesCompleted(remote.challengesCompleted)
-          } else {
-            // 明示的に無ければ初期化
-            setChallengesCompleted(Array(9).fill(false))
-          }
-        } else {
-          // normal behavior: merge remote into local state (preserve unspecified local fields)
-          if (Array.isArray(remote.rotValues)) {
-            const arr = Array(numberOfRings).fill(1)
-            for (let i = 0; i < Math.min(remote.rotValues.length, numberOfRings); i++) arr[i] = remote.rotValues[i]
-            setRotValues(arr)
-          }
-          if (typeof remote.score === 'number') setScore(remote.score)
-          if (Array.isArray(remote.speedLevels)) {
-            const arr = Array(numberOfRings).fill(0)
-            for (let i = 0; i < Math.min(remote.speedLevels.length, numberOfRings); i++) arr[i] = remote.speedLevels[i]
-            setSpeedLevels(arr)
-          }
-          if (typeof remote.prestigePoints === 'number') setPrestigePoints(remote.prestigePoints)
-          if (typeof remote.prestigeStrength === 'number') setPrestigeStrength(remote.prestigeStrength)
-          if (typeof remote.promotionLevel === 'number') setPromotionLevel(remote.promotionLevel)
-          if (typeof remote.autoBuy === 'boolean') setAutoBuy(remote.autoBuy)
-          if (typeof remote.autoPromo === 'boolean') setAutoPromo(remote.autoPromo)
-          if (typeof remote.autoInfinite === 'boolean') setAutoInfinite(remote.autoInfinite)
-          if (typeof remote.infinityPoints === 'number') setInfinityPoints(remote.infinityPoints)
-          if (typeof remote.hasReachedInfinity === 'boolean') setHasReachedInfinity(remote.hasReachedInfinity)
-          if (typeof remote.infinityReachCount === 'number') setInfinityReachCount(remote.infinityReachCount)
-          if (remote.ipUpgrades && typeof remote.ipUpgrades === 'object') {
-            const ip: any = {}
-            for (const k of Object.keys(remote.ipUpgrades)) ip[k] = remote.ipUpgrades[k] || 0
-            setIpUpgrades((prev) => ({ ...prev, ...ip }))
-          }
-          if (Array.isArray(remote.purchaseCounts)) {
-            const arr = Array(numberOfRings).fill(0)
-            for (let i = 0; i < Math.min(remote.purchaseCounts.length, numberOfRings); i++) arr[i] = remote.purchaseCounts[i]
-            setPurchaseCounts(arr)
-          }
-          if (typeof remote.lastPrestigeScore === 'number') setLastPrestigeScore(remote.lastPrestigeScore)
-          if (typeof remote.lastPrestigeAt === 'number') setLastPrestigeAt(remote.lastPrestigeAt)
-          if (typeof remote.autoPrestigeEnabled === 'boolean') setAutoPrestigeEnabled(remote.autoPrestigeEnabled)
-          if (typeof remote.autoPrestigeMultiplier === 'number' || typeof remote.autoPrestigeMultiplier === 'string') setAutoPrestigeMultiplier(String(remote.autoPrestigeMultiplier))
-          if (typeof remote.autoPrestigeMinTime === 'number' || typeof remote.autoPrestigeMinTime === 'string') setAutoPrestigeMinTime(String(remote.autoPrestigeMinTime))
-          if (typeof remote.autoPromoMaxLevel === 'number' || typeof remote.autoPromoMaxLevel === 'string') setAutoPromoMaxLevel(String(remote.autoPromoMaxLevel))
-          // マージモードでもリモートにチャレンジ情報があれば反映する（未指定フィールドはローカル維持）
-          if (Array.isArray(remote.challengesCompleted)) {
-            setChallengesCompleted(prev => {
-              try {
-                const next = [...prev]
-                for (let i = 0; i < Math.min(9, remote.challengesCompleted.length); i++) {
-                  if (typeof remote.challengesCompleted[i] === 'boolean') next[i] = remote.challengesCompleted[i]
-                }
-                return next
-              } catch (e) {
-                return prev
-              }
-            })
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to load revolution state from Firebase:', e)
-      }
-    }
-
-    load()
-    return () => { cancelled = true }
-  }, [auth.user])
 
   // Handle window resize for responsive design
   useEffect(() => {

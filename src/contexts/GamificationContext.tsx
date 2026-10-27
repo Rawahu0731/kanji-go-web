@@ -10,11 +10,8 @@ import type { Character, OwnedCharacter } from '../data/characters';
 import { CHARACTERS, pullGacha, getCharacterEffectValue, getXpForCharacterLevel, MAX_CHARACTER_COUNT, MAX_CHARACTER_LEVEL } from '../data/characters';
 import { getKanjiAttributes } from '../data/kanjiAttributes';
 import { SKILLS } from '../data/skillTree';
-import { saveUserData, loadUserData, isFirebaseEnabled, getStorageDownloadUrl, deleteUserData, updateDisplayName } from '../lib/firebase';
-import { useAuth } from './AuthContext';
 import { computeNewBadges } from '../utils/badgeUtils';
 import * as BN from '../utils/bigNumber';
-import { toNumber } from '../utils/bigNumber';
 
 // 分離したモジュールからインポート
 import type { GamificationState, GamificationContextType } from './gamification/types';
@@ -26,8 +23,6 @@ import {
   isMedalSystemEnabled,
   getXpForLevel,
   getXpForLevelBN,
-  mergeCardCollections,
-  mergeCharacters,
   rarityRank
 } from './gamification/utils';
 import { migrateData } from './gamification/migrations';
@@ -39,22 +34,10 @@ const GamificationContext = createContext<GamificationContextType | undefined>(u
 
 export function GamificationProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<GamificationState>(INITIAL_STATE);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [medalSystemEnabled, setMedalSystemEnabled] = useState(isMedalSystemEnabled());
-  const auth = useAuth();
-  const prevAuthRef = useRef<typeof auth.user | null>(auth.user || null);
   const saveTimerRef = useRef<number | null>(null);
-  const firebaseSaveTimerRef = useRef<number | null>(null);
-  const remoteLoadedRef = useRef(false);
-  // 直近のリモート保存 Promise を保持してチェーン化する（同時並列保存を防ぐ）
-  const lastSavePromiseRef = useRef<Promise<any> | null>(null);
   const localLoadedRef = useRef(false);
-  // 自動 Firebase 同期を無効化するためのフラグ（デフォルトは無効）。
-  // 無効にしておくことで、意図しない自動書き込みによる
-  // Firebase の無料枠超過や課金リスクを防ぎます。
-  // 手動同期は `syncWithFirebase()` を呼ぶことで行えます。
-  const autoSyncRef = useRef(false);
 
   // Season2: use revolution v2 for new multipliers; v1 is removed on init.
   const REVOLUTION_STORAGE_KEY = 'revolution_state_v2';
@@ -69,9 +52,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // ゲームデータをリセットし、オプションで Firebase 上のデータも削除する
-  const deleteGameData = useCallback(async (deleteRemote: boolean = false) => {
-    // ローカル状態を初期化するが、アカウント情報（username, icons）は保持する
+  // ゲームデータをローカルストレージから削除して初期化する
+  const deleteGameData = useCallback(async () => {
     setState(prev => {
       const preservedUsername = prev.username || INITIAL_STATE.username;
       const preservedActiveIcon = prev.activeIcon || INITIAL_STATE.activeIcon;
@@ -86,15 +68,6 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
 
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(resetState));
-        // プレゼントボックスと microCMS 同期情報もローカルで削除
-        try {
-          localStorage.removeItem('presentBox_state');
-          localStorage.removeItem('microcms_last_sync');
-          // Revolution v2 は初期化処理でも削除されるが念のため
-          localStorage.removeItem('revolution_state_v2');
-        } catch (e) {
-          // ignore
-        }
       } catch (e) {
         console.warn('Failed to persist reset state to localStorage:', e);
       }
@@ -102,30 +75,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       return resetState;
     });
 
-    if (deleteRemote) {
-      if (!isFirebaseEnabled) {
-        console.warn('Firebase not enabled; skipping remote deletion');
-        return;
-      }
-      if (!auth.user) {
-        console.warn('No authenticated user; skipping remote deletion');
-        return;
-      }
-
-      try {
-        await deleteUserData(auth.user.uid);
-        console.log('Remote user data deleted from Firebase');
-      } catch (err) {
-        console.error('Failed to delete remote user data:', err);
-      }
-    }
-    // 他のコンテキスト（例: PresentBox）へ即時リセットを通知
-    try {
-      window.dispatchEvent(new Event('gameDataDeleted'));
-    } catch (e) {
-      // ignore
-    }
-  }, [auth.user]);
+  }, []);
 
   // URLパラメータの変化を監視してメダルシステムの有効状態を更新
   useEffect(() => {
@@ -190,26 +140,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       // ignore
     }
-    // Firebase が有効かつユーザーがログインしている場合はリモート読み込みを待つ
-    if (!isFirebaseEnabled || !auth.user) {
-      setInitializing(false);
-    }
+    setInitializing(false);
   }, []);
-
-  // ログイン時にFirebaseからデータを読み込み
-  useEffect(() => {
-    if (auth.user && isFirebaseEnabled) {
-      const comingFromLoggedOut = !prevAuthRef.current && !!auth.user;
-      // 読み込み中フラグを立ててからリモート読み込み
-      setInitializing(true);
-      remoteLoadedRef.current = false;
-      loadFromFirebase(auth.user.uid, comingFromLoggedOut).finally(() => {
-        remoteLoadedRef.current = true;
-        setInitializing(false);
-      });
-    }
-    prevAuthRef.current = auth.user || null
-  }, [auth.user]);
 
   // 負債の利子計算（5分ごと、複利10%）
   useEffect(() => {
@@ -283,39 +215,6 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
           // フォールバック：短い遅延で実行してUI優先
           window.setTimeout(() => doSave(), 200);
         }
-        // Firebase に保存（ログイン中かつFirebase有効、かつリモート読み込み完了時のみ）
-        try {
-          if (auth.user && isFirebaseEnabled && remoteLoadedRef.current && autoSyncRef.current) {
-              if (firebaseSaveTimerRef.current !== null) {
-                window.clearTimeout(firebaseSaveTimerRef.current);
-              }
-              const toSaveRemote = toSave;
-              // デバウンス後に保存処理をキューに入れる。直近の保存があればその後にチェーンすることで
-              // 同時に大量の未解決書き込みが発生しないようにする。
-              firebaseSaveTimerRef.current = window.setTimeout(() => {
-                const doSave = async () => {
-                  try {
-                    const saveOp = () => saveUserData(auth.user!.uid, toSaveRemote as any);
-                    if (lastSavePromiseRef.current) {
-                      // 既存の保存が終わった後に実行されるPromiseチェーンを作る
-                      lastSavePromiseRef.current = lastSavePromiseRef.current.finally(() => saveOp());
-                    } else {
-                      // 新しいチェーンを開始
-                      lastSavePromiseRef.current = saveOp();
-                    }
-                    await lastSavePromiseRef.current;
-                  } catch (err) {
-                    console.warn('Failed to save gamification state to Firebase:', err);
-                  } finally {
-                    firebaseSaveTimerRef.current = null;
-                  }
-                };
-                void doSave();
-              }, 1000);
-            }
-        } catch (e) {
-          // ignore
-        }
       } catch (e) {
         console.warn('Failed to schedule gamification state persist:', e);
       }
@@ -328,172 +227,6 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       }
     };
   }, [state]);
-
-  // Firebaseへの同期
-  const syncWithFirebase = async (userId: string) => {
-    if (!isFirebaseEnabled || isSyncing) return;
-
-    try {
-      setIsSyncing(true);
-      // 競合を避けるため、まずサーバ側のデータを読み込み、マージしてから保存する
-      const remote = await loadUserData(userId);
-
-      if (!remote) {
-        // サーバ側にデータがなければそのまま保存
-        await saveUserData(userId, state);
-        console.log('Data synced to Firebase (no remote data)');
-        return;
-      }
-
-      const migratedRemote = migrateData(remote as any);
-
-      // マージ戦略：
-      // - totalXp は大きい方を採用
-      // - xp はローカルの進行を優先
-      // - coins はローカルの値を優先（消費を反映するため）
-      // - 配列はユニオン
-      // - stats は大きい方を採用（合算ではなく）
-      const merged: GamificationState = {
-        ...migratedRemote,
-        ...state,
-        totalXp: Math.max(
-          (typeof state.totalXp === 'number' ? state.totalXp : toNumber(state.totalXp)) || 0,
-          (typeof migratedRemote.totalXp === 'number' ? migratedRemote.totalXp : toNumber(migratedRemote.totalXp)) || 0
-        ),
-        xp: state.xp,
-        level: Math.max(state.level, migratedRemote.level),
-        coins: state.coins,
-        unlockedBadges: Array.from(new Set([...(migratedRemote.unlockedBadges || []), ...(state.unlockedBadges || [])])),
-        purchasedItems: Array.from(new Set([...(migratedRemote.purchasedItems || []), ...(state.purchasedItems || [])])),
-        cardCollection: mergeCardCollections(migratedRemote.cardCollection || [], state.cardCollection || []),
-        characters: mergeCharacters(migratedRemote.characters || [], state.characters || []),
-        equippedCharacter: state.equippedCharacter || migratedRemote.equippedCharacter || null,
-        stats: {
-          totalQuizzes: Math.max(migratedRemote.stats?.totalQuizzes || 0, state.stats?.totalQuizzes || 0),
-          correctAnswers: Math.max(migratedRemote.stats?.correctAnswers || 0, state.stats?.correctAnswers || 0),
-          incorrectAnswers: Math.max(migratedRemote.stats?.incorrectAnswers || 0, state.stats?.incorrectAnswers || 0),
-          currentStreak: Math.max(migratedRemote.stats?.currentStreak || 0, state.stats?.currentStreak || 0),
-          bestStreak: Math.max(migratedRemote.stats?.bestStreak || 0, state.stats?.bestStreak || 0),
-          // エンドレスモード専用の最高連続正解数をマージ
-          endlessBestStreak: Math.max(migratedRemote.stats?.endlessBestStreak || 0, state.stats?.endlessBestStreak || 0)
-        },
-        activeTheme: state.activeTheme || migratedRemote.activeTheme,
-        activeIcon: state.activeIcon || migratedRemote.activeIcon,
-        customIconUrl: state.customIconUrl || migratedRemote.customIconUrl,
-        username: migratedRemote.username && migratedRemote.username !== 'プレイヤー' ? migratedRemote.username : state.username
-      };
-
-      // merged の username が空ならデフォルトを設定
-      if (!merged.username || (typeof merged.username === 'string' && merged.username.trim() === '')) {
-        merged.username = INITIAL_STATE.username;
-      }
-
-      // 更新日時をセット
-      // @ts-ignore - 任意フィールドとして保存
-      (merged as any).updatedAt = Date.now();
-
-      // merged の totalXp に基づき level/xp の整合性を保証する
-      try {
-        const mergedTotalXpBN = BN.ensureBigNumber(merged.totalXp);
-        const mergedTotalXpNum = BN.toNumber(mergedTotalXpBN);
-        if (isFinite(mergedTotalXpNum)) {
-          let recalculatedLevel = 1;
-          let accumulated = 0;
-          while (true) {
-            const nextXp = getXpForLevel(recalculatedLevel + 1);
-            if (accumulated + nextXp > mergedTotalXpNum) break;
-            accumulated += nextXp;
-            recalculatedLevel++;
-          }
-          merged.level = recalculatedLevel;
-          merged.xp = BN.fromNumber ? BN.fromNumber(mergedTotalXpNum) : BN.fromNumber(mergedTotalXpNum);
-          merged.totalXp = BN.fromNumber ? BN.fromNumber(mergedTotalXpNum) : BN.fromNumber(mergedTotalXpNum);
-        }
-      } catch (e) {
-        console.warn('Failed to normalize merged level/XP from totalXp:', e);
-      }
-
-      // ローカル状態をマージ結果で更新してから保存
-      setState(merged);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-      await saveUserData(userId, merged);
-      console.log('Data merged and synced to Firebase');
-    } catch (error) {
-      console.error('Failed to sync with Firebase:', error);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  // Firebaseからデータを読み込み
-  const loadFromFirebase = async (userId: string, preferRemote: boolean = false) => {
-    void preferRemote;
-    if (!isFirebaseEnabled) return;
-    void preferRemote;
-    
-    try {
-      const data = await loadUserData(userId);
-
-      // サーバー側のデータをマイグレーション
-      const migratedRemote = data ? migrateData(data) : null;
-
-      // サーバー側でシーズンリセット等が行われた場合、remote に season フィールドがセットされる想定。
-      // ローカルデータは無視して、サーバー側のデータを常に優先する。
-      if (migratedRemote) {
-        // ローカルキャッシュをクリア（サーバーが常に正とする）
-        try {
-          localStorage.removeItem(STORAGE_KEY);
-          localStorage.removeItem('presentBox_state');
-          localStorage.removeItem('microcms_last_sync');
-          localStorage.removeItem('revolution_state_v2');
-        } catch (e) {
-          // ignore
-        }
-
-        if (!migratedRemote.username || (typeof migratedRemote.username === 'string' && migratedRemote.username.trim() === '')) {
-          migratedRemote.username = INITIAL_STATE.username;
-        }
-
-        // If customIconUrl references Cloud Storage (gs://...), resolve to a downloadable URL
-        try {
-          if (migratedRemote.customIconUrl && typeof migratedRemote.customIconUrl === 'string' && migratedRemote.customIconUrl.startsWith('gs://')) {
-            const resolved = await getStorageDownloadUrl(migratedRemote.customIconUrl);
-            migratedRemote.customIconUrl = resolved;
-          }
-        } catch (e) {
-          console.warn('Failed to resolve customIconUrl to download URL:', e);
-        }
-
-        setState(migratedRemote);
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedRemote)); } catch (e) { /* ignore */ }
-        console.log('Loaded data from server (server is always preferred)');
-        return;
-      }
-
-      // サーバー側にデータがない場合のみローカルデータを使用
-      const localRaw = localStorage.getItem(STORAGE_KEY);
-      let localParsed: any = null;
-      if (localRaw) {
-        try { localParsed = JSON.parse(localRaw); } catch (e) { localParsed = null; }
-      }
-
-      const migratedLocal = localParsed ? migrateData(localParsed) : null;
-
-      if (migratedLocal) {
-        // 名前が空ならデフォルトを設定
-        if (!migratedLocal.username || (typeof migratedLocal.username === 'string' && migratedLocal.username.trim() === '')) {
-          migratedLocal.username = INITIAL_STATE.username;
-        }
-
-        // 状態を反映してローカルに保存
-        setState(migratedLocal);
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedLocal)); } catch (e) { /* ignore */ }
-        console.log('No server data found; using local data');
-      }
-    } catch (error) {
-      console.error('Failed to load from Firebase:', error);
-    }
-  };
 
   const addXp = (amount: number) => {
     setState(prev => {
@@ -1231,33 +964,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const setUsername = (username: string) => {
     const cleaned = username.trim() || 'プレイヤー';
 
-    // ローカルのゲーム状態のみ更新（プレイヤー名）。アカウントの displayName は変更しない。
-    // Firebaseへの保存は state の変更を監視するデバウンス同期に任せる（過剰な書き込みを防ぐ）
-    const updatedState = { ...state, username: cleaned };
-    setState(updatedState);
-
-    // ユーザーがログインしていて Firebase が有効なら、認証表示名と Firestore 側のユーザードキュメントも更新する。
-    const user = auth.user;
-    if (isFirebaseEnabled && user) {
-      (async () => {
-        try {
-          try {
-            await updateDisplayName(user, cleaned);
-          } catch (e) {
-            console.warn('updateDisplayName failed:', e);
-          }
-
-          try {
-            // saveUserData は merge=true で部分更新するため、ここで username を確実にサーバに保存する
-            await saveUserData(user.uid, updatedState as any);
-          } catch (e) {
-            console.warn('Failed to save username to Firebase user document:', e);
-          }
-        } catch (err) {
-          console.warn('Failed to persist username to server:', err);
-        }
-      })();
-    }
+    setState(prev => ({ ...prev, username: cleaned }));
   };
 
   const getXpForNextLevel = () => {
@@ -2008,13 +1715,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     getSkillBoost,
     useStreakProtection,
     setDebugInfo,
-    syncWithFirebase,
-    loadFromFirebase,
     deleteGameData
-    ,
-    // 自動同期の有効/無効切替
-    setAutoSyncEnabled: (enabled: boolean) => { autoSyncRef.current = enabled; },
-    isAutoSyncEnabled: () => !!autoSyncRef.current,
   }), [
     state, 
     medalSystemEnabled,

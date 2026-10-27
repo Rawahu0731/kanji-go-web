@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGamification } from './contexts/GamificationContext';
-import { usePresentBox } from './contexts/PresentBoxContext';
 
 // Background images used in the story
 const STORY_BACKGROUNDS = [
@@ -49,7 +48,6 @@ type EndRollProps = {
 export default function EndRoll({ onBackToTitle }: EndRollProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const gamification = useGamification();
-  const presentBox = usePresentBox();
   // アニメーション時間は速度から計算される
   const [effectiveRollDuration, setEffectiveRollDuration] = useState(320);
   const startOffsetSec = 0; // Start from the beginning of the audio
@@ -230,16 +228,10 @@ export default function EndRoll({ onBackToTitle }: EndRollProps) {
 
   // エンドロール完了後、初回タイトル戻りで零をプレゼント
   const handleBackToTitle = () => {
-    // 初回完了でなければプレゼントを追加
+    // 初回完了時にストーリー進行を記録
     if (!gamification.state.hasCompletedEndroll) {
-      presentBox.addPresent({
-        title: '新キャラクター「零」',
-        description: '零を添えて題を押すとき、沈黙は報われる。',
-        rewards: [{ type: 'character', characterId: 'zero' }],
-        createdAt: Date.now()
-      }).then(() => {
-        gamification.setHasCompletedEndroll(true);
-      });
+      gamification.addCharacter('zero');
+      gamification.setHasCompletedEndroll(true);
     }
     
     // タイトルに戻る

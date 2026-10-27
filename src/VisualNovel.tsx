@@ -223,7 +223,7 @@ export default function VisualNovel() {
     }, 200);
   };
 
-  // Gamification state と同期: Firebase に保存された進行状況があればローカル state に反映する
+  // Gamification state と同期してストーリー進行をローカルに保存する
   const { state: gamState, setStoryProgress } = useGamification();
 
   // Only update local Sets when remote arrays actually differ to avoid
@@ -334,7 +334,6 @@ export default function VisualNovel() {
       const data = Array.from(unlockedScenes);
       localStorage.setItem('unlockedScenes', JSON.stringify(data));
       console.log('💾 Saved unlockedScenes:', data);
-      // Firebaseへも保存
       if (typeof setStoryProgress === 'function') {
         setStoryProgress({ unlockedScenes: data });
       }
@@ -350,7 +349,6 @@ export default function VisualNovel() {
       const data = Array.from(clearedQuizzes);
       localStorage.setItem('clearedQuizzes', JSON.stringify(data));
       console.log('💾 Saved clearedQuizzes:', data);
-      // Firebaseへも保存
       if (typeof setStoryProgress === 'function') {
         setStoryProgress({ clearedQuizzes: data });
       }
@@ -366,7 +364,6 @@ export default function VisualNovel() {
       const data = Array.from(completedChapters);
       localStorage.setItem('completedChapters', JSON.stringify(data));
       console.log('💾 Saved completedChapters:', data);
-      // Firebaseへも保存
       if (typeof setStoryProgress === 'function') {
         setStoryProgress({ completedChapters: data });
       }
