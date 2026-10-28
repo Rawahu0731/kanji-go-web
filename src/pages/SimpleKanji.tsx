@@ -26,8 +26,8 @@ function ListView({ items }: { items: Item[] }) {
   }, []);
 
   const CARD_WIDTH = 160;
-  const CARD_HEIGHT = 200;
-  const GAP = 12;
+  const CARD_HEIGHT = 280;
+  const GAP = 16;
 
   const columnCount = Math.max(1, Math.floor((width + GAP) / (CARD_WIDTH + GAP)));
   const rowCount = Math.max(1, Math.ceil(items.length / columnCount));
@@ -203,7 +203,7 @@ export default function SimpleKanji() {
     const saved = localStorage.getItem('simpleKanjiLevel');
     if (saved) {
       const parsed = saved === 'extra' ? 'extra' : parseInt(saved);
-      if ([4, 5, 6, 7, 8, 'extra'].includes(parsed as Level)) {
+      if ([1, 2, 3, 4, 5, 6, 7, 8].includes(parsed as number)) {
         return parsed as Level;
       }
     }
@@ -244,7 +244,7 @@ export default function SimpleKanji() {
     setViewMode('quiz');
   };
 
-  const levels: Level[] = [4, 5, 6, 7, 8, 'extra'];
+  const levels: Level[] = [1, 2, 3, 4, 5, 6, 7, 8];
 
   return (
     <div className="simple-kanji-root">
@@ -265,22 +265,7 @@ export default function SimpleKanji() {
                 }}
                 className={`level-button ${selectedLevel === level ? 'active' : ''}`}
               >
-                {level === 'extra' ? (
-                  <>
-                    エクストラ
-                    <span style={{ 
-                      fontSize: '0.75em', 
-                      display: 'block', 
-                      marginTop: '2px',
-                      fontWeight: 'normal',
-                      opacity: 0.9
-                    }}>
-                      期間限定
-                    </span>
-                  </>
-                ) : (
-                  `レベル${level}`
-                )}
+                {`レベル${level}`}
               </button>
             ))}
           </div>

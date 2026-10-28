@@ -138,6 +138,7 @@
   border-radius: 8px;
   padding: 18px;
   padding-bottom: 12px;
+  min-height: 264px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
   height: 100%;
@@ -153,7 +154,8 @@
 
 .simple-kanji-card img {
   width: 100%;
-  height: auto;
+  height: 150px;
+  object-fit: contain;
   border-radius: 6px;
   margin-bottom: 8px;
   transition: transform 0.2s;
@@ -339,4 +341,3 @@
 .simple-next-button:hover {
   background: #16a34a !important;
 }
-

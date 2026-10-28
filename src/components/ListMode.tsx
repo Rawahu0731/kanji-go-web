@@ -13,8 +13,8 @@ interface ListModeProps {
 }
 
 const CARD_WIDTH = 160;
-const CARD_HEIGHT = 200;
-const GAP = 12;
+const CARD_HEIGHT = 280;
+const GAP = 16;
 
 const VirtualizedGrid = memo(({ items, studyMode, revealed, handleCardClick }: { 
   items: Item[]; 
@@ -55,7 +55,7 @@ const VirtualizedGrid = memo(({ items, studyMode, revealed, handleCardClick }: {
         cells.push(
           <div key={i} style={{ width: CARD_WIDTH, marginRight: GAP }}>
             <div className={`kanji-card ${studyMode ? 'clickable' : ''}`} onClick={() => handleCardClick(item)}>
-              <img src={item.imageUrl} alt={item.filename} loading="lazy" decoding="async" style={{ width: '100%', height: 'auto' }} />
+              <img src={item.imageUrl} alt={item.filename} loading="lazy" decoding="async" />
               {studyMode ? (
                 isRevealed ? (
                   <>

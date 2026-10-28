@@ -14,6 +14,6 @@ export type Item = {
   questionType?: 'correction' | 'reading';
 };
 
-export type Level = 4 | 5 | 6 | 7 | 8 | 'extra';
+export type Level = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 'extra';
 export type Mode = 'list' | 'quiz' | 'endless';
 export type QuizFormat = 'input' | 'choice';

@@ -2,14 +2,33 @@ import { type Item, type Level } from '../types/kanji';
 import { parseCSVLine } from './kanjiUtils';
 
 function encodeImageUrl(path: string): string {
-  // 静的ホスティングによっては、実ファイル名のカンマを %2C として
-  // 解決できないため、URL全体をエンコードしてカンマはそのまま残す。
-  return encodeURI(path);
+  // パス全体ではなく各セグメントをエンコードする。カンマや空白を含む
+  // ファイル名を静的ホスティング側で正しく解決するため、スラッシュは残す。
+  return path
+    .split('/')
+    .map(segment => encodeURIComponent(segment))
+    .join('/');
+}
+
+function resolveImagePath(filename: string, selectedLevel: Exclude<Level, 'extra'>): string {
+  if (filename.startsWith('/')) {
+    return filename;
+  }
+
+  // スクレイパーのCSVはpublicからの相対パスを保存するため、
+  // `kanji/level-8/images/...` はそのままサイトルートから解決する。
+  if (filename.startsWith('kanji/')) {
+    return `/${filename}`;
+  }
+
+  return `/kanji/level-${selectedLevel}/${filename}`;
 }
 
 export async function loadKanjiData(selectedLevel: Level): Promise<Item[]> {
+  const isExtra = selectedLevel === 'extra';
+
   // エクストラは指定期間のみ利用可能にする
-  if (selectedLevel === 'extra') {
+  if (isExtra) {
     const urlParams = new URLSearchParams(window.location.search);
     const debugDateStr = urlParams.get('debugDate');
     const now = debugDateStr ? new Date(debugDateStr) : new Date();
@@ -22,13 +41,13 @@ export async function loadKanjiData(selectedLevel: Level): Promise<Item[]> {
     }
   }
 
-  // レベル7, 8, extra以外は準備中
-  if (selectedLevel !== 7 && selectedLevel !== 8 && selectedLevel !== 'extra') {
+  // レベル1〜8以外は無効
+  if (!isExtra && (selectedLevel < 1 || selectedLevel > 8)) {
     throw new Error('準備中です');
   }
 
   // CSV を fetch
-  const csvPath = selectedLevel === 'extra' 
+  const csvPath = isExtra
     ? `/kanji/extra/mappings.csv`
     : `/kanji/level-${selectedLevel}/mappings.csv`;
   const res = await fetch(csvPath);
@@ -53,7 +72,7 @@ export async function loadKanjiData(selectedLevel: Level): Promise<Item[]> {
 
   let mapped: Item[];
   
-  if (selectedLevel === 'extra') {
+  if (isExtra) {
     mapped = data.map(d => {
       const hasAnswer2 = (d.answer2 || '').trim() !== '';
       if (hasAnswer2) {
@@ -88,7 +107,7 @@ export async function loadKanjiData(selectedLevel: Level): Promise<Item[]> {
     mapped = data.map(d => {
       const fname = d[filenameField];
       const kanjiChar = kanjiField ? d[kanjiField] : null;
-      const imagePath = fname?.startsWith('/') ? fname : `/kanji/level-${selectedLevel}/${fname}`;
+      const imagePath = fname ? resolveImagePath(fname, selectedLevel) : '';
       const imageUrl = imagePath ? encodeImageUrl(imagePath) : '';
       
       return {
