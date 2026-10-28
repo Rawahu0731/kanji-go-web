@@ -41,6 +41,11 @@ export async function loadKanjiData(selectedLevel: Level): Promise<Item[]> {
     }
   }
 
+  // レベル1〜3は未提供
+  if (!isExtra && selectedLevel >= 1 && selectedLevel <= 3) {
+    throw new Error(`準備中です`);
+  }
+
   // レベル1〜8以外は無効
   if (!isExtra && (selectedLevel < 1 || selectedLevel > 8)) {
     throw new Error('準備中です');
