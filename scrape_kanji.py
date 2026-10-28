@@ -16,12 +16,11 @@ from PIL import Image
 # 設定
 # ============================================================
 
-LEVEL = 7
+LEVEL = 3
 
 # 取得するページを順番に指定する
 URLS = [
-    "https://w.atwiki.jp/yuia_sk/pages/16.html",
-    "https://w.atwiki.jp/yuia_sk/pages/36.html"   
+    "https://w.atwiki.jp/yuia_sk/pages/29.html"   
 ]
 
 BASE_DIR = Path(__file__).resolve().parent
