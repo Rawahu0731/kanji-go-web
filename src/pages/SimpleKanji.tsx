@@ -203,7 +203,7 @@ export default function SimpleKanji() {
     const saved = localStorage.getItem('simpleKanjiLevel');
     if (saved) {
       const parsed = saved === 'extra' ? 'extra' : parseInt(saved);
-      if ([1, 2, 3, 4, 5, 6, 7, 8].includes(parsed as number)) {
+      if ([4, 5, 6, 7, 8].includes(parsed as number)) {
         return parsed as Level;
       }
     }
@@ -244,7 +244,7 @@ export default function SimpleKanji() {
     setViewMode('quiz');
   };
 
-  const levels: Level[] = [1, 2, 3, 4, 5, 6, 7, 8];
+  const levels: Level[] = [4, 5, 6, 7, 8];
 
   return (
     <div className="simple-kanji-root">
