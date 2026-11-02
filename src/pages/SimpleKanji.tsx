@@ -55,7 +55,7 @@ function ListView({ items }: { items: Item[] }) {
     }
 
     return (
-      <div style={{ ...style, display: 'flex', alignItems: 'flex-start' }}>
+      <div style={{ ...style, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
         {cells}
       </div>
     );
@@ -157,7 +157,7 @@ function QuizView({ items, onBack }: { items: Item[]; onBack: () => void }) {
         </div>
       </div>
 
-      <div className="simple-quiz-content">
+      <div className={`simple-quiz-content ${showResult ? 'result-visible' : ''}`}>
         <div className="simple-quiz-image">
           <img src={currentItem.imageUrl} alt={currentItem.filename} />
         </div>
@@ -217,6 +217,20 @@ export default function SimpleKanji() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   useEffect(() => {
+    if (viewMode !== 'quiz') return;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousDocumentOverflow;
+    };
+  }, [viewMode]);
+
+  useEffect(() => {
     loadData();
   }, [selectedLevel]);
 
@@ -247,7 +261,7 @@ export default function SimpleKanji() {
   const levels: Level[] = [4, 5, 6, 7, 8];
 
   return (
-    <div className="simple-kanji-root">
+    <div className={`simple-kanji-root ${viewMode === 'quiz' ? 'quiz-active' : ''}`}>
       <header className="simple-header">
         <h1>漢字学習</h1>
         <p>メンテナンス中はこちらで学習を行ってください</p>

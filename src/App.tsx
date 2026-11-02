@@ -164,6 +164,23 @@ function App() {
     };
   }, [selectedLevel]);
 
+  useEffect(() => {
+    const isQuizActive = mode === 'quiz' || mode === 'endless';
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
+    document.body.classList.toggle('quiz-active', isQuizActive);
+    if (isQuizActive) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.body.classList.remove('quiz-active');
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousDocumentOverflow;
+    };
+  }, [mode]);
+
   const startQuiz = () => {
     if (!items || items.length === 0) return;
     setLoading(true);

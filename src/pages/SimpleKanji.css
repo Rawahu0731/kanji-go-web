@@ -4,6 +4,19 @@
   padding: 2rem;
 }
 
+.simple-kanji-root.quiz-active {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(0.5rem, 2vh, 1.5rem) clamp(0.75rem, 3vw, 2rem);
+}
+
+.simple-kanji-root.quiz-active .simple-header {
+  display: none;
+}
+
 .simple-header {
   text-align: center;
   color: #1a1a1a;
@@ -191,7 +204,12 @@
 /* 問題モード */
 .simple-quiz-container {
   max-width: 800px;
+  width: 100%;
+  min-height: 0;
   margin: 0 auto;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
 }
 
 .simple-quiz-header {
@@ -201,7 +219,7 @@
   background: white;
   padding: 1rem 1.5rem;
   border-radius: 8px;
-  margin-bottom: 1.5rem;
+  margin-bottom: clamp(0.5rem, 1.5vh, 1.5rem);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   border: 1px solid #e0e0e0;
 }
@@ -231,21 +249,48 @@
 
 .simple-quiz-content {
   background: white;
-  padding: 2.5rem;
+  min-height: 0;
+  padding: clamp(0.75rem, 3vh, 2.5rem) clamp(0.75rem, 4vw, 2.5rem);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   border: 1px solid #e0e0e0;
+  display: flex;
+  flex: 0 1 auto;
+  width: 100%;
+  flex-direction: column;
+  justify-content: center;
+  align-self: center;
+}
+
+.simple-quiz-content.result-visible .simple-quiz-image img {
+  height: min(28vh, 220px);
+}
+
+.simple-quiz-content.result-visible .simple-result {
+  padding: clamp(0.75rem, 2vh, 1.5rem);
+}
+
+.simple-quiz-content.result-visible .simple-result-text {
+  font-size: clamp(1.2rem, 4vw, 1.5rem);
+  margin-bottom: clamp(0.5rem, 1.5vh, 1rem);
+}
+
+.simple-quiz-content.result-visible .simple-correct-answer {
+  font-size: clamp(0.95rem, 3vw, 1.1rem);
+  margin-bottom: clamp(0.5rem, 1.5vh, 1rem);
 }
 
 .simple-quiz-image {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: clamp(0.5rem, 2vh, 2rem);
+  min-height: 0;
 }
 
 .simple-quiz-image img {
-  max-width: 300px;
+  max-width: min(300px, 42vw);
   width: 100%;
-  height: auto;
+  height: min(38vh, 300px);
+  object-fit: contain;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   border: 1px solid #e0e0e0;
@@ -254,19 +299,19 @@
 .simple-quiz-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: clamp(0.5rem, 1.5vh, 1.5rem);
 }
 
 .simple-quiz-form label {
-  font-size: 1.15rem;
+  font-size: clamp(0.9rem, 2.2vw, 1.15rem);
   font-weight: 600;
   color: #1a1a1a;
   text-align: center;
 }
 
 .simple-quiz-form input {
-  padding: 12px 16px;
-  font-size: 1.1rem;
+  padding: clamp(8px, 1.5vh, 12px) 16px;
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
   border: 2px solid #e0e0e0;
   border-radius: 8px;
   transition: all 0.2s ease;
@@ -280,8 +325,8 @@
 }
 
 .simple-quiz-form button {
-  padding: 12px 28px;
-  font-size: 1.1rem;
+  padding: clamp(8px, 1.5vh, 12px) 28px;
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
   font-weight: 700;
   color: white;
   background: #1a1a1a;
@@ -340,4 +385,23 @@
 
 .simple-next-button:hover {
   background: #16a34a !important;
+}
+
+@media (max-width: 600px) {
+  .simple-kanji-root {
+    padding: 1rem;
+  }
+
+  .simple-quiz-header {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .simple-back-button {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+
+  .simple-score {
+    font-size: 0.8rem;
+  }
 }

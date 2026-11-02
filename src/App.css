@@ -431,6 +431,7 @@ h1 {
 /* 問題モード */
 .quiz-container {
   max-width: 700px;
+  width: 100%;
   margin: 0 auto;
   animation: fadeIn 0.5s ease-out;
 }
@@ -523,10 +524,82 @@ h1 {
   animation: scaleIn 0.36s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+body.quiz-active {
+  overflow: hidden;
+}
+
+body.quiz-active .gamification-header,
+body.quiz-active .app-footer,
+body.quiz-active .site-logo,
+body.quiz-active .level-buttons {
+  display: none;
+}
+
+body.quiz-active .quiz-container {
+  height: 100dvh;
+  max-width: 700px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(0.5rem, 2vh, 1.5rem) clamp(0.75rem, 3vw, 2rem);
+}
+
+body.quiz-active .quiz-header {
+  margin-bottom: clamp(0.5rem, 1.5vh, 2rem);
+}
+
+body.quiz-active .quiz-format-selector {
+  margin-bottom: clamp(0.5rem, 1.5vh, 1.5rem);
+}
+
+body.quiz-active .quiz-card {
+  min-height: 0;
+  flex: 0 1 auto;
+  width: 100%;
+  overflow: hidden;
+  padding: clamp(0.75rem, 3vh, 36px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-self: center;
+}
+
+body.quiz-active .quiz-card.result-visible .quiz-input-container,
+body.quiz-active .quiz-card.result-visible .quiz-choices-container,
+body.quiz-active .quiz-card.result-visible .quiz-buttons {
+  display: none;
+}
+
+body.quiz-active .quiz-card.result-visible .quiz-image {
+  max-height: min(30vh, 240px);
+  margin-bottom: clamp(0.5rem, 2vh, 20px);
+}
+
+body.quiz-active .quiz-card.result-visible .result-message {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  margin-bottom: clamp(0.5rem, 1.5vh, 20px);
+}
+
+body.quiz-active .quiz-card.result-visible .correct-answer {
+  font-size: clamp(1rem, 3vw, 1.25rem);
+  margin-bottom: clamp(0.5rem, 1.5vh, 20px);
+  padding: clamp(0.5rem, 1.5vh, 1rem);
+}
+
+body.quiz-active .quiz-card.result-visible .correct-answer-text {
+  font-size: clamp(1.2rem, 4vw, 1.5rem);
+}
+
+.result-container {
+  min-width: 0;
+  text-align: center;
+}
+
 .quiz-image {
   width: 100%;
   max-width: 350px;
-  height: auto;
+  max-height: min(42vh, 350px);
+  object-fit: contain;
   margin: 0 auto 30px;
   border-radius: 16px;
   box-shadow: 0 12px 32px rgba(102, 126, 234, 0.2);
@@ -845,6 +918,19 @@ h1 {
   .list-header {
     flex-direction: column;
     gap: 15px;
+  }
+
+  body.quiz-active .quiz-header {
+    gap: 8px;
+  }
+
+  body.quiz-active .quiz-progress {
+    font-size: 16px;
+  }
+
+  body.quiz-active .quiz-score {
+    font-size: 13px;
+    padding: 6px 10px;
   }
 }
 

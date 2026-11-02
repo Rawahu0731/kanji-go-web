@@ -612,7 +612,7 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
         </div>
       )}
 
-      <div className="quiz-card">
+      <div className={`quiz-card ${showResult ? 'result-visible' : ''}`}>
         {selectedLevel === 'extra' ? (
           <div className="extra-quiz-content">
             {(() => {

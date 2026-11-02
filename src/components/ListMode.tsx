@@ -80,7 +80,7 @@ const VirtualizedGrid = memo(({ items, studyMode, revealed, handleCardClick }: {
     }
 
     return (
-      <div style={{ ...style, display: 'flex', alignItems: 'flex-start' }}>
+      <div style={{ ...style, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
         {cells}
       </div>
     );
