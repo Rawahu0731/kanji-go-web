@@ -68,6 +68,7 @@ export const INITIAL_STATE: GamificationState = {
   lastInterestTime: Date.now(),
   lastSkillPurchaseTime: undefined,
   collectionPlus: [],
+  kanjiAnswerResults: {},
   tickets: {}
   ,
   // ストーリー進行の初期値

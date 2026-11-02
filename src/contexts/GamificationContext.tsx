@@ -1347,6 +1347,23 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     return 0;
   };
 
+  // 問題モードの各漢字について、最後に回答した結果を保存する。
+  // 戻り値は今回の結果を反映した「正解状態の漢字数」。
+  const recordKanjiAnswer = (kanji: string | undefined, isCorrect: boolean): number => {
+    if (!kanji) {
+      return Object.values(state.kanjiAnswerResults || {}).filter(Boolean).length;
+    }
+
+    const answerResults = {
+      ...(state.kanjiAnswerResults || {}),
+      [kanji]: isCorrect
+    };
+    const correctKanjiCount = Object.values(answerResults).filter(Boolean).length;
+    setState(prev => ({ ...prev, kanjiAnswerResults: answerResults }));
+
+    return correctKanjiCount;
+  };
+
   // collection++ は削除
 
   // コレクションがコンプリートしているか判定
@@ -1688,6 +1705,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     getCollectionBoost,
     getCollectionPlusEffect,
     getCharacterMedalBoost,
+    recordKanjiAnswer,
     getUnlockedHints,
     purchaseHint,
     addCardsToDeck,

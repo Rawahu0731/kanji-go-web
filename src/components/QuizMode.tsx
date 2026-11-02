@@ -86,6 +86,7 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
     getSkillBoost,
     getCollectionPlusEffect,
     getCharacterMedalBoost,
+    recordKanjiAnswer,
     useStreakProtection,
     addQuizRewards,
     state: gamificationState,
@@ -236,13 +237,15 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
     }
     
     if (correct) {
+      const correctKanjiCount = recordKanjiAnswer(quizItems[currentIndex].kanji, true);
       const newStreak = currentStreak + 1;
       // デバッグ用: XP計算の詳細を記録
       const baseXp = 150;
       const xpBoost = getSkillBoost('xp_boost');
       const xpMultiplierBoost = getSkillBoost('xp_multiplier');
-      const xpGain = Math.floor(baseXp * (1 + xpBoost) * (1 + xpMultiplierBoost));
-      const coinGain = Math.floor(100 * (1 + getSkillBoost('coin_boost')));
+      const coinMultiplier = 1 + correctKanjiCount * 0.5;
+      const xpGain = Math.floor(baseXp * (1 + xpBoost) * (1 + xpMultiplierBoost) * coinMultiplier);
+      const coinGain = Math.floor(100 * (1 + getSkillBoost('coin_boost')) * coinMultiplier);
       const medalBoost = getSkillBoost('medal_boost') + (getCollectionPlusEffect()?.medalBoost || 0) + getCharacterMedalBoost();
       const medalGain = tryGetMedal(quizFormat, medalBoost);
       console.log(`[MEDAL REWARD] Calling addQuizRewards with medalGain=${medalGain}`);
@@ -291,6 +294,7 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
         }, delay);
       });
     } else {
+      recordKanjiAnswer(quizItems[currentIndex].kanji, false);
       const protectionUsed = useStreakProtection();
       const newStreak = protectionUsed ? currentStreak : 0;
       
@@ -327,6 +331,8 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
 
   const giveUp = () => {
     if (!quizItems[currentIndex]) return;
+
+    recordKanjiAnswer(quizItems[currentIndex].kanji, false);
     
     // デバッグ情報をクリア
     setXpDebugInfo(null);
@@ -401,13 +407,15 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
     const correct = idx === correctChoiceIndex;
     
     if (correct) {
+      const correctKanjiCount = recordKanjiAnswer(quizItems[currentIndex].kanji, true);
       const newStreak = currentStreak + 1;
       // デバッグ用: XP計算の詳細を記録
       const baseXp = 50;
       const xpBoost = getSkillBoost('xp_boost');
       const xpMultiplierBoost = getSkillBoost('xp_multiplier');
-      const xpGain = Math.floor(baseXp * (1 + xpBoost) * (1 + xpMultiplierBoost));
-      const coinGain = Math.floor(30 * (1 + getSkillBoost('coin_boost')));
+      const coinMultiplier = 1 + correctKanjiCount * 0.5;
+      const xpGain = Math.floor(baseXp * (1 + xpBoost) * (1 + xpMultiplierBoost) * coinMultiplier);
+      const coinGain = Math.floor(30 * (1 + getSkillBoost('coin_boost')) * coinMultiplier);
       const medalBoost = getSkillBoost('medal_boost') + (getCollectionPlusEffect()?.medalBoost || 0) + getCharacterMedalBoost();
       const medalGain = tryGetMedal(quizFormat, medalBoost);
       console.log(`[MEDAL REWARD CHOICE] Calling addQuizRewards with medalGain=${medalGain}`);
@@ -449,6 +457,7 @@ const QuizMode = memo(({ items, selectedLevel, onBack, onReady, endless = false 
         setIsProcessing(false); // ローディング終了
       });
     } else {
+      recordKanjiAnswer(quizItems[currentIndex].kanji, false);
       const protectionUsed = useStreakProtection();
       const newStreak = protectionUsed ? currentStreak : 0;
       

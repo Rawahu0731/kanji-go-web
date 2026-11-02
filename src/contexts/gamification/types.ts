@@ -45,6 +45,8 @@ export interface GamificationState {
   lastSkillPurchaseTime?: number;
   // コレクション（漢字ごとの + 値。最大10でカンスト）
   collectionPlus?: { kanji: string; plus: number; obtainedAt?: number }[];
+  // 問題モードでの各漢字の最新回答結果
+  kanjiAnswerResults: Record<string, boolean>;
   // コレクション++ は削除
   // チケット（キー: ticketId, 値: 所持数）
   tickets?: Record<string, number>;
@@ -100,6 +102,7 @@ export type GamificationContextType = {
   getCollectionBoost: () => number;
   getCollectionPlusEffect: () => { totalPlus: number; xpCoinBonusPercent: number; xpCoinBonusFraction: number; medalBoost: number };
   getCharacterMedalBoost: () => number;
+  recordKanjiAnswer: (kanji: string | undefined, isCorrect: boolean) => number;
   // コレクション++ は削除
   isCollectionComplete: () => boolean;
   isCollectionPlusComplete: () => boolean;

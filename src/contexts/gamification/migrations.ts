@@ -169,6 +169,9 @@ export function migrateData(data: any): GamificationState {
   if (!data.collectionPlus) {
     data.collectionPlus = [];
   }
+  if (!data.kanjiAnswerResults || typeof data.kanjiAnswerResults !== 'object' || Array.isArray(data.kanjiAnswerResults)) {
+    data.kanjiAnswerResults = {};
+  }
   if (!data.skillLevels) {
     data.skillLevels = [];
   }

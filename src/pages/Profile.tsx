@@ -12,6 +12,8 @@ function Profile() {
 
   const unlockedBadgesList = (state.unlockedBadges ?? []).map(id => BADGES[id]).filter(Boolean);
   const totalBadges = Object.keys(BADGES).length;
+  const correctKanjiCount = Object.values(state.kanjiAnswerResults ?? {}).filter(Boolean).length;
+  const answerStatusMultiplier = 1 + correctKanjiCount * 0.5;
 
   const handleNameSave = () => {
     setUsername(nameInput);
@@ -139,6 +141,16 @@ function Profile() {
               <div className="stat-icon">✓</div>
               <div className="stat-value">{state.stats.correctAnswers}</div>
               <div className="stat-label">正解数</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon">漢</div>
+              <div className="stat-value">{correctKanjiCount}</div>
+              <div className="stat-label">正解漢字数</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon">📈</div>
+              <div className="stat-value">×{answerStatusMultiplier.toFixed(1)}</div>
+              <div className="stat-label">XP・コイン倍率</div>
             </div>
             <div className="stat-card">
               <div className="stat-icon">✗</div>
